@@ -1,0 +1,141 @@
+.tracking-info-box {
+    background: white;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin: 0 auto 1.2rem auto;
+    text-align: left;
+    border: 1px solid var(--pink-light);
+    max-width: 480px;
+    animation: popIn 0.4s ease;
+}
+
+/* Contenedor de tracking: compacto en desktop, full en móvil */
+.container {
+    max-width: 520px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+@media (max-width: 600px) {
+    .container { max-width: 100%; margin: 1rem auto; }
+}
+
+.tracking-info-estado-wrap {
+    text-align: center;
+    margin-bottom: 12px;
+}
+
+.tracking-estado-badge {
+    display: inline-block;
+    padding: 6px 22px;
+    background: var(--pink-accent);
+    color: white;
+    border-radius: 50px;
+    font-size: 0.95rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border: 2px solid white;
+    animation: popIn 0.5s ease, neon-glow 1.5s infinite alternate ease-in-out;
+}
+
+@keyframes neon-glow {
+    from {
+        box-shadow: 0 0 5px #fff, 0 0 10px rgba(225, 155, 157, 0.2);
+        transform: scale(1);
+    }
+    to {
+        box-shadow: 0 0 10px #fff, 0 0 20px var(--pink-accent), 0 0 35px var(--pink-accent);
+        transform: scale(1.05);
+    }
+}
+
+.tracking-info-row {
+    padding: 5px 0;
+    border-bottom: 1px solid var(--pink-light);
+    font-size: 0.9rem;
+    color: var(--brown-text);
+}
+
+.tracking-info-row:last-child {
+    border-bottom: none;
+}
+
+.tracking-info-label {
+    font-weight: bold;
+}
+
+/* Grid: compacto en desktop, full en móvil */
+.tracking-table-wrapper {
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto 1.2rem auto;
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1.5px solid #e8b8c4;
+    box-shadow: 0 2px 12px rgba(225, 155, 157, 0.18);
+}
+
+.tracking-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+    text-align: left;
+}
+
+.tracking-table thead tr {
+    background: var(--pink-accent);
+    color: white;
+}
+
+.tracking-table th,
+.tracking-table td {
+    padding: 9px 12px;
+    border-bottom: 1px solid rgba(225, 155, 157, 0.2);
+}
+
+.tracking-table tbody tr:not(:last-child) td {
+    font-size: 0.72rem;
+    padding: 5px 12px;
+}
+
+.tracking-table tbody tr:last-child td {
+    border-bottom: none;
+    font-weight: bold;
+    background: #fff5f5;
+}
+
+.tracking-table tbody tr:hover {
+    background: var(--pink-light);
+}
+
+.tracking-nota {
+    font-size: 0.78rem;
+    color: #999;
+    font-style: italic;
+}
+
+.btn-whatsapp-track {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 0.5rem;
+    background: #25d366;
+    color: white;
+    padding: 10px 24px;
+    border-radius: 50px;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+@keyframes popIn {
+    0%   { transform: scale(0.9); opacity: 0; }
+    100% { transform: scale(1);   opacity: 1; }
+}
+
+@media (max-width: 600px) {
+    .tracking-table-wrapper,
+    .tracking-info-box {
+        max-width: 100%;
+    }
+}

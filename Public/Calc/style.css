@@ -1,0 +1,304 @@
+body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to bottom, #ffe6f0, #fff5fa);
+      color: #4b2e2e;
+      text-align: center;
+      padding: 30px;
+      margin: 0;
+    }
+
+    img {
+      border-radius: 15px;
+      margin: 2px 0;
+    }
+
+    /* Resto de estilos globales del index.html se mantienen aquí */
+    .catalog-status .spinner {
+        width: 48px;
+        height: 48px;
+        border: 5px solid #FDE2E4;
+        border-top-color: #E19B9D;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin: 0 auto 1rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .no-results {
+        text-align: center;
+        padding: 3rem;
+        color: #E19B9D;
+        font-size: 1.1rem;
+        display: none;
+    }
+    .img-modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.75);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+    }
+    .img-modal-overlay.active {
+        display: flex;
+    }
+    .img-modal-overlay img {
+        max-width: 90vw;
+        max-height: 85vh;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        margin: 0;
+    }
+    .img-modal-overlay .close-btn {
+        position: absolute;
+        top: 20px;
+        right: 25px;
+        font-size: 2rem;
+        color: white;
+        cursor: pointer;
+        line-height: 1;
+        background: none;
+        border: none;
+    }
+    @media (max-width: 480px) {
+        .product-grid { grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+        .product-info { padding: 0.75rem; }
+        .btn-flotante span { display: none; }
+        .btn-flotante { 
+            padding: 12px !important; 
+            width: 45px; height: 45px; border-radius: 50% !important; justify-content: center;
+        }
+    }
+
+    :root {
+            --pink-light: #FDE2E4;
+            --pink-accent: #E19B9D;
+            --brown-text: #704E36;
+            --white: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            background-color: var(--white);
+            color: var(--brown-text);
+            overflow-x: hidden;
+        }
+
+        header {
+            background-color: var(--pink-light);
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .logo {
+            max-width: 180px;
+            border-radius: 15px;
+            cursor: pointer;
+        }
+
+        nav {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            background: var(--pink-accent);
+            padding: 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        nav a {
+            color: var(--white);
+            text-decoration: none;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px; /* Espacio entre la casita y el texto */
+        }
+
+        /* CONTENEDOR DINÁMICO */
+        #content-area {
+            min-height: 60vh;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .fade-out { opacity: 0; }
+        .fade-in { opacity: 1; }
+
+        /* Estilos de las Cards (Se mantienen para el Home) */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .card {
+            border: 2px solid var(--pink-light);
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            background-color: var(--pink-light);
+        }
+
+        /* Contenedor de Redes Flotantes */
+        .social-menu {
+            position: fixed;
+            left: 20px;
+            bottom: 25px;
+            z-index: 2000;
+        }
+
+        /* Todos los botones ocultos en el mismo punto */
+        .social-links .btn-flotante {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+            z-index: 1999;
+        }
+
+        .social-links.active .btn-flotante {
+            opacity: 0.85; /* Semitransparente para no tapar contenido */
+            transform: scale(1);
+            pointer-events: auto;
+        }
+
+        /* Posiciones finales al separarse (con delay para efecto cascada) */
+        .social-links.active .btn-whatsapp { bottom: 65px; transition-delay: 0.05s; }
+        .social-links.active .btn-facebook { bottom: 125px; transition-delay: 0.1s; }
+        .social-links.active .btn-instagram { bottom: 185px; transition-delay: 0.15s; }
+        .social-links.active .btn-tiktok { bottom: 245px; transition-delay: 0.2s; }
+
+        .btn-flotante {
+            /* Quitamos position relative para evitar conflictos */
+            color: white;
+            padding: 10px 20px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: bold;
+            box-shadow: 0px 4px 15px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            opacity: 0.85; /* Semitransparente por defecto */
+        }
+
+        .btn-flotante:hover { transform: scale(1.05); opacity: 1; }
+        .btn-whatsapp { background-color: #25d366; }
+        .btn-facebook { background-color: #1877F2; }
+        .btn-instagram { background: linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%); }
+        .btn-tiktok { background-color: #010101; }
+
+        /* Botón de control principal */
+        .btn-main-toggle {
+            position: relative;
+            z-index: 2001; /* Siempre por encima de los demás */
+            background-color: var(--white) !important;
+            width: 50px;
+            height: 50px;
+            border-radius: 50% !important;
+            padding: 0 !important;
+            justify-content: center;
+            border: 2px solid white;
+            cursor: pointer;
+            overflow: hidden;
+            /* Eliminamos la sombra fija para que el neón brille */
+            animation: neon-glow 1.5s infinite alternate ease-in-out;
+        }
+
+        /* Efecto Neón Notorio */
+        @keyframes neon-glow {
+            from {
+                  border-color: var(--pink-accent);
+                box-shadow: 0 0 5px #fff, 0 0 10px rgba(225, 155, 157, 0.2);
+                 transform: scale(1);
+            }
+            to {
+                border-color: var(--pink-accent);
+                /* Triple capa de sombra para efecto neón real */
+                box-shadow: 0 0 10px #fff, 0 0 20px var(--pink-accent), 0 0 35px var(--pink-accent);
+                 transform: scale(1.1); /*Crece un poquito para hacerse notar */
+            }
+        }
+
+        #btnToggleClose {
+            color: var(--pink-accent); /* La X será rosada */
+        }
+
+        /* Estilo del Collage de iconos */
+        .toggle-collage {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 4px;
+            line-height: 1;
+            padding: 5px;
+        }
+
+        .toggle-collage i {
+            font-size: 12px;
+            /* Colores temáticos para que se reconozcan de un vistazo */
+            filter: drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+        }
+        .toggle-collage .fa-tiktok { color: #00f2ea; }
+        .toggle-collage .fa-instagram { color: #e1306c; }
+        .toggle-collage .fa-facebook-f { color: #1877f2; }
+        .toggle-collage .fa-whatsapp { color: #25d366; }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            font-size: 0.8rem;
+            border-top: 1px solid var(--pink-light);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .footer-flag {
+            width: 18px;
+            height: auto;
+            margin-left: 8px;
+            vertical-align: middle;
+            border-radius: 2px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            display: inline-block;
+        }
+
+        /* Estilos para el resaltado del Estado en Rastreo */
+        .dato-destacado {
+            margin-top: 15px;
+            padding: 15px 30px;
+            background-color: var(--pink-accent);
+            color: white;
+            border-radius: 50px;
+            font-size: 1.4rem;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(225, 155, 157, 0.4);
+            border: 2px solid white;
+            display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            animation: popIn 0.5s ease;
+        }
+
+        @keyframes popIn { 
+            0% { transform: scale(0.9); opacity: 0; } 
+            100% { transform: scale(1); opacity: 1; } 
+        }

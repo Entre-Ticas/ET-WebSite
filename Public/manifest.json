@@ -1,0 +1,38 @@
+{
+  "name": "Entre Ticas",
+  "short_name": "Entre Ticas",
+  "start_url": "/index.html#calc",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#E19B9D",
+  "icons": [
+    {
+      "src": "assets/EntreTicas.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Calculadora",
+      "short_name": "Calculadora",
+      "description": "Calcular costos de importación",
+      "url": "/index.html#calc",
+      "icons": [{ "src": "assets/EntreTicas.jpg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Catálogo",
+      "short_name": "Catálogo",
+      "description": "Ver productos disponibles",
+      "url": "/index.html#catalog",
+      "icons": [{ "src": "assets/EntreTicas.jpg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Rastreo",
+      "short_name": "Rastreo",
+      "description": "Rastrear mis paquetes",
+      "url": "/index.html#tracking",
+      "icons": [{ "src": "assets/EntreTicas.jpg", "sizes": "192x192" }]
+    }
+  ]
+}

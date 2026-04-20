@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="/">
+    <title>Entre Ticas - Personal Shoppers</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/style.css" />
+    <link rel="stylesheet" href="assets/css/calc.css" />
+    <link rel="stylesheet" href="assets/css/catalog.css" />
+    <link rel="stylesheet" href="assets/css/tracking.css" />
+    <link rel="stylesheet" href="assets/css/admin.css" />
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <style>
+        
+    </style>
+</head>
+<body>
+
+    <header>
+        <img src="assets/img/EntreTicas.jpg" alt="Logo" class="logo" onclick="loadPage('home')">
+    </header>
+
+    <nav>
+        <a onclick="loadPage('home')"><i class="fas fa-home"></i></a>
+        <a onclick="loadPage('catalog')">Catálogo</a>
+        <a onclick="loadPage('calc')">Calculadora</a>
+        <a onclick="loadPage('tracking')">Rastreo</a>
+        <a id="navAdmin" onclick="loadPage('admin')" style="display:none;">Gestión</a>
+    </nav>
+
+    <!-- Botón flotante de login, discreto en esquina superior derecha -->
+    <button id="floatingLoginBtn" onclick="abrirLoginModal()" title="Iniciar sesión"
+        style="position:fixed; top:4px; right:4px; z-index:8000; background:transparent; border:none; cursor:pointer; opacity:0.12; transition:opacity 0.3s;"
+        onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.12'">
+        <i class="fas fa-user" style="font-size:1.2rem; color:var(--brown-text, #5a3e2b);"></i>
+    </button>
+
+    <div id="content-area">
+        <section class="hero" style="text-align:center; padding:2rem;">
+            <h1>Sitio de Gestión para Entreticas Personal Shoppers</h1>
+            <p>Todo lo que necesitas para traer tus compras desde USA.</p>
+        </section>
+
+        <div class="features">
+            <div class="card" onclick="loadPage('tracking')">
+                <div style="font-size: 2rem;">📦</div>
+                <h3>Rastreo</h3>
+                <p>Consulta el estado de tus paquetes.</p>
+            </div>
+            <div class="card" onclick="loadPage('calc')">
+                <div style="font-size: 2rem;">🧮</div>
+                <h3>Calculadora</h3>
+                <p>Impuestos, fletes y comisiones.</p>
+            </div>
+            <div class="card" onclick="loadPage('catalog')">
+                <div style="font-size: 2rem;">🛍️</div>
+                <h3>Catálogo</h3>
+                <p>Explora y agrega artículos.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Login -->
+    <div id="loginModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:white; border-radius:16px; padding:2rem; width:90%; max-width:340px; text-align:center;">
+            <h3 style="margin:0 0 1rem; color:var(--brown-text);">🔐 Iniciar Sesión</h3>
+            <input type="text" id="loginUser" placeholder="Usuario"
+                style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); box-sizing:border-box; margin-bottom:0.8rem;">
+            <input type="password" id="loginPassword" placeholder="Contraseña"
+                style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); box-sizing:border-box; margin-bottom:1rem;">
+            <button onclick="iniciarSesion()"
+                style="width:100%; padding:11px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
+                Entrar
+            </button>
+            <div id="loginError" style="margin-top:0.8rem; color:red; font-size:0.85rem;"></div>
+            <button onclick="cerrarLoginModal()"
+                style="margin-top:0.8rem; background:none; border:none; color:#aaa; cursor:pointer; font-size:0.85rem;">
+                Cancelar
+            </button>
+        </div>
+    </div>
+
+    <div class="social-menu" id="socialMenu">
+        <button class="btn-flotante btn-main-toggle" id="btnMainToggle" onclick="toggleSocialMenu()" aria-label="Abrir redes sociales">
+            <div class="toggle-collage" id="btnToggleCollage">
+                <i class="fab fa-tiktok"></i>
+                <i class="fab fa-instagram"></i>
+                <i class="fab fa-facebook-f"></i>
+                <i class="fab fa-whatsapp"></i>
+            </div>
+            <i class="fas fa-times" id="btnToggleClose" style="display:none;"></i>
+        </button>
+        <div class="social-links" id="socialLinks">
+            <a href="#" id="btnTiktokFlotante" class="btn-flotante btn-tiktok" target="_blank">
+                <i class="fab fa-tiktok"></i> <span>TikTok</span>
+            </a>
+            <a href="#" id="btnInstagramFlotante" class="btn-flotante btn-instagram" target="_blank">
+                <i class="fab fa-instagram"></i> <span>Instagram</span>
+            </a>
+            <a href="#" id="btnFacebookFlotante" class="btn-flotante btn-facebook" target="_blank">
+                <i class="fab fa-facebook-f"></i> <span>Facebook</span>
+            </a>
+            <a href="#" id="btnWhatsappFlotante" class="btn-flotante btn-whatsapp" target="_blank">
+                <i class="fab fa-whatsapp"></i> <span>WhatsApp</span>
+            </a>
+        </div>
+    </div>
+
+    <footer>
+        <p>
+            &copy; 2026 Entre Ticas - Costa Rica 
+            <img src="https://flagcdn.com/w40/cr.png" alt="Costa Rica" class="footer-flag">
+        </p>
+    </footer>
+
+    
+    <script src="assets/js/setup.js"></script>
+    <script src="assets/js/script.js"></script>
+    <script src="assets/js/catalog.js"></script>
+    <script src="assets/js/tracking.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script src="assets/js/tracking-admin.js"></script>
+    <script src="assets/js/main.js"></script>
+    
+</body>
+</html>

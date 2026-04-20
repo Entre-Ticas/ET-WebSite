@@ -1,0 +1,58 @@
+<div class="container">
+    <div class="card" style="cursor:default;">
+        <i class="fas fa-calculator" style="font-size:3rem; color:var(--pink-accent);"></i>
+        <h3>Calculadora de Costos</h3>
+        <p>Calcula impuestos, flete y comisión de tu compra.</p>
+
+        <div class="calculator active" id="calc0" style="margin-top:1rem;">
+            <label><input type="checkbox" id="cbkDollar0" onclick="calculate(0)"> Monto superior a $500</label><br/>
+
+            <div id="exchangeContainer0" style="display:none; margin-top:0.5rem;">
+                <label>Tipo de cambio:</label>
+                <label id="exchange2">¢:</label><br/>
+            </div>
+
+            <div id="weight" style="margin-top:0.8rem;">
+                <div class="cbkNames">
+                    <input type="radio" id="Kg0" name="unidad0" />
+                    <label for="Kg0" style="margin-left:5px;">Kilos</label>
+                </div>
+                <div class="cbkNames">
+                    <input type="radio" id="Lb0" name="unidad0" />
+                    <label for="Lb0" style="margin-left:5px;">Libras</label>
+                </div>
+                <br/>
+                <input type="number" id="pound0" placeholder="Ej: 1" step="1" min="1" value="0" disabled/>
+            </div>
+
+            <div id="tax" style="margin-top:0.8rem;">
+                <div class="cbkNames">
+                    <input type="checkbox" id="cbkImp0" onchange="enableProductWeightLabel2(0)">
+                    <label for="cbkImp0">Impuesto (%)</label>
+                </div>
+                <br/>
+                <div id="impContainer0" style="display:none;">
+                    <input type="number" id="impPercent0" value="7" oninput="calculate(0)">
+                </div>
+                <br/>
+            </div>
+
+            <div id="price" style="margin-top:0.5rem;">
+                <label>Precio de producto:</label>
+                <input type="number" id="price0" placeholder="Ej: 50" step="0.01" min="0"/>
+            </div>
+
+            <div class="result" id="results0" style="display:none; margin-top:1rem;">
+                <p id="impRow0" style="display:none;">
+                    🧾 <strong>Impuesto <span id="impPercentLabel0">7</span>%:</strong> $<span id="impAmount0"></span>
+                </p>
+                <p>💼 <strong>Comisión <span id="feeVariable0">8</span>%:</strong> $<span id="fee0"></span></p>
+                <p>💼 <strong>Monto de peso:</strong> $<span id="amountPound0"></span></p>
+                <p class="glitter">💰 <strong>Total en dólares:</strong> $<span id="totalUsd0"></span></p>
+                <p class="glitter">💵 <strong>Total en colones:</strong> ₡<span id="totalCrc0"></span></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="assets/js/script.js"></script>

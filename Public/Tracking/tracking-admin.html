@@ -1,0 +1,131 @@
+<div class="admin-wrapper">
+
+    <!-- ===== VISTA: GRID ===== -->
+    <div id="adminGridView">
+        <div class="admin-header">
+            <h2>📦 Gestión de Paquetes</h2>
+            <p>Busca y actualiza el estado de cada envío.</p>
+        </div>
+
+        <div class="admin-search-bar">
+            <input type="text" id="adminSearchInput" placeholder="🔍 Buscar por cliente, producto o guía..." oninput="filtrarTrackings()" />
+            <button class="admin-btn-agregar" onclick="abrirFormNuevo()">+ Agregar</button>
+        </div>
+
+        <div id="adminStatus" class="catalog-status">
+            <div class="spinner"></div>
+            <p>Cargando paquetes...</p>
+        </div>
+
+        <div id="adminGrid" class="admin-grid"></div>
+
+        <div class="no-results" id="adminNoResults">
+            😔 No se encontraron paquetes con esa búsqueda.
+        </div>
+    </div>
+
+    <!-- ===== VISTA: NUEVO TRACKING ===== -->
+    <div id="adminFormNuevoView" style="display:none;">
+        <div class="container">
+            <div class="card" style="cursor:default;">
+                <button onclick="cerrarFormNuevo()" class="admin-btn-back">← Volver</button>
+
+                <i class="fas fa-plus-circle" style="font-size:2rem; color:var(--pink-accent); margin-top:0.5rem;"></i>
+                <h3 style="margin:0.5rem 0;">Nuevo Paquete</h3>
+
+                <div style="text-align:left;">
+                    <label style="font-weight:bold; font-size:0.9rem;">Cliente: *</label>
+                    <input type="text" id="nuevoCliente" placeholder="Nombre del cliente"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Producto: *</label>
+                    <input type="text" id="nuevoProducto" placeholder="Descripción del producto"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Guía Externa (UPS, FedEx, etc.):</label>
+                    <input type="text" id="nuevoGuiaExt" placeholder="Ej: 1Z999AA10123456784"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Guía Interna:</label>
+                    <input type="text" id="nuevoGuiaInt" placeholder="Código interno"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Fecha de Compra: *</label>
+                    <input type="date" id="nuevoFecha"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Fecha de Llegada a Miami:</label>
+                    <input type="date" id="nuevoFechaMiami"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Estado Inicial: *</label>
+                    <select id="nuevoEstado"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:1rem; box-sizing:border-box;">
+                        <option value="">-- Selecciona --</option>
+                        <option value="1">Compra realizada</option>
+                        <option value="2">En camino a Miami</option>
+                        <option value="3">Entregado en Miami</option>
+                        <option value="4">En aduanas CR</option>
+                        <option value="5">Retenido en aduanas CR</option>
+                        <option value="6">En aduanas USA</option>
+                        <option value="7">Entregado a Entreticas</option>
+                        <option value="8">Pendiente envio Correos CR</option>
+                        <option value="9">Entregado al Cliente</option>
+                        <option value="10">Entregado en CR</option>
+                    </select>
+
+                    <button onclick="guardarNuevoTracking()"
+                        style="width:100%; padding:12px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
+                        Guardar Paquete
+                    </button>
+
+                    <div id="nuevoMensaje" style="margin-top:0.8rem; font-weight:bold; text-align:center;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== VISTA: FORMULARIO ===== -->
+    <div id="adminFormView" style="display:none;">
+        <div class="container">
+            <div class="card" style="cursor:default;">
+                <button onclick="volverAlGrid()" class="admin-btn-back">← Volver</button>
+
+                <i class="fa fa-edit" style="font-size:2rem; color:var(--pink-accent); margin-top:0.5rem;"></i>
+                <h3 style="margin:0.5rem 0;">Actualizar Estado</h3>
+
+                <div id="adminFormPaqueteInfo" style="text-align:left; background:var(--pink-light); border-radius:10px; padding:12px 16px; margin-bottom:1.2rem; font-size:0.9rem;"></div>
+
+                <div style="text-align:left;">
+                    <label style="font-weight:bold; font-size:0.9rem;">Nuevo Estado:</label>
+                    <select id="adminSelectEstado"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+                        <option value="">-- Selecciona --</option>
+                        <option value="1">Compra realizada</option>
+                        <option value="2">En camino a Miami</option>
+                        <option value="3">Entregado en Miami</option>
+                        <option value="4">En aduanas CR</option>
+                        <option value="5">Retenido en aduanas CR</option>
+                        <option value="6">En aduanas USA</option>
+                        <option value="7">Entregado a Entreticas</option>
+                        <option value="8">Pendiente envio Correos CR</option>
+                        <option value="9">Entregado al Cliente</option>
+                        <option value="10">Entregado en CR</option>
+                    </select>
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Nota (opcional):</label>
+                    <input type="text" id="adminDetalle" placeholder="Ej: Retenido por falta de factura..."
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <button onclick="guardarEstado()"
+                        style="width:100%; padding:12px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
+                        Guardar Estado
+                    </button>
+
+                    <div id="adminMensaje" style="margin-top:0.8rem; font-weight:bold; text-align:center;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>

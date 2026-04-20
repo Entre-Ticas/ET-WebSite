@@ -1,0 +1,18 @@
+<div class="container">
+    <div class="card">
+        <i class="fa fa-truck" style="font-size: 3rem; color: var(--pink-accent);"></i>
+        <h3>Rastreo de Paquetes</h3>
+        <p>Ingresa tu número de tracking para verificar el estado en el casillero.</p>
+        
+        <div style="margin-top: 1rem;">
+            <input type="text" id="trackingNum" placeholder="Ej: 1Z9999..." style="width:100%; padding:12px; border-radius:10px; border:1px solid var(--pink-light); box-sizing: border-box;">
+            <button onclick="buscarTracking()" style="margin-top:1rem; width:100%; padding:12px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">Buscar Paquete</button>
+        </div>
+
+        <!-- Espacio para mostrar el resultado -->
+        <div id="resultadoRastreo" style="display:none; margin-top: 1.5rem; text-align: center; padding: 1rem; background: var(--pink-light); border-radius: 10px; color: var(--brown-text);">
+            <h4 style="margin-top:0;">📦 Información del Paquete:</h4>
+            <div id="infoDetalle"></div>
+        </div>
+    </div>
+</div>

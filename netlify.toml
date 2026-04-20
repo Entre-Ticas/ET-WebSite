@@ -1,0 +1,11 @@
+[build]
+  functions = "netlify/functions"
+  publish = "Public"
+
+[dev]
+  publish = "Public"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

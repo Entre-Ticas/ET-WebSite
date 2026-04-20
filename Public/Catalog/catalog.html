@@ -1,0 +1,32 @@
+<!-- ===== CATÁLOGO ENTRE TICAS — estilos en assets/css/style.css ===== -->
+
+<!-- Modal para ampliar imagen -->
+<div class="img-modal-overlay" id="imgModal" onclick="if(event.target===this)closeModal()">
+    <button class="close-btn" onclick="closeModal()">✕</button>
+    <img id="modalImg" src="" alt="Producto ampliado">
+</div>
+
+<div class="catalog-wrapper">
+    <div class="catalog-header">
+        <h2>🛍️ Catálogo de Productos</h2>
+        <p>Todo traído desde USA con amor ✈️🇺🇸 → 🇨🇷</p>
+    </div>
+
+    <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="🔍 Buscar producto..." oninput="filterProducts()" />
+    </div>
+
+    <!-- Estado: cargando -->
+    <div class="catalog-status" id="catalogStatus">
+        <div class="spinner"></div>
+        <p>Cargando productos...</p>
+    </div>
+
+    <!-- Grid de productos -->
+    <div class="product-grid" id="productGrid"></div>
+
+    <!-- Sin resultados -->
+    <div class="no-results" id="noResults">
+        😔 No se encontraron productos con ese nombre.
+    </div>
+</div>
