@@ -71,6 +71,8 @@ async function iniciarSesion() {
 
         cerrarLoginModal();
         actualizarNavUser();
+        programarAutoLogout();
+        iniciarDeteccionActividad();
 
     } catch {
         errorEl.innerHTML = 'Error de conexión.';
@@ -84,5 +86,37 @@ function cerrarSesion() {
     actualizarNavUser();
 }
 
+const INACTIVIDAD_MS = 60 * 60 * 1000; // 1 hora sin actividad
+const DEBOUNCE_MS    = 30 * 1000;       // reiniciar timer máximo cada 30s
+
+let _autoLogoutTimer = null;
+let _debounceTimer   = null;
+
+function programarAutoLogout() {
+    clearTimeout(_autoLogoutTimer);
+    if (!getSession()) return;
+    _autoLogoutTimer = setTimeout(() => {
+        cerrarSesion();
+        alert('Tu sesión expiró por inactividad. Iniciá sesión nuevamente.');
+    }, INACTIVIDAD_MS);
+}
+
+function onActividad() {
+    clearTimeout(_debounceTimer);
+    _debounceTimer = setTimeout(programarAutoLogout, DEBOUNCE_MS);
+}
+
+function iniciarDeteccionActividad() {
+    ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(evento => {
+        document.addEventListener(evento, onActividad, { passive: true });
+    });
+}
+
 // Inicializar al cargar
-document.addEventListener('DOMContentLoaded', actualizarNavUser);
+document.addEventListener('DOMContentLoaded', () => {
+    actualizarNavUser();
+    if (getSession()) {
+        programarAutoLogout();
+        iniciarDeteccionActividad();
+    }
+});

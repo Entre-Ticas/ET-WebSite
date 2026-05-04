@@ -80,15 +80,32 @@
     color: white;
     border: none;
     border-radius: 20px;
-    padding: 5px 14px;
-    font-size: 0.78rem;
+    padding: 5px 10px;
+    font-size: 0.85rem;
     font-weight: bold;
     cursor: pointer;
     white-space: nowrap;
     transition: opacity 0.2s;
+    display: inline-flex;
+    align-items: center;
 }
 
 .admin-btn-actualizar:hover { opacity: 0.85; }
+
+.admin-btn-copiar {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font-size: 0.75rem;
+    font-family: monospace;
+    color: #aaa;
+    cursor: pointer;
+    text-decoration: underline dotted;
+    transition: color 0.15s;
+}
+
+.admin-btn-copiar:hover { color: var(--pink-accent); }
 
 .admin-btn-back {
     background: none;
@@ -143,3 +160,27 @@
 .admin-table th.sortable { cursor: pointer; user-select: none; }
 .admin-table th.sortable:hover { opacity: 0.85; }
 .sort-arrow { font-size: 0.7rem; margin-left: 4px; opacity: 0.7; }
+
+.admin-actions-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.admin-btn-track {
+    background: #f3bfc1;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 5px 10px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.2s;
+    display: inline-flex;
+    align-items: center;
+}
+
+.admin-btn-track:hover { opacity: 0.85; }

@@ -7,9 +7,28 @@ let sortColumn = null;
 let sortDir = 'asc';
 let columnFilters = { cliente: '', producto: '', guia: '', fecha: '', estado: '' };
 
+async function cargarEstados() {
+    try {
+        const res = await fetch('/.netlify/functions/tracking-status');
+        if (!res.ok) throw new Error();
+        const estados = await res.json();
+        const options = estados.map(e =>
+            `<option value="${e.id_status_tracking}">${e.status_name}</option>`
+        ).join('');
+        ['adminSelectEstado', 'nuevoEstado'].forEach(id => {
+            const sel = document.getElementById(id);
+            if (sel) sel.innerHTML = '<option value="">-- Selecciona --</option>' + options;
+        });
+    } catch {
+        console.error('No se pudieron cargar los estados.');
+    }
+}
+
 async function loadAdmin() {
     const statusEl = document.getElementById('adminStatus');
     if (!statusEl) return;
+
+    cargarEstados();
 
     try {
         const response = await fetch('/.netlify/functions/tracking');
@@ -67,7 +86,6 @@ function renderTrackings() {
     }
 
     noResults.style.display = lista.length === 0 ? 'block' : 'none';
-    if (lista.length === 0) { grid.innerHTML = ''; return; }
 
     const arrow = col => {
         if (sortColumn !== col) return '<span class="sort-arrow">↕</span>';
@@ -79,16 +97,24 @@ function renderTrackings() {
         const fecha = t.fecha_compra
             ? new Date(t.fecha_compra).toLocaleDateString('es-CR', { day: '2-digit', month: '2-digit', year: 'numeric' })
             : '—';
+        const guiaCelda = guia !== '—'
+            ? `<button class="admin-btn-copiar" onclick="copiarGuia(this, '${guia.replace(/'/g, "\\'")}')">${guia} <i class="fa-regular fa-copy"></i></button>`
+            : '—';
         return `
             <tr>
                 <td>${t.cliente || '—'}</td>
                 <td>${t.producto || '—'}</td>
-                <td class="admin-td-guia">${guia}</td>
+                <td class="admin-td-guia">${guiaCelda}</td>
                 <td>${fecha}</td>
                 <td class="admin-td-estado">${t.ultimo_estado || 'Sin estado'}</td>
-                <td><button class="admin-btn-actualizar" onclick="abrirFormEstado(${t.id_tracking})">Actualizar Estado</button></td>
+                <td class="admin-actions-cell">
+                    <button class="admin-btn-actualizar" onclick="abrirFormEstado(${t.id_tracking})" title="Actualizar Estado"><i class="fa-solid fa-pen-to-square"></i></button>
+                    ${guia !== '—' ? `<button class="admin-btn-track" onclick="irARastreo('${guia.replace(/'/g, "\\'")}')" title="Rastrear paquete"><i class="fa-solid fa-truck-fast"></i></button>` : ''}
+                </td>
             </tr>`;
     }).join('');
+
+    const focusedCol = document.activeElement?.dataset?.col || null;
 
     const cf = columnFilters;
     grid.innerHTML = `
@@ -103,16 +129,21 @@ function renderTrackings() {
                     <th></th>
                 </tr>
                 <tr class="admin-filter-row">
-                    <td><input type="text" placeholder="Filtrar..." value="${cf.cliente}" oninput="setColumnFilter('cliente', this.value)" /></td>
-                    <td><input type="text" placeholder="Filtrar..." value="${cf.producto}" oninput="setColumnFilter('producto', this.value)" /></td>
-                    <td><input type="text" placeholder="Filtrar..." value="${cf.guia}"     oninput="setColumnFilter('guia', this.value)" /></td>
-                    <td><input type="text" placeholder="Filtrar..." value="${cf.fecha}"    oninput="setColumnFilter('fecha', this.value)" /></td>
-                    <td><input type="text" placeholder="Filtrar..." value="${cf.estado}"   oninput="setColumnFilter('estado', this.value)" /></td>
+                    <td><input type="text" data-col="cliente" placeholder="Filtrar..." value="${cf.cliente}" oninput="setColumnFilter('cliente', this.value)" /></td>
+                    <td><input type="text" data-col="producto" placeholder="Filtrar..." value="${cf.producto}" oninput="setColumnFilter('producto', this.value)" /></td>
+                    <td><input type="text" data-col="guia"     placeholder="Filtrar..." value="${cf.guia}"     oninput="setColumnFilter('guia', this.value)" /></td>
+                    <td><input type="text" data-col="fecha"    placeholder="Filtrar..." value="${cf.fecha}"    oninput="setColumnFilter('fecha', this.value)" /></td>
+                    <td><input type="text" data-col="estado"   placeholder="Filtrar..." value="${cf.estado}"   oninput="setColumnFilter('estado', this.value)" /></td>
                     <td></td>
                 </tr>
             </thead>
             <tbody>${filas}</tbody>
         </table>`;
+
+    if (focusedCol) {
+        const input = grid.querySelector(`input[data-col="${focusedCol}"]`);
+        if (input) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
+    }
 }
 
 function sortBy(col) {
@@ -226,6 +257,24 @@ function abrirFormNuevo() {
 
 function cerrarFormNuevo() {
     volverAlGrid();
+}
+
+function irARastreo(guia) {
+    if (typeof loadPage === 'function') {
+        loadPage('tracking', guia);
+    }
+}
+
+function copiarGuia(btn, guia) {
+    const url = `${window.location.origin}/tracking/${guia}`;
+    navigator.clipboard.writeText(url).then(() => {
+        const original = btn.innerHTML;
+        btn.innerHTML = '✅ Copiado';
+        btn.disabled = true;
+        setTimeout(() => { btn.innerHTML = original; btn.disabled = false; }, 1500);
+    }).catch(() => {
+        alert('No se pudo copiar: ' + url);
+    });
 }
 
 async function guardarNuevoTracking() {

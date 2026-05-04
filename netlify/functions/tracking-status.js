@@ -1,10 +1,28 @@
 exports.handler = async (event) => {
+    const SUPABASE_URL = process.env.SUPABASE_URL;
+    const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    // GET → devuelve lista de estados
+    if (event.httpMethod === 'GET') {
+        if (!SUPABASE_URL || !SUPABASE_KEY) {
+            return { statusCode: 500, body: JSON.stringify({ error: 'Faltan variables de entorno.' }) };
+        }
+        try {
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/status_tracking?select=id_status_tracking,status_name&order=id_status_tracking.asc`, {
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+            });
+            if (!res.ok) throw new Error(`Supabase ${res.status}`);
+            const data = await res.json();
+            return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) };
+        } catch (error) {
+            return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
+        }
+    }
+
     if (event.httpMethod !== 'POST') {
         return { statusCode: 405, body: JSON.stringify({ error: 'Método no permitido.' }) };
     }
 
-    const SUPABASE_URL = process.env.SUPABASE_URL;
-    const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const ADMIN_SECRET = process.env.ADMIN_SECRET;
 
     // Verificar token

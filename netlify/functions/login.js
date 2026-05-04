@@ -31,7 +31,7 @@ exports.handler = async (event) => {
         }
 
         const userData = rows[0];
-        const expiry = Date.now() + 8 * 60 * 60 * 1000; // 8 horas
+        const expiry = Date.now() + 60 * 60 * 1000; // 1 hora
         const token = Buffer.from(`${ADMIN_SECRET}:${userData.id}:${expiry}`).toString('base64');
 
         return {

@@ -128,7 +128,7 @@ exports.handler = async (event) => {
                     id_tracking:        nuevoTracking.id_tracking,
                     id_status_tracking,
                     detalle:            null,
-                    fecha_hora:         fecha_compra ? new Date(fecha_compra).toISOString() : new Date().toISOString()
+                    fecha_hora:         new Date().toISOString()
                 })
             });
             if (!resStatus.ok) throw new Error(`Supabase ${resStatus.status}: ${await resStatus.text()}`);
