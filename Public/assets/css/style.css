@@ -313,3 +313,59 @@ body {
             0% { transform: scale(0.9); opacity: 0; } 
             100% { transform: scale(1); opacity: 1; } 
         }
+
+/* Estilos para botones de copia */
+.admin-btn-copiar {
+    background: none;
+    border: none;
+    color: var(--brown-text);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: color 0.2s;
+}
+.admin-btn-copiar:hover { color: var(--pink-accent); }
+
+.admin-table tbody td {
+    font-size: 0.82rem;   
+    padding: 6px 14px;     
+
+.admin-actions-cell button {
+    font-size: 0.75rem;   
+    padding: 4px 6px;
+}
+
+.admin-actions-cell button i {
+    font-size: 0.8rem;    /* Iconos dentro de los botones de acción */
+}
+
+.admin-btn-copy-link {
+    background: #fff;
+    color: #704E36;
+    border: 1px solid #FDE2E4;
+    padding: 5px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.admin-btn-copy-link:hover { background: #FDE2E4; color: #E19B9D; }
+
+.btn-copy-link-public {
+    background: white;
+    color: var(--pink-accent);
+    border: 2px solid var(--pink-accent);
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(225, 155, 157, 0.3);
+}
+.btn-copy-link-public:hover { background: var(--pink-accent); color: white; transform: scale(1.1); }
