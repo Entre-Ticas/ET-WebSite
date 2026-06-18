@@ -91,6 +91,55 @@ exports.handler = async (event) => {
         }
     }
 
+    // ── PUT actualizar tracking (admin) ───────────────────────────────────────
+    if (method === 'PUT') {
+        if (!verifyToken(event.headers['x-admin-token'])) {
+            return { statusCode: 401, body: JSON.stringify({ error: 'No autorizado.' }) };
+        }
+        try {
+            const {
+                id_tracking,
+                cliente, producto,
+                codigo_seguimiento_externo, codigo_seguimiento_interno,
+                fecha_compra, fecha_entrega_miami
+            } = JSON.parse(event.body);
+
+            if (!id_tracking || !cliente || !producto || !fecha_compra) {
+                return { statusCode: 400, body: JSON.stringify({ error: 'Faltan campos requeridos para la actualización.' }) };
+            }
+
+            const updatePayload = {
+                cliente,
+                producto,
+                codigo_seguimiento_externo: codigo_seguimiento_externo || null,
+                codigo_seguimiento_interno: codigo_seguimiento_interno || null,
+                fecha_compra:               fecha_compra               || null,
+                fecha_entrega_miami:        fecha_entrega_miami        || null
+            };
+
+            const response = await fetch(`${SUPABASE_URL()}/rest/v1/tracking?id_tracking=eq.${id_tracking}`, {
+                method:  'PATCH', // Usamos PATCH para actualizaciones parciales
+                headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+                body: JSON.stringify(updatePayload)
+            });
+
+            if (!response.ok) {
+                const err = await response.text();
+                throw new Error(`Supabase error ${response.status}: ${err}`);
+            }
+
+            return {
+                statusCode: 200,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ success: true, message: 'Tracking actualizado correctamente.' })
+            };
+
+        } catch (error) {
+            console.error('Error en update-tracking:', error.message);
+            return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
+        }
+    }
+
     // ── POST crear nuevo tracking (admin) ───────────────────────────────────
     if (method === 'POST') {
         if (!verifyToken(event.headers['x-admin-token'])) {

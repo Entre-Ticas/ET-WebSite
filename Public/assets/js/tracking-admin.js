@@ -58,7 +58,7 @@ function renderTrackings() {
 
     // Aplicar filtros por columna
     lista = lista.filter(t => {
-        const guia = (t.codigo_seguimiento_externo || t.codigo_seguimiento_interno || '').toLowerCase();
+        const guia = (t.codigo_seguimiento_externo || t.codigo_seguimiento_interno || t.guia_externa || t.guia_interna || '').toLowerCase();
         const fecha = t.fecha_compra
             ? new Date(t.fecha_compra).toLocaleDateString('es-CR', { day: '2-digit', month: '2-digit', year: 'numeric' })
             : '';
@@ -87,17 +87,12 @@ function renderTrackings() {
 
     noResults.style.display = lista.length === 0 ? 'block' : 'none';
 
-    const arrow = col => {
-        if (sortColumn !== col) return '<span class="sort-arrow">↕</span>';
-        return `<span class="sort-arrow">${sortDir === 'asc' ? '▲' : '▼'}</span>`;
-    };
-
     const filas = lista.map(t => {
-        const guia  = t.codigo_seguimiento_externo || t.codigo_seguimiento_interno || '—';
+        const guia  = t.codigo_seguimiento_externo || t.codigo_seguimiento_interno || t.guia_externa || t.guia_interna || '—';
         const fecha = t.fecha_compra
             ? new Date(t.fecha_compra).toLocaleDateString('es-CR', { day: '2-digit', month: '2-digit', year: 'numeric' })
             : '—';
-        const guiaCelda = guia !== '—'
+        const guiaCelda = guia !== '—' 
             ? `<button class="admin-btn-copiar" onclick="copiarGuia(this, '${guia.replace(/'/g, "\\'")}')">${guia} <i class="fa-regular fa-copy"></i></button>`
             : '—';
         return `
@@ -108,42 +103,64 @@ function renderTrackings() {
                 <td>${fecha}</td>
                 <td class="admin-td-estado">${t.ultimo_estado || 'Sin estado'}</td>
                 <td class="admin-actions-cell">
+                    <button class="admin-btn-edit" onclick="abrirFormEdicionCompleta('${t.id_tracking}')" title="Editar Paquete"><i class="fas fa-pencil-alt"></i></button>
                     <button class="admin-btn-actualizar" onclick="abrirFormEstado(${t.id_tracking})" title="Actualizar Estado"><i class="fa-solid fa-pen-to-square"></i></button>
-                    ${guia !== '—' ? `<button class="admin-btn-track" onclick="irARastreo('${guia.replace(/'/g, "\\'")}')" title="Rastrear paquete"><i class="fa-solid fa-truck-fast"></i></button>` : ''}
+                    ${guia !== '—' ? `
+                        <button class="admin-btn-track" onclick="irARastreo('${guia.replace(/'/g, "\\'")}')" title="Rastrear paquete"><i class="fa-solid fa-truck-fast"></i></button>
+                    ` : ''}
                 </td>
             </tr>`;
     }).join('');
 
-    const focusedCol = document.activeElement?.dataset?.col || null;
+    // Buscamos el cuerpo de la tabla. Si no existe, inicializamos la estructura una sola vez.
+    let tbody = document.getElementById('adminTableBody');
+    if (!tbody) {
+        inicializarTablaAdmin(grid);
+        tbody = document.getElementById('adminTableBody');
+    }
 
-    const cf = columnFilters;
-    grid.innerHTML = `
+    // Actualizamos solo el contenido del cuerpo y los iconos de ordenamiento
+    tbody.innerHTML = filas;
+    actualizarIconosOrden();
+}
+
+/**
+ * Inyecta la estructura base de la tabla (thead e inputs de filtro).
+ * Esto solo corre la primera vez que se carga la vista o si se refresca el contenedor.
+ */
+function inicializarTablaAdmin(container) {
+    container.innerHTML = `
         <table class="admin-table">
             <thead>
                 <tr>
-                    <th class="sortable" onclick="sortBy('cliente')">Cliente ${arrow('cliente')}</th>
-                    <th class="sortable" onclick="sortBy('producto')">Producto ${arrow('producto')}</th>
-                    <th class="sortable" onclick="sortBy('guia')">Guía ${arrow('guia')}</th>
-                    <th class="sortable" onclick="sortBy('fecha')">F. Compra ${arrow('fecha')}</th>
-                    <th class="sortable" onclick="sortBy('estado')">Estado Actual ${arrow('estado')}</th>
+                    <th class="sortable" onclick="sortBy('cliente')" data-col="cliente">Cliente <span class="sort-arrow">↕</span></th>
+                    <th class="sortable" onclick="sortBy('producto')" data-col="producto">Producto <span class="sort-arrow">↕</span></th>
+                    <th class="sortable" onclick="sortBy('guia')" data-col="guia">Guía <span class="sort-arrow">↕</span></th>
+                    <th class="sortable" onclick="sortBy('fecha')" data-col="fecha">F. Compra <span class="sort-arrow">↕</span></th>
+                    <th class="sortable" onclick="sortBy('estado')" data-col="estado">Estado Actual <span class="sort-arrow">↕</span></th>
                     <th></th>
                 </tr>
                 <tr class="admin-filter-row">
-                    <td><input type="text" data-col="cliente" placeholder="Filtrar..." value="${cf.cliente}" oninput="setColumnFilter('cliente', this.value)" /></td>
-                    <td><input type="text" data-col="producto" placeholder="Filtrar..." value="${cf.producto}" oninput="setColumnFilter('producto', this.value)" /></td>
-                    <td><input type="text" data-col="guia"     placeholder="Filtrar..." value="${cf.guia}"     oninput="setColumnFilter('guia', this.value)" /></td>
-                    <td><input type="text" data-col="fecha"    placeholder="Filtrar..." value="${cf.fecha}"    oninput="setColumnFilter('fecha', this.value)" /></td>
-                    <td><input type="text" data-col="estado"   placeholder="Filtrar..." value="${cf.estado}"   oninput="setColumnFilter('estado', this.value)" /></td>
+                    <td><input type="text" placeholder="Filtrar..." value="${columnFilters.cliente}" oninput="setColumnFilter('cliente', this.value)" /></td>
+                    <td><input type="text" placeholder="Filtrar..." value="${columnFilters.producto}" oninput="setColumnFilter('producto', this.value)" /></td>
+                    <td><input type="text" placeholder="Filtrar..." value="${columnFilters.guia}" oninput="setColumnFilter('guia', this.value)" /></td>
+                    <td><input type="text" placeholder="Filtrar..." value="${columnFilters.fecha}" oninput="setColumnFilter('fecha', this.value)" /></td>
+                    <td><input type="text" placeholder="Filtrar..." value="${columnFilters.estado}" oninput="setColumnFilter('estado', this.value)" /></td>
                     <td></td>
                 </tr>
             </thead>
-            <tbody>${filas}</tbody>
+            <tbody id="adminTableBody"></tbody>
         </table>`;
+}
 
-    if (focusedCol) {
-        const input = grid.querySelector(`input[data-col="${focusedCol}"]`);
-        if (input) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
-    }
+function actualizarIconosOrden() {
+    document.querySelectorAll('.admin-table th.sortable').forEach(th => {
+        const col = th.dataset.col;
+        const arrow = th.querySelector('.sort-arrow');
+        if (!arrow) return;
+        if (sortColumn !== col) arrow.textContent = '↕';
+        else arrow.textContent = sortDir === 'asc' ? '▲' : '▼';
+    });
 }
 
 function sortBy(col) {
@@ -193,6 +210,7 @@ function abrirFormEstado(idTracking) {
 function volverAlGrid() {
     document.getElementById('adminFormView').style.display = 'none';
     document.getElementById('adminFormNuevoView').style.display = 'none';
+    document.getElementById('adminFormEditView').style.display = 'none';
     document.getElementById('adminGridView').style.display = 'block';
 }
 
@@ -240,6 +258,124 @@ async function guardarEstado() {
     }
 }
 
+// ===== FORM: EDITAR TRACKING EXISTENTE =====
+
+function abrirFormEdicionCompleta(idTracking) {
+    // Buscamos el tracking en la lista global
+    const tracking = todosLosTrackings.find(t => String(t.id_tracking) === String(idTracking));
+    if (!tracking) {
+        alert('No se encontró el paquete para editar.');
+        return;
+    }
+
+    adminIdTracking = idTracking;
+
+    // Rellenar los campos de texto
+    const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+    
+    setVal('editCliente', tracking.cliente);
+    setVal('editProducto', tracking.producto);
+    setVal('editGuiaExt',  tracking.codigo_seguimiento_externo || tracking.guia_externa); // Compatibilidad por si el RPC usa otro nombre
+    setVal('editGuiaInt',  tracking.codigo_seguimiento_interno || tracking.guia_interna);
+    
+    // Función interna para formatear fechas de forma segura para inputs tipo date
+    const formatDateForInput = (dateStr) => {
+        if (!dateStr) return '';
+        try {
+            // Si el string ya tiene formato ISO (YYYY-MM-DD...), extraemos la parte de la fecha directamente.
+            // Esta es la forma más segura de evitar desfases por zonas horarias.
+            if (typeof dateStr === 'string' && dateStr.includes('-')) {
+                const parteFecha = dateStr.split('T')[0].split(' ')[0];
+                if (parteFecha.length === 10) return parteFecha;
+            }
+
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return '';
+            
+            // Fallback usando métodos UTC para asegurar que no se reste un día
+            const year  = d.getUTCFullYear();
+            const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+            const day   = String(d.getUTCDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        } catch (e) {
+            console.error("Error formateando fecha:", e);
+            return '';
+        }
+    };
+
+    // Asignación de fechas
+    const inputCompra = document.getElementById('editFechaCompra');
+    const inputMiami  = document.getElementById('editFechaMiami');
+    if (inputCompra) inputCompra.value = formatDateForInput(tracking.fecha_compra);
+    if (inputMiami)  inputMiami.value  = formatDateForInput(tracking.fecha_entrega_miami || tracking.fecha_llegada_miami);
+
+    const msgEl = document.getElementById('editMensaje');
+    if (msgEl) msgEl.innerHTML = ''; 
+
+    const gridView = document.getElementById('adminGridView');
+    const editView = document.getElementById('adminFormEditView');
+
+    if (gridView && editView) {
+        gridView.style.display = 'none';
+        editView.style.display = 'block';
+    } else {
+        console.error("No se encontraron los contenedores 'adminGridView' o 'adminFormEditView' en el HTML.");
+        alert("Error técnico: No se puede mostrar el formulario de edición.");
+    }
+    
+    window.scrollTo(0, 0);
+}
+
+async function guardarEdicionCompleta() {
+    const getVal = (id) => document.getElementById(id)?.value?.trim() || '';
+    
+    const cliente     = getVal('editCliente');
+    const producto    = getVal('editProducto');
+    const guiaExt     = getVal('editGuiaExt');
+    const guiaInt     = getVal('editGuiaInt');
+    const fechaCompra = getVal('editFechaCompra');
+    const fechaMiami  = document.getElementById('editFechaMiami')?.value || null; // Obtenemos el valor directo del input date
+    const mensaje     = document.getElementById('editMensaje') || { set innerHTML(v){} };
+
+    if (!adminIdTracking) return (mensaje.innerHTML = '⚠️ No hay paquete seleccionado para editar.');
+    if (!cliente)  return (mensaje.innerHTML = '⚠️ El cliente es requerido.');
+    if (!producto) return (mensaje.innerHTML = '⚠️ El producto es requerido.');
+    if (!fechaCompra) return (mensaje.innerHTML = '⚠️ La fecha de compra es requerida.');
+
+    mensaje.innerHTML = 'Guardando cambios...';
+
+    try {
+        const session = getSession();
+        if (!session) { mensaje.innerHTML = '⚠️ Sesión expirada. Inicia sesión nuevamente.'; return; }
+
+        const response = await fetch(`/.netlify/functions/tracking`, { 
+            method: 'PUT', // Cambiamos a PUT para indicar una actualización
+            headers: { 'Content-Type': 'application/json', 'x-admin-token': session.token },
+            body: JSON.stringify({
+                id_tracking:                adminIdTracking,
+                cliente:                    cliente,
+                producto:                   producto,
+                codigo_seguimiento_externo: guiaExt      || null,
+                codigo_seguimiento_interno: guiaInt      || null,
+                fecha_compra:               fechaCompra  || null,
+                fecha_entrega_miami:        fechaMiami   || null
+            })
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error || 'Error al guardar los cambios.');
+        }
+
+        // Actualizar el tracking en la lista local y refrescar la tabla
+        await loadAdmin(); // Recargar todos los trackings para asegurar la consistencia
+        mensaje.innerHTML = '✅ Cambios guardados correctamente.';
+        setTimeout(() => { volverAlGrid(); }, 1200);
+
+    } catch (error) {
+        mensaje.innerHTML = `⚠️ Error: ${error.message}`;
+    }
+}
 // ===== FORM: NUEVO TRACKING =====
 
 function abrirFormNuevo() {
@@ -263,18 +399,6 @@ function irARastreo(guia) {
     if (typeof loadPage === 'function') {
         loadPage('tracking', guia);
     }
-}
-
-function copiarGuia(btn, guia) {
-    const url = `${window.location.origin}/tracking/${guia}`;
-    navigator.clipboard.writeText(url).then(() => {
-        const original = btn.innerHTML;
-        btn.innerHTML = '✅ Copiado';
-        btn.disabled = true;
-        setTimeout(() => { btn.innerHTML = original; btn.disabled = false; }, 1500);
-    }).catch(() => {
-        alert('No se pudo copiar: ' + url);
-    });
 }
 
 async function guardarNuevoTracking() {

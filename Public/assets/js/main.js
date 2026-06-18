@@ -120,3 +120,28 @@ async function loadPage(page, param = null) {
         }
     }, 300);
 }
+
+/**
+ * Función global para copiar el enlace de rastreo al portapapeles
+ * @param {HTMLElement} btn - El botón que disparó el evento
+ * @param {string} guia - El número de guía
+ */
+async function copiarGuia(btn, guia) {
+    if (!guia || guia === '—') return;
+    try {
+        const url = `${window.location.origin}/tracking/${guia}`;
+        await navigator.clipboard.writeText(url);
+        
+        const icon = btn.querySelector('i');
+        const originalClass = icon.className;
+        icon.className = 'fas fa-check';
+        btn.style.color = '#25d366';
+        
+        setTimeout(() => {
+            icon.className = originalClass;
+            btn.style.color = '';
+        }, 2000);
+    } catch (err) {
+        console.error('Error al copiar:', err);
+    }
+}
