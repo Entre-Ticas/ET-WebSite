@@ -70,6 +70,12 @@ body {
         }
     }
 
+    /* Estilo global para imágenes, si se desea mantener */
+    img {
+      border-radius: 15px;
+      margin: 2px 0;
+    }
+
     :root {
             --pink-light: #FDE2E4;
             --pink-accent: #E19B9D;
@@ -369,3 +375,33 @@ body {
     box-shadow: 0 2px 8px rgba(225, 155, 157, 0.3);
 }
 .btn-copy-link-public:hover { background: var(--pink-accent); color: white; transform: scale(1.1); }
+
+/* Estilos para el menú desplegable de Información */
+.nav-dropdown {
+    position: relative;
+}
+
+.nav-dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: var(--pink-accent);
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 1;
+    border-radius: 8px;
+    padding: 8px 0;
+    margin-top: 5px;
+}
+
+.nav-dropdown-content a {
+    color: white;
+    padding: 10px 16px;
+    text-decoration: none;
+    display: block;
+    text-align: left;
+    background: none !important; /* Importante para sobreescribir el estilo de nav a */
+}
+
+.nav-dropdown:hover .nav-dropdown-content {
+    display: block;
+}

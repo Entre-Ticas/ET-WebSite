@@ -84,16 +84,21 @@ async function loadPage(page, param = null) {
                 'calc': 'Calc/calc.html',
                 'catalog': 'Catalog/catalog.html',
                 'tracking': 'Tracking/tracking.html',
-                'admin': 'Tracking/tracking-admin.html'
+                'admin': 'Tracking/tracking-admin.html',
+                'info': 'InformationImg/info.html',
+                'informacion': 'InformationImg/infoImg.html'
             };
-
             const url = routes[page];
-            if (!url) throw new Error("Página no definida");
-
+            if (!url) {
+                console.error(`La página '${page}' no está definida en las rutas.`);
+                throw new Error("Página no definida");
+            }
+            
             const response = await fetch(url);
             if (!response.ok) throw new Error(`Error ${response.status}: No se encontró ${url}`);
             
-            const html = await response.text();
+            let html = await response.text();
+
             container.innerHTML = html;
 
             if (page === 'calc') {
@@ -104,6 +109,8 @@ async function loadPage(page, param = null) {
             } else if (page === 'tracking' && typeof buscarTracking === 'function' && param) {
                 const input = document.getElementById('trackingNum');
                 if (input) { input.value = param; buscarTracking(); }
+            } else if (page === 'informacion' && typeof loadInfo === 'function' && param) {
+                loadInfo(param);
             } else if (page === 'admin' && typeof loadAdmin === 'function') {
                 loadAdmin();
             }
