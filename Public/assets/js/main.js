@@ -1,4 +1,26 @@
 // Lógica principal y navegación del sitio
+
+/**
+ * Carga la imagen del logo del encabezado dinámicamente desde la base de datos.
+ * Llama a la función serverless con un ID fijo 'ImagenET'.
+ */
+async function loadHeaderImage() {
+    const logoImg = document.querySelector('header .logo');
+    if (!logoImg) return;
+
+    try {
+        const response = await fetch(`/.netlify/functions/info-image?id=ImagenET`);
+        if (!response.ok) return; // Si falla, simplemente se queda la imagen por defecto.
+
+        const { imageUrl } = await response.json();
+        if (imageUrl) {
+            logoImg.src = imageUrl;
+        }
+    } catch (error) {
+        console.error('Error al cargar la imagen del encabezado:', error);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // Inicializar links de redes sociales con variables de setup.js
     if (document.getElementById('btnWhatsappFlotante')) {
@@ -13,6 +35,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('btnFacebookFlotante')) {
         document.getElementById('btnFacebookFlotante').href = `https://www.facebook.com/${Facebook_user}`;
     }
+
+    // Cargar la imagen del encabezado dinámicamente
+    loadHeaderImage();
 
     // Routing basado en pathname: /tracking/qwerty → page=tracking, param=qwerty
     const handleRouting = () => {

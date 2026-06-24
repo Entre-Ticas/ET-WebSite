@@ -1,17 +1,14 @@
 // Lógica para la página de Información con Imagen
 
 async function loadInfo(param) {
-    console.log('Cargando información para:', param);
     const titleEl = document.getElementById('infoTitle');
     const statusEl = document.getElementById('infoStatus');
     const containerEl = document.getElementById('infoImageContainer');
 
     if (!titleEl || !statusEl || !containerEl) return;
 
-    // Formatear el título, ej: "PersonalShopper" -> "Personal Shopper", "Online" -> "Online Shopper"
-    let formattedTitle = param.replace(/([A-Z])/g, ' $1').trim(); // "OnlineShopper" -> "Online Shopper"
+    let formattedTitle = param.replace(/([A-Z])/g, ' $1').trim();
     titleEl.textContent = formattedTitle;
-
 
     try {
         
