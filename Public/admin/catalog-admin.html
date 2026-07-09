@@ -18,27 +18,19 @@
         </div>
 
         <div id="adminGrid" class="admin-grid">
-            <!-- 
-                EJEMPLO DE TARJETA DE PRODUCTO 
-                Esta estructura se puede usar como plantilla para llenarla dinámicamente con JavaScript.
-            -->
-            <div class="admin-card">
-                <img src="https://via.placeholder.com/150" alt="Nombre del Producto" class="admin-card-img">
-                <div class="admin-card-info">
-                    <h4 class="admin-card-title">Nombre del Producto</h4>
-                    <p class="admin-card-details"><strong>Categoría:</strong> Ropa</p>
-                    <p class="admin-card-details"><strong>Talla:</strong> M</p>
-                    <p class="admin-card-details"><strong>Precio:</strong> $29.99</p>
-                    <div class="admin-card-status">
-                        <span class="status-dot available"></span>
-                        <span>Disponible</span>
-                    </div>
-                </div>
-                <div class="admin-card-actions">
-                    <button class="admin-btn-icon" onclick="abrirFormEdicionCompleta(1)"><i class="fas fa-pencil-alt"></i></button>
-                    <button class="admin-btn-icon" onclick="abrirFormEstado(1)"><i class="fa fa-edit"></i></button>
-                </div>
-            </div>
+            <table class="admin-table" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Imagen</th>
+                        <th>Nombre</th>
+                        <th>Categoría</th>
+                        <th>Precio</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="adminTbody"></tbody>
+            </table>
         </div>
 
         <div class="no-results" id="adminNoResults">
@@ -50,7 +42,7 @@
     <div id="adminFormNuevoView" style="display:none;">
         <div class="container">
             <div class="card" style="cursor:default;">
-                <button onclick="cerrarFormNuevo()" class="admin-btn-back">← Volver</button>
+                <button onclick="volverAlGrid()" class="admin-btn-back">← Volver</button>
 
                 <i class="fas fa-plus-circle" style="font-size:2rem; color:var(--pink-accent); margin-top:0.5rem;"></i>
                 <h3 style="margin:0.5rem 0;">Nuevo Producto</h3>
@@ -229,5 +221,12 @@
         cursor: pointer;
         color: var(--pink-accent);
         font-size: 1rem;
+    }
+
+    .admin-table .admin-table-img {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+        border-radius: 8px;
     }
 </style>

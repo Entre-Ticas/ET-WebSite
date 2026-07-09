@@ -14,12 +14,14 @@ function getSession() {
 
 function actualizarNavUser() {
     const session  = getSession();
-    const navAdmin = document.getElementById('navAdmin');
+    const adminLinks = document.querySelectorAll('.navAdminLink');
     const floatBtn = document.getElementById('floatingLoginBtn');
 
-    if (navAdmin) {
-        navAdmin.style.display = session ? 'inline-flex' : 'none';
-    }
+    // Itera sobre todos los enlaces de administrador y los muestra o esconde.
+    adminLinks.forEach(link => {
+        // Usamos 'inline-block' o 'inline' para que se muestren en la barra de navegación.
+        link.style.display = session ? 'inline-block' : 'none';
+    });
 
     if (floatBtn) {
         if (session) {

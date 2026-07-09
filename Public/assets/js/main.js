@@ -1,9 +1,5 @@
 // Lógica principal y navegación del sitio
 
-/**
- * Carga la imagen del logo del encabezado dinámicamente desde la base de datos.
- * Llama a la función serverless con un ID fijo 'ImagenET'.
- */
 async function loadHeaderImage() {
     const logoImg = document.querySelector('header .logo');
     if (!logoImg) return;
@@ -36,21 +32,28 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('btnFacebookFlotante').href = `https://www.facebook.com/${Facebook_user}`;
     }
 
-    // Cargar la imagen del encabezado dinámicamente
     loadHeaderImage();
 
-    // Routing basado en pathname: /tracking/qwerty → page=tracking, param=qwerty
     const handleRouting = () => {
-        const parts = window.location.pathname.split('/').filter(Boolean);
-        const pageName = parts[0] || null;
-        const param    = parts[1] || null;
-        if (pageName) loadPage(pageName, param);
+        const parts = window.location.pathname.split('/').filter(Boolean); // ej: ['admin', 'catalog']
+        let pageToLoad = parts[0] || 'home'; // Si no hay nada, vamos a home.
+        let paramToLoad = parts[1] || null;
+
+        // Manejo especial para rutas anidadas como /admin/catalog
+        if (pageToLoad === 'admin' && parts.length > 1) {
+            pageToLoad = `admin/${parts[1]}`; // Construye la ruta completa: 'admin/catalog'
+            paramToLoad = parts[2] || null; // El siguiente sería el parámetro
+        }
+
+        // Si estamos en la página de inicio, no hacemos nada para evitar el bucle de recarga.
+        // El contenido de la home ya está en index.html.
+        if (pageToLoad !== 'home') {
+            loadPage(pageToLoad, paramToLoad);
+        }
     };
 
-    // Ejecutar al cargar la página
     handleRouting();
 
-    // Escuchar navegación con botones atrás/adelante del browser
     window.addEventListener('popstate', handleRouting);
 
     // Cerrar el menú social si se hace clic fuera de él (en cualquier otro sector)
@@ -83,7 +86,6 @@ async function loadPage(page, param = null) {
     const container = document.getElementById('content-area');
     if (!container) return;
     
-    // Colapsar el menú social si está abierto al cambiar de página
     const socialLinks = document.getElementById('socialLinks');
     if (socialLinks && socialLinks.classList.contains('active')) {
         toggleSocialMenu();
@@ -96,7 +98,8 @@ async function loadPage(page, param = null) {
         try {
             if (page === 'home') {
                 history.pushState({}, '', '/');
-                location.reload();
+                const response = await fetch('/index.html');
+                container.innerHTML = (await response.text()).match(/<div id="content-area">([\s\S]*)<\/div>/)[1];
                 return;
             }
 
@@ -109,7 +112,8 @@ async function loadPage(page, param = null) {
                 'calc': 'Calc/calc.html',
                 'catalog': 'Catalog/catalog.html',
                 'tracking': 'Tracking/tracking.html',
-                'admin': 'Tracking/tracking-admin.html',
+                'admin/tracking': 'admin/tracking-admin.html',
+                'admin/catalog': 'admin/catalog-admin.html',
                 'info': 'InformationImg/info.html',
                 'informacion': 'InformationImg/infoImg.html'
             };
@@ -136,8 +140,10 @@ async function loadPage(page, param = null) {
                 if (input) { input.value = param; buscarTracking(); }
             } else if (page === 'informacion' && typeof loadInfo === 'function' && param) {
                 loadInfo(param);
-            } else if (page === 'admin' && typeof loadAdmin === 'function') {
+            } else if (page === 'admin/tracking' && typeof loadAdmin === 'function') {
                 loadAdmin();
+            } else if (page === 'admin/catalog' && typeof window.initCatalogAdminPage === 'function') {
+                window.initCatalogAdminPage();
             }
 
         } catch (error) {
@@ -177,3 +183,5 @@ async function copiarGuia(btn, guia) {
         console.error('Error al copiar:', err);
     }
 }
+
+window.loadPage = loadPage;
