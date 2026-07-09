@@ -57,9 +57,10 @@ function displayAdminProducts(products) {
     table.style.display = ''; // Asegurarse de que la tabla sea visible
     
     products.forEach(p => {
+        const imageUrl = p.image_url || ''; // Asegurarse de que la URL sea una cadena
         tbody.innerHTML += `
             <tr>
-                <td><img src="${p.image_url || 'https://placehold.co/20x20/E19B9D/FFFFFF?text=ET'}" alt="${p.product_name}" class="admin-table-img"></td>
+                <td><img src="${imageUrl || 'https://placehold.co/20x20/E19B9D/FFFFFF?text=ET'}" alt="${p.product_name}" class="admin-table-img"></td>
                 <td>${p.product_name}</td>
                 <td>${p.category}</td>
                 <td>₡${p.price ? p.price.toLocaleString('es-CR') : '0'}</td>
@@ -67,6 +68,7 @@ function displayAdminProducts(products) {
                 <td>
                     <button class="admin-btn-icon" onclick="abrirFormEdicionCompleta(${p.id_product})" title="Editar Producto"><i class="fas fa-pencil-alt"></i></button>
                     <button class="admin-btn-icon" onclick="abrirFormEstado(${p.id_product})" title="Actualizar Estado"><i class="fa fa-edit"></i></button>
+                    <button class="admin-btn-icon btn-delete" onclick="eliminarProducto(${p.id_product}, '${imageUrl}')" title="Eliminar Producto"><i class="fas fa-trash-alt"></i></button>
                 </td>
             </tr>
         `;
@@ -168,6 +170,54 @@ async function guardarNuevoProducto() {
         console.error('Error al guardar el producto:', error);
         mensajeEl.textContent = `Error al guardar: ${error.message}`;
         mensajeEl.style.color = 'red';
+    }
+}
+
+async function eliminarProducto(id, imageUrl) {
+    if (!confirm('¿Estás seguro de que deseas eliminar este producto? Esta acción no se puede deshacer.')) {
+        return;
+    }
+
+    const status = document.getElementById('adminStatus');
+    status.innerHTML = '<div class="spinner"></div><p>Eliminando producto...</p>';
+    status.style.display = 'flex';
+
+    try {
+        const session = getSession();
+        if (!session) {
+            throw new Error('Sesión expirada. Inicia sesión nuevamente.');
+        }
+
+        const response = await fetch(`/.netlify/functions/catalog-products?id=${id}`, {
+            method: 'DELETE',
+            headers: {
+                'x-admin-token': session.token,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ imageUrl: imageUrl })
+        });
+
+        if (!response.ok) {
+            let errorMessage = `Error del servidor: ${response.status}`;
+            try {
+                // Intenta leer el error como JSON
+                const errorData = await response.json();
+                errorMessage = errorData.message || JSON.stringify(errorData);
+            } catch (e) {
+                // Si falla, lee el error como texto plano
+                errorMessage = await response.text();
+            }
+            throw new Error(errorMessage || 'No se pudo eliminar el producto.');
+        }
+
+        // Recargar la lista de productos para reflejar el cambio
+        await loadAdminProducts();
+
+    } catch (error) {
+        console.error('Error al eliminar el producto:', error);
+        alert(`Error: ${error.message}`);
+    } finally {
+        status.style.display = 'none';
     }
 }
 
