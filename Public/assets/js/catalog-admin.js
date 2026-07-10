@@ -14,8 +14,7 @@ async function loadAdminProducts() {
     status.style.display = 'flex'; // Mostrar 'Cargando...'
 
     try {
-        // Llama a una función de Netlify, igual que lo hace tracking-admin.js
-        const response = await fetch('/.netlify/functions/catalog-products');
+        const response = await fetch('/.netlify/functions/catalog');
 
         if (!response.ok) {
             throw new Error(`Error del servidor: ${response.statusText}`);
@@ -141,7 +140,7 @@ async function guardarNuevoProducto() {
             return;
         }
 
-        const response = await fetch('/.netlify/functions/catalog-products', {
+        const response = await fetch('/.netlify/functions/catalog', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'x-admin-token': session.token },
             body: JSON.stringify({
@@ -154,8 +153,9 @@ async function guardarNuevoProducto() {
             })
         });
 
-        if (error) {
-            throw error;
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'No se pudo guardar el producto.');
         }
 
         mensajeEl.textContent = '✅ ¡Producto guardado con éxito!';
@@ -188,7 +188,7 @@ async function eliminarProducto(id, imageUrl) {
             throw new Error('Sesión expirada. Inicia sesión nuevamente.');
         }
 
-        const response = await fetch(`/.netlify/functions/catalog-products?id=${id}`, {
+        const response = await fetch(`/.netlify/functions/catalog?id=${id}`, {
             method: 'DELETE',
             headers: {
                 'x-admin-token': session.token,
