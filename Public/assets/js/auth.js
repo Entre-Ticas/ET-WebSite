@@ -85,7 +85,12 @@ function cerrarSesion() {
     localStorage.removeItem('et_token');
     localStorage.removeItem('et_expiry');
     localStorage.removeItem('et_user');
+
+    // Detenemos el temporizador de auto-logout para evitar alertas inoportunas.
+    clearTimeout(_autoLogoutTimer);
+
     actualizarNavUser();
+    loadPage('home'); // Usamos la función global para navegar al inicio.
 }
 
 const INACTIVIDAD_MS = 60 * 60 * 1000; // 1 hora sin actividad

@@ -94,6 +94,22 @@ async function loadPage(page, param = null) {
     // Efecto de salida (hace la pantalla transparente temporalmente)
     container.classList.add('fade-out');
     
+    // --- INICIO: LÓGICA DE SEGURIDAD ---
+    // Lista de rutas que requieren que el usuario esté autenticado.
+    const protectedRoutes = ['admin/tracking', 'admin/catalog'];
+
+    // Verificamos si la página solicitada es protegida Y si el usuario NO tiene una sesión activa.
+    // La función getSession() ya existe en auth.js y nos dice si hay un token válido.
+    if (protectedRoutes.includes(page) && !getSession()) {
+        console.warn(`Acceso no autorizado a la ruta protegida '${page}'. Redirigiendo al inicio.`);
+        alert('Debes iniciar sesión para acceder a esta página.');
+        
+        // Redirigimos a la página de inicio de forma segura.
+        window.location.href = '/';
+        return; // Detenemos la ejecución para no cargar la página de admin.
+    }
+    // --- FIN: LÓGICA DE SEGURIDAD ---
+
     setTimeout(async () => {
         try {
             if (page === 'home') {
