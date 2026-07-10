@@ -31,7 +31,15 @@ async function loadAdmin() {
     cargarEstados();
 
     try {
-        const response = await fetch('/.netlify/functions/tracking');
+        const session = getSession();
+        if (!session) {
+            // La seguridad en main.js debería prevenir esto, pero es una buena salvaguarda.
+            throw new Error('401');
+        }
+
+        const response = await fetch('/.netlify/functions/tracking', {
+            headers: { 'x-admin-token': session.token }
+        });
         if (!response.ok) throw new Error(`Error ${response.status}`);
 
         todosLosTrackings = await response.json();

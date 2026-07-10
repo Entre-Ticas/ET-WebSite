@@ -1,4 +1,9 @@
+const argon2 = require('argon2');
+
 exports.handler = async (event) => {
+    // Importar node-fetch para usar fetch en el entorno de Node.js
+    const fetch = (await import('node-fetch')).default;
+
     if (event.httpMethod !== 'POST') {
         return { statusCode: 405, body: JSON.stringify({ error: 'Método no permitido.' }) };
     }
@@ -14,8 +19,9 @@ exports.handler = async (event) => {
             return { statusCode: 400, body: JSON.stringify({ error: 'Usuario y contraseña requeridos.' }) };
         }
 
+        // 1. Buscamos al usuario por su nombre para obtener el hash de la contraseña guardada.
         const response = await fetch(
-            `${SUPABASE_URL}/rest/v1/users?User=eq.${encodeURIComponent(user)}&Contraseña=eq.${encodeURIComponent(password)}&select=id,User,User_Name,id_status`,
+            `${SUPABASE_URL}/rest/v1/users?User=eq.${encodeURIComponent(user)}&select=id,User,User_Name,Contraseña`,
             {
                 headers: {
                     'apikey': SUPABASE_KEY,
@@ -23,26 +29,30 @@ exports.handler = async (event) => {
                 }
             }
         );
-
         const rows = await response.json();
 
+        // Si no hay usuario, devolvemos un error genérico para no dar pistas.
         if (!rows || rows.length === 0) {
             return { statusCode: 401, body: JSON.stringify({ error: 'Credenciales incorrectas.' }) };
         }
 
         const userData = rows[0];
-        const expiry = Date.now() + 60 * 60 * 1000; // 1 hora
-        const token = Buffer.from(`${ADMIN_SECRET}:${userData.id}:${expiry}`).toString('base64');
+        const hashedPasswordFromDB = userData.Contraseña;
 
-        return {
-            statusCode: 200,
-            body: JSON.stringify({
-                token,
-                expiry,
-                user: userData.User,
-                name: userData.User_Name
-            })
-        };
+        // 2. Usamos argon2 para verificar si la contraseña ingresada coincide con el hash.
+        if (await argon2.verify(hashedPasswordFromDB, password)) {
+            // ¡Contraseña correcta! Generamos el token de sesión.
+            const expiry = Date.now() + 60 * 60 * 1000; // 1 hora
+            const token = Buffer.from(`${ADMIN_SECRET}:${userData.id}:${expiry}`).toString('base64');
+
+            return {
+                statusCode: 200,
+                body: JSON.stringify({ token, expiry, user: userData.User, name: userData.User_Name })
+            };
+        } else {
+            // Contraseña incorrecta.
+            return { statusCode: 401, body: JSON.stringify({ error: 'Credenciales incorrectas.' }) };
+        }
     } catch (error) {
         return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
     }

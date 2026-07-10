@@ -31,7 +31,7 @@ exports.handler = async (event) => {
     try {
         const decoded = Buffer.from(token, 'base64').toString('utf8');
         const [secret, , expiry] = decoded.split(':');
-        if (secret !== ADMIN_SECRET || Date.now() > parseInt(expiry)) {
+        if (secret !== ADMIN_SECRET || !expiry || Date.now() > parseInt(expiry)) {
             return { statusCode: 401, body: JSON.stringify({ error: 'Sesión inválida o expirada.' }) };
         }
     } catch {

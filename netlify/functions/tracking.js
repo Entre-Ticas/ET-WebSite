@@ -73,11 +73,13 @@ exports.handler = async (event) => {
 
     // ── GET todos (admin) ───────────────────────────────────────────────────
     if (method === 'GET') {
+        if (!verifyToken(event.headers['x-admin-token'])) {
+            return { statusCode: 401, body: JSON.stringify({ error: 'No autorizado.' }) };
+        }
         try {
             const response = await fetch(`${SUPABASE_URL()}/rest/v1/rpc/get_all_trackings`, {
                 method:  'POST',
-                headers: sbHeaders(),
-                body:    JSON.stringify({})
+                headers: sbHeaders()
             });
             if (!response.ok) throw new Error(`Supabase ${response.status}: ${await response.text()}`);
             const rows = await response.json();
