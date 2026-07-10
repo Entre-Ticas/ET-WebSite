@@ -14,6 +14,7 @@ async function loadAdminProducts() {
     status.style.display = 'flex'; // Mostrar 'Cargando...'
 
     try {
+        // CORRECCIÓN: Apuntar a la función unificada 'catalog'
         const response = await fetch('/.netlify/functions/catalog');
 
         if (!response.ok) {
@@ -56,18 +57,18 @@ function displayAdminProducts(products) {
     table.style.display = ''; // Asegurarse de que la tabla sea visible
     
     products.forEach(p => {
-        const imageUrl = p.image_url || ''; // Asegurarse de que la URL sea una cadena
+        const imageUrl = p.img || ''; // CORRECCIÓN: Usar 'img' que viene del backend
         tbody.innerHTML += `
             <tr>
-                <td><img src="${imageUrl || 'https://placehold.co/20x20/E19B9D/FFFFFF?text=ET'}" alt="${p.product_name}" class="admin-table-img"></td>
-                <td>${p.product_name}</td>
+                <td><img src="${imageUrl || 'https://placehold.co/20x20/E19B9D/FFFFFF?text=ET'}" alt="${p.name}" class="admin-table-img"></td>
+                <td>${p.name}</td>
                 <td>${p.category}</td>
                 <td>₡${p.price ? p.price.toLocaleString('es-CR') : '0'}</td>
-                <td><span class="status-dot ${p.is_available ? 'available' : 'unavailable'}"></span> ${p.status_name}</td>
+                <td><span class="status-dot ${p.stock === 'entrega inmediata' ? 'available' : 'unavailable'}"></span> ${p.stock}</td>
                 <td>
-                    <button class="admin-btn-icon" onclick="abrirFormEdicionCompleta(${p.id_product})" title="Editar Producto"><i class="fas fa-pencil-alt"></i></button>
-                    <button class="admin-btn-icon" onclick="abrirFormEstado(${p.id_product})" title="Actualizar Estado"><i class="fa fa-edit"></i></button>
-                    <button class="admin-btn-icon btn-delete" onclick="eliminarProducto(${p.id_product}, '${imageUrl}')" title="Eliminar Producto"><i class="fas fa-trash-alt"></i></button>
+                    <button class="admin-btn-icon" onclick="abrirFormEdicionCompleta(${p.id})" title="Editar Producto"><i class="fas fa-pencil-alt"></i></button>
+                    <button class="admin-btn-icon" onclick="abrirFormEstado(${p.id})" title="Actualizar Estado"><i class="fa fa-edit"></i></button>
+                    <button class="admin-btn-icon btn-delete" onclick="eliminarProducto(${p.id}, '${imageUrl}')" title="Eliminar Producto"><i class="fas fa-trash-alt"></i></button>
                 </td>
             </tr>
         `;
@@ -140,6 +141,7 @@ async function guardarNuevoProducto() {
             return;
         }
 
+        // CORRECCIÓN: Apuntar a la función unificada 'catalog'
         const response = await fetch('/.netlify/functions/catalog', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'x-admin-token': session.token },
@@ -188,6 +190,7 @@ async function eliminarProducto(id, imageUrl) {
             throw new Error('Sesión expirada. Inicia sesión nuevamente.');
         }
 
+        // CORRECCIÓN: Apuntar a la función unificada 'catalog'
         const response = await fetch(`/.netlify/functions/catalog?id=${id}`, {
             method: 'DELETE',
             headers: {

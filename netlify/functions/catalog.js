@@ -27,12 +27,15 @@ exports.handler = async (event) => {
 
         const rows = await response.json();
 
+        // CORRECCIÓN: Mapear los nombres de columna de la base de datos (ej. product_name)
+        // a los nombres que el frontend espera (ej. name).
         const productos = rows.map(r => ({
-            img:      r.image_url   || '',
-            category: r.category    || 'General',
-            name:     r.product_name,
+            id:       r.id_product,
+            img:      r.image_url      || '',
+            category: r.category_name  || 'General',
+            name:     r.product_name   || 'Sin nombre',
             size:     r.size        || 'N/A',
-            price:    r.price       || '',
+            price:    r.price          || '0',
             stock:    r.product_status || 'No disponible'
         }));
 
