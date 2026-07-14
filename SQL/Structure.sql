@@ -1,15 +1,18 @@
 [
   {
-    "Script SQL Completo": "-- ==========================================\n-- TABLA: maintenance\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.maintenance (\n  status_id bigint,\n  id bigint NOT NULL,\n  value1 character varying,\n  name character varying NOT NULL,\n  value2 character varying,\n  value3 character varying,\n  created_at timestamp with time zone NOT NULL\n);\n"
+    "Script SQL Completo": "-- ==========================================\n-- TABLA: maintenance\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.maintenance (\n  value1 character varying,\n  name character varying NOT NULL,\n  status_id bigint,\n  value3 character varying,\n  created_at timestamp with time zone NOT NULL,\n  id bigint NOT NULL,\n  value2 character varying\n);\n"
   },
   {
-    "Script SQL Completo": "-- ==========================================\n-- TABLA: product_category\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.product_category (\n  id_category bigint NOT NULL,\n  category_name character varying(100) NOT NULL,\n  id_status bigint\n);\n"
+    "Script SQL Completo": "-- ==========================================\n-- TABLA: order_items\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.order_items (\n  id bigint NOT NULL,\n  quantity integer NOT NULL,\n  price numeric NOT NULL,\n  created_at timestamp with time zone NOT NULL,\n  image_url text,\n  size text,\n  product_name text NOT NULL,\n  client_phone text,\n  client_name text NOT NULL,\n  id_status bigint NOT NULL\n);\n"
   },
   {
-    "Script SQL Completo": "-- ==========================================\n-- TABLA: product_status\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.product_status (\n  id_product_status bigint NOT NULL,\n  status_name text NOT NULL,\n  created_at timestamp with time zone,\n  is_available boolean NOT NULL\n);\n"
+    "Script SQL Completo": "-- ==========================================\n-- TABLA: product_category\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.product_category (\n  category_name character varying(100) NOT NULL,\n  id_status bigint,\n  id_category bigint NOT NULL\n);\n"
   },
   {
-    "Script SQL Completo": "-- ==========================================\n-- TABLA: products\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.products (\n  id_product_status bigint NOT NULL,\n  id_status bigint NOT NULL,\n  category bigint,\n  created_at timestamp with time zone,\n  id_product bigint NOT NULL,\n  image_url text NOT NULL,\n  price numeric NOT NULL,\n  product_name text NOT NULL,\n  size text\n);\n"
+    "Script SQL Completo": "-- ==========================================\n-- TABLA: product_status\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.product_status (\n  is_available boolean NOT NULL,\n  created_at timestamp with time zone,\n  status_name text NOT NULL,\n  id_product_status bigint NOT NULL\n);\n"
+  },
+  {
+    "Script SQL Completo": "-- ==========================================\n-- TABLA: products\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.products (\n  id_status bigint NOT NULL,\n  id_product bigint NOT NULL,\n  price numeric NOT NULL,\n  id_product_status bigint NOT NULL,\n  created_at timestamp with time zone,\n  category bigint,\n  image_url text NOT NULL,\n  product_name text NOT NULL,\n  size text\n);\n"
   },
   {
     "Script SQL Completo": "-- ==========================================\n-- TABLA: status\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.status (\n  disabled boolean NOT NULL,\n  status_name character varying(50) NOT NULL,\n  id_status bigint NOT NULL\n);\n"
@@ -18,16 +21,16 @@
     "Script SQL Completo": "-- ==========================================\n-- TABLA: status_tracking\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.status_tracking (\n  id_status_tracking bigint NOT NULL,\n  status_name character varying(100) NOT NULL,\n  id_status bigint NOT NULL\n);\n"
   },
   {
-    "Script SQL Completo": "-- ==========================================\n-- TABLA: stores\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.stores (\n  tienda_code text NOT NULL,\n  id_store bigint NOT NULL,\n  id_status bigint NOT NULL,\n  created_at timestamp with time zone,\n  nombre_tienda text NOT NULL\n);\n"
+    "Script SQL Completo": "-- ==========================================\n-- TABLA: stores\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.stores (\n  id_status bigint NOT NULL,\n  created_at timestamp with time zone,\n  tienda_code text NOT NULL,\n  nombre_tienda text NOT NULL,\n  id_store bigint NOT NULL\n);\n"
   },
   {
-    "Script SQL Completo": "-- ==========================================\n-- TABLA: tracking\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.tracking (\n  codigo_seguimiento_externo character varying(100),\n  cliente character varying(150) NOT NULL,\n  producto character varying(150) NOT NULL,\n  fecha_entrega_miami date,\n  fecha_compra date NOT NULL,\n  id_tracking bigint NOT NULL,\n  id_store bigint,\n  codigo_seguimiento_interno character varying(100) NOT NULL\n);\n"
+    "Script SQL Completo": "-- ==========================================\n-- TABLA: tracking\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.tracking (\n  fecha_entrega_miami date,\n  fecha_compra date NOT NULL,\n  cliente character varying(150) NOT NULL,\n  id_tracking bigint NOT NULL,\n  producto character varying(150) NOT NULL,\n  codigo_seguimiento_externo character varying(100),\n  codigo_seguimiento_interno character varying(100) NOT NULL,\n  id_store bigint\n);\n"
   },
   {
-    "Script SQL Completo": "-- ==========================================\n-- TABLA: tracking_historial\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.tracking_historial (\n  fecha_hora timestamp with time zone NOT NULL,\n  id_status_tracking bigint NOT NULL,\n  detalle text,\n  id bigint NOT NULL,\n  id_tracking bigint NOT NULL\n);\n"
+    "Script SQL Completo": "-- ==========================================\n-- TABLA: tracking_historial\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.tracking_historial (\n  id_tracking bigint NOT NULL,\n  fecha_hora timestamp with time zone NOT NULL,\n  detalle text,\n  id bigint NOT NULL,\n  id_status_tracking bigint NOT NULL\n);\n"
   },
   {
-    "Script SQL Completo": "-- ==========================================\n-- TABLA: users\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.users (\n  Contraseña text NOT NULL,\n  id_status bigint NOT NULL,\n  created_at timestamp with time zone NOT NULL,\n  id bigint NOT NULL,\n  User character varying NOT NULL,\n  User_Name character varying NOT NULL\n);\n"
+    "Script SQL Completo": "-- ==========================================\n-- TABLA: users\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.users (\n  User character varying NOT NULL,\n  created_at timestamp with time zone NOT NULL,\n  Contraseña text NOT NULL,\n  id_status bigint NOT NULL,\n  User_Name character varying NOT NULL,\n  id bigint NOT NULL\n);\n"
   },
   {
     "Script SQL Completo": "-- ==========================================\n-- FUNCION / SP: get_tracking_historial_by_guia\n-- ==========================================\nCREATE OR REPLACE FUNCTION public.get_tracking_historial_by_guia(p_numero_guia text)\n RETURNS TABLE(fecha_hora timestamp with time zone, detalle_estado text, nota text)\n LANGUAGE sql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\r\n    SELECT\r\n        th.fecha_hora,\r\n        st.status_name AS detalle_estado,\r\n        th.detalle AS nota\r\n    FROM tracking_historial th\r\n    JOIN tracking t ON th.id_tracking = t.id_tracking\r\n    JOIN status_tracking st ON th.id_status_tracking = st.id_status_tracking\r\n    WHERE t.codigo_seguimiento_interno = p_numero_guia\r\n       OR t.codigo_seguimiento_externo = p_numero_guia\r\n    ORDER BY th.fecha_hora ASC;\r\n$function$\n;\n"
