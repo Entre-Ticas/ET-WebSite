@@ -1,0 +1,59 @@
+[
+  {
+    "Script SQL Completo": "-- ==========================================\n-- TABLA: maintenance\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.maintenance (\n  status_id bigint,\n  id bigint NOT NULL,\n  value1 character varying,\n  name character varying NOT NULL,\n  value2 character varying,\n  value3 character varying,\n  created_at timestamp with time zone NOT NULL\n);\n"
+  },
+  {
+    "Script SQL Completo": "-- ==========================================\n-- TABLA: product_category\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.product_category (\n  id_category bigint NOT NULL,\n  category_name character varying(100) NOT NULL,\n  id_status bigint\n);\n"
+  },
+  {
+    "Script SQL Completo": "-- ==========================================\n-- TABLA: product_status\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.product_status (\n  id_product_status bigint NOT NULL,\n  status_name text NOT NULL,\n  created_at timestamp with time zone,\n  is_available boolean NOT NULL\n);\n"
+  },
+  {
+    "Script SQL Completo": "-- ==========================================\n-- TABLA: products\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.products (\n  id_product_status bigint NOT NULL,\n  id_status bigint NOT NULL,\n  category bigint,\n  created_at timestamp with time zone,\n  id_product bigint NOT NULL,\n  image_url text NOT NULL,\n  price numeric NOT NULL,\n  product_name text NOT NULL,\n  size text\n);\n"
+  },
+  {
+    "Script SQL Completo": "-- ==========================================\n-- TABLA: status\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.status (\n  disabled boolean NOT NULL,\n  status_name character varying(50) NOT NULL,\n  id_status bigint NOT NULL\n);\n"
+  },
+  {
+    "Script SQL Completo": "-- ==========================================\n-- TABLA: status_tracking\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.status_tracking (\n  id_status_tracking bigint NOT NULL,\n  status_name character varying(100) NOT NULL,\n  id_status bigint NOT NULL\n);\n"
+  },
+  {
+    "Script SQL Completo": "-- ==========================================\n-- TABLA: stores\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.stores (\n  tienda_code text NOT NULL,\n  id_store bigint NOT NULL,\n  id_status bigint NOT NULL,\n  created_at timestamp with time zone,\n  nombre_tienda text NOT NULL\n);\n"
+  },
+  {
+    "Script SQL Completo": "-- ==========================================\n-- TABLA: tracking\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.tracking (\n  codigo_seguimiento_externo character varying(100),\n  cliente character varying(150) NOT NULL,\n  producto character varying(150) NOT NULL,\n  fecha_entrega_miami date,\n  fecha_compra date NOT NULL,\n  id_tracking bigint NOT NULL,\n  id_store bigint,\n  codigo_seguimiento_interno character varying(100) NOT NULL\n);\n"
+  },
+  {
+    "Script SQL Completo": "-- ==========================================\n-- TABLA: tracking_historial\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.tracking_historial (\n  fecha_hora timestamp with time zone NOT NULL,\n  id_status_tracking bigint NOT NULL,\n  detalle text,\n  id bigint NOT NULL,\n  id_tracking bigint NOT NULL\n);\n"
+  },
+  {
+    "Script SQL Completo": "-- ==========================================\n-- TABLA: users\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.users (\n  Contraseña text NOT NULL,\n  id_status bigint NOT NULL,\n  created_at timestamp with time zone NOT NULL,\n  id bigint NOT NULL,\n  User character varying NOT NULL,\n  User_Name character varying NOT NULL\n);\n"
+  },
+  {
+    "Script SQL Completo": "-- ==========================================\n-- FUNCION / SP: get_tracking_historial_by_guia\n-- ==========================================\nCREATE OR REPLACE FUNCTION public.get_tracking_historial_by_guia(p_numero_guia text)\n RETURNS TABLE(fecha_hora timestamp with time zone, detalle_estado text, nota text)\n LANGUAGE sql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\r\n    SELECT\r\n        th.fecha_hora,\r\n        st.status_name AS detalle_estado,\r\n        th.detalle AS nota\r\n    FROM tracking_historial th\r\n    JOIN tracking t ON th.id_tracking = t.id_tracking\r\n    JOIN status_tracking st ON th.id_status_tracking = st.id_status_tracking\r\n    WHERE t.codigo_seguimiento_interno = p_numero_guia\r\n       OR t.codigo_seguimiento_externo = p_numero_guia\r\n    ORDER BY th.fecha_hora ASC;\r\n$function$\n;\n"
+  },
+  {
+    "Script SQL Completo": "-- ==========================================\n-- FUNCION / SP: search_products\n-- ==========================================\nCREATE OR REPLACE FUNCTION public.search_products(p_search text)\n RETURNS TABLE(id_product bigint, product_name text, category text, size text, price numeric, image_url text, product_status text)\n LANGUAGE sql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\r\n  SELECT\r\n    p.id_product,\r\n    p.product_name,\r\n    p.category,\r\n    p.size,\r\n    p.price,\r\n    p.image_url,\r\n    ps.status_name\r\n  FROM products p\r\n  JOIN product_status ps ON p.id_product_status = ps.id_product_status\r\n  WHERE p.product_name ILIKE '%' || p_search || '%'\r\n     OR p.category ILIKE '%' || p_search || '%'\r\n  ORDER BY p.created_at DESC;\r\n$function$\n;\n"
+  },
+  {
+    "Script SQL Completo": "-- ==========================================\n-- FUNCION / SP: get_public_catalog_products\n-- ==========================================\nCREATE OR REPLACE FUNCTION public.get_public_catalog_products()\n RETURNS TABLE(id_product bigint, product_name text, category bigint, size text, price numeric, image_url text, is_available boolean, status_name text)\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\r\nBEGIN\r\n    RETURN QUERY\r\n    SELECT\r\n        p.id_product,\r\n        p.product_name,\r\n        p.category,\r\n        p.size,\r\n        p.price,\r\n        p.image_url,\r\n        ps.is_available,\r\n        ps.status_name AS status_name\r\n    FROM\r\n        products p\r\n    JOIN\r\n        product_status ps ON p.id_product_status = ps.id_product_status\r\n    WHERE\r\n        ps.is_available = true\r\n    ORDER BY\r\n        p.id_product DESC;\r\nEND;\r\n$function$\n;\n"
+  },
+  {
+    "Script SQL Completo": "-- ==========================================\n-- FUNCION / SP: delete_product\n-- ==========================================\nCREATE OR REPLACE FUNCTION public.delete_product(p_id integer)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\r\nBEGIN\r\n    -- Elimina el producto de la tabla 'products' donde el ID coincida.\r\n    -- Asegúrate de que la tabla se llame 'products' y la columna 'id_product'.\r\n    DELETE FROM products\r\n    WHERE id_product = p_id;\r\nEND;\r\n$function$\n;\n"
+  },
+  {
+    "Script SQL Completo": "-- ==========================================\n-- FUNCION / SP: get_maintenance_folders\n-- ==========================================\nCREATE OR REPLACE FUNCTION public.get_maintenance_folders()\n RETURNS TABLE(folder_name text)\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\r\nBEGIN\r\n    RETURN QUERY\r\n    SELECT value1\r\n    FROM public.maintenance\r\n    WHERE name = 'Folders';\r\nEND;\r\n$function$\n;\n"
+  },
+  {
+    "Script SQL Completo": "-- ==========================================\n-- FUNCION / SP: get_tracking_by_guia\n-- ==========================================\nCREATE OR REPLACE FUNCTION public.get_tracking_by_guia(p_numero_guia text)\n RETURNS TABLE(id_tracking bigint, cliente text, producto text, nombre_tienda text, fecha_compra date, fecha_entrega_miami date)\n LANGUAGE sql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\r\n    SELECT\r\n        t.id_tracking,\r\n        t.cliente,\r\n        t.producto,\r\n        store.nombre_tienda,\r\n        t.fecha_compra,\r\n        t.fecha_entrega_miami\r\n    FROM tracking t\r\n    LEFT JOIN stores store ON t.id_store = store.id_store\r\n    WHERE t.codigo_seguimiento_interno = p_numero_guia\r\n       OR t.codigo_seguimiento_externo = p_numero_guia;\r\n$function$\n;\n"
+  },
+  {
+    "Script SQL Completo": "-- ==========================================\n-- FUNCION / SP: get_all_trackings\n-- ==========================================\nCREATE OR REPLACE FUNCTION public.get_all_trackings()\n RETURNS TABLE(id_tracking bigint, cliente text, producto text, nombre_tienda text, fecha_compra date, codigo_seguimiento_interno text, codigo_seguimiento_externo text, ultimo_estado text, ultima_fecha timestamp with time zone, fecha_entrega_miami date)\n LANGUAGE sql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\r\n    SELECT\r\n        t.id_tracking,\r\n        t.cliente,\r\n        t.producto,\r\n        s.nombre_tienda,\r\n        t.fecha_compra,\r\n        t.codigo_seguimiento_interno,\r\n        t.codigo_seguimiento_externo,\r\n        st.status_name  AS ultimo_estado,\r\n        th.fecha_hora   AS ultima_fecha,\r\n        t.fecha_entrega_miami -- Ahora coincide con la definición de arriba\r\n    FROM tracking t\r\n    LEFT JOIN stores s ON t.id_store = s.id_store\r\n    LEFT JOIN LATERAL (\r\n        SELECT th2.id_status_tracking, th2.fecha_hora\r\n        FROM tracking_historial th2\r\n        WHERE th2.id_tracking = t.id_tracking\r\n        ORDER BY th2.fecha_hora DESC\r\n        LIMIT 1\r\n    ) th ON true\r\n    LEFT JOIN status_tracking st ON th.id_status_tracking = st.id_status_tracking\r\n    WHERE th.id_status_tracking IS NULL\r\n       OR th.id_status_tracking != 9\r\n    ORDER BY t.fecha_compra DESC;\r\n$function$\n;\n"
+  },
+  {
+    "Script SQL Completo": "-- ==========================================\n-- FUNCION / SP: get_maintenance_by_name_and_active\n-- ==========================================\nCREATE OR REPLACE FUNCTION public.get_maintenance_by_name_and_active(search_name character varying)\n RETURNS SETOF maintenance\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\r\nbegin\r\n  return query\r\n  select *\r\n  from public.maintenance\r\n  where name = search_name\r\n    and status_id = 1;\r\nend;\r\n$function$\n;\n"
+  },
+  {
+    "Script SQL Completo": "-- ==========================================\n-- FUNCION / SP: get_available_products\n-- ==========================================\nCREATE OR REPLACE FUNCTION public.get_available_products()\n RETURNS TABLE(id_product integer, product_name text, category text, size text, price numeric, image_url text, is_available boolean, product_status text)\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$BEGIN\r\n    RETURN QUERY\r\n    SELECT\r\n        p.id_product::integer,\r\n        p.product_name::text,\r\n        c.category_name::text,\r\n        p.size::text,\r\n        p.price::numeric,\r\n        p.image_url::text,\r\n        ps.is_available::boolean,\r\n        ps.status_name::text AS product_status\r\n    FROM\r\n        products p\r\n    JOIN\r\n        product_status ps ON p.id_product_status = ps.id_product_status\r\n    JOIN\r\n        product_category c ON p.category = c.id_category -- ◄ CORREGIDO: product_category\r\n    ORDER BY\r\n        p.id_product DESC;\r\nEND;$function$\n;\n"
+  }
+]
