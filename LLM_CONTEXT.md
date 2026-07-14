@@ -29,6 +29,7 @@ La estructura oficial de la base de datos, incluyendo nombres exactos de tablas,
 *   **Manejo Asíncrono:** Uso obligatorio de `async/await` estructurado dentro de bloques `try/catch`. Las peticiones se realizan con `fetch` y la respuesta se valida con `response.ok` antes de procesar el JSON con `response.json()`. No se utiliza la destructuración `{ data, error }` del SDK de Supabase.
 
 ---
+
 ## 4. Variables de Entorno (`.env`)
 El proyecto depende de un archivo `.env` en la raíz para el desarrollo local. Estas variables DEBEN estar configuradas en el entorno de producción de Netlify.
 
@@ -38,7 +39,7 @@ El proyecto depende de un archivo `.env` en la raíz para el desarrollo local. E
 *   **`ADMIN_SECRET`**: El secreto personalizado para firmar y verificar los tokens de sesión de administrador.
 *   **`MIGRATION_SECRET`**: Una clave de seguridad de un solo uso para proteger scripts de mantenimiento críticos.
 
-
+---
 ## 5. Estructura del Workspace
 Este es el árbol de directorios del proyecto. Los archivos clave a consultar son los que se encuentran en `Public/assets/js/` para la lógica del frontend y `netlify/functions/` para la lógica del backend.
 ```
