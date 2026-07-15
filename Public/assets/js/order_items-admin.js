@@ -124,7 +124,8 @@ function abrirFormNuevo() {
     const preview = document.getElementById('nuevoImagePreview');
     if (preview) preview.querySelector('img').src = 'https://placehold.co/100x100/E19B9D/FFFFFF?text=?';
     document.getElementById('nuevoImageStatus').textContent = '';
-    document.querySelector('.image-upload-input[onchange*="\'nuevo\'"]').value = null; // Limpiar el input file
+    document.getElementById('nuevoImageUpload').value = null;
+    document.getElementById('nuevoCameraUpload').value = null;
 }
 
 async function guardarNuevaOrden() {
@@ -206,8 +207,8 @@ function abrirFormEdicion(id) {
     if (preview) preview.querySelector('img').src = orden.image_url || 'https://placehold.co/100x100/E19B9D/FFFFFF?text=?';
     const imageStatusEl = document.getElementById('editImageStatus');
     if (imageStatusEl) imageStatusEl.textContent = '';
-    const fileInput = document.querySelector('.image-upload-input[onchange*="\'edit\'"]');
-    if (fileInput) fileInput.value = null;
+    document.getElementById('editImageUpload').value = null;
+    document.getElementById('editCameraUpload').value = null;
 
     document.getElementById('editMensaje').innerHTML = '';
     
@@ -347,6 +348,16 @@ async function handleImageUpload(event, formType) {
         statusEl.textContent = `Error: ${error.message}`;
         statusEl.style.color = 'red';
     }
+}
+
+function triggerFileUpload(formType) {
+    // Dispara el clic en el input para seleccionar archivos del dispositivo
+    document.getElementById(`${formType}ImageUpload`).click();
+}
+
+function triggerCameraUpload(formType) {
+    // Dispara el clic en el input que tiene el atributo 'capture' para abrir la cámara
+    document.getElementById(`${formType}CameraUpload`).click();
 }
 
 

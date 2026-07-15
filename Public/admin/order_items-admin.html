@@ -13,6 +13,12 @@
     .image-upload-input {
         width: 100%;
         margin-bottom: 0.8rem;
+        /* Ocultamos los inputs de archivo originales */
+        display: none;
+    }
+    .image-upload-buttons {
+        display: flex;
+        gap: 0.5rem;
     }
     .image-preview {
         width: 100px;
@@ -106,8 +112,13 @@
                     <!-- Reemplazo para carga de imagen -->
                     <div class="image-upload-container">
                         <label for="nuevoImageUpload">Imagen del Producto</label>
-                        <input type="file" accept="image/*" id="nuevoImageUpload" class="image-upload-input" onchange="handleImageUpload(event, 'nuevo')">
-                        <div class="image-preview" id="nuevoImagePreview">
+                        <div class="image-upload-buttons">
+                            <button class="admin-btn" onclick="triggerFileUpload('nuevo')">Subir Archivo</button>
+                            <button class="admin-btn" onclick="triggerCameraUpload('nuevo')">Tomar Foto</button>
+                        </div>
+                        <input type="file" accept="image/*" id="nuevoImageUpload" class="image-upload-input" onchange="handleImageUpload(event, 'nuevo')"> <!-- Para subir archivo -->
+                        <input type="file" accept="image/*" capture id="nuevoCameraUpload" class="image-upload-input" onchange="handleImageUpload(event, 'nuevo')"> <!-- Para tomar foto -->
+                         <div class="image-preview" id="nuevoImagePreview" style="margin-top: 0.8rem;">
                             <img src="https://placehold.co/100x100/E19B9D/FFFFFF?text=?" alt="Vista previa de la imagen">
                         </div>
                         <input type="hidden" id="nuevoImageUrl"> <!-- Campo oculto para guardar la URL final -->
@@ -157,8 +168,13 @@
                     <!-- Reemplazo para carga de imagen -->
                     <div class="image-upload-container">
                         <label for="editImageUpload">Imagen del Producto</label>
+                        <div class="image-upload-buttons">
+                            <button class="admin-btn" onclick="triggerFileUpload('edit')">Subir Archivo</button>
+                            <button class="admin-btn" onclick="triggerCameraUpload('edit')">Tomar Foto</button>
+                        </div>
                         <input type="file" accept="image/*" id="editImageUpload" class="image-upload-input" onchange="handleImageUpload(event, 'edit')">
-                        <div class="image-preview" id="editImagePreview">
+                        <input type="file" accept="image/*" capture id="editCameraUpload" class="image-upload-input" onchange="handleImageUpload(event, 'edit')">
+                        <div class="image-preview" id="editImagePreview" style="margin-top: 0.8rem;">
                             <img src="https://placehold.co/100x100/E19B9D/FFFFFF?text=?" alt="Vista previa de la imagen">
                         </div>
                         <input type="hidden" id="editImageUrl"> <!-- Campo oculto para guardar la URL final -->
