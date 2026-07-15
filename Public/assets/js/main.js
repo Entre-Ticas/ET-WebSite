@@ -96,8 +96,7 @@ async function loadPage(page, param = null) {
     
     // --- INICIO: LÓGICA DE SEGURIDAD ---
     // Lista de rutas que requieren que el usuario esté autenticado.
-    const protectedRoutes = ['admin/tracking', 'admin/catalog'];
-
+    const protectedRoutes = ['admin/tracking', 'admin/catalog', 'admin/order_items'];
     // Verificamos si la página solicitada es protegida Y si el usuario NO tiene una sesión activa.
     // La función getSession() ya existe en auth.js y nos dice si hay un token válido.
     if (protectedRoutes.includes(page) && !getSession()) {
@@ -130,6 +129,7 @@ async function loadPage(page, param = null) {
                 'tracking': 'Tracking/tracking.html',
                 'admin/tracking': 'admin/tracking-admin.html',
                 'admin/catalog': 'admin/catalog-admin.html',
+                'admin/order_items': 'admin/order_items-admin.html',
                 'info': 'InformationImg/info.html',
                 'informacion': 'InformationImg/infoImg.html'
             };
@@ -159,7 +159,11 @@ async function loadPage(page, param = null) {
             } else if (page === 'admin/tracking' && typeof loadAdmin === 'function') {
                 loadAdmin();
             } else if (page === 'admin/catalog' && typeof window.initCatalogAdminPage === 'function') {
-                window.initCatalogAdminPage();
+                // La inicialización se maneja dentro del propio HTML de catalog-admin
+                // por lo que no se necesita una llamada explícita aquí.
+                // window.initCatalogAdminPage();
+            } else if (page === 'admin/order_items' && typeof window.initOrderItemsAdminPage === 'function') {
+                window.initOrderItemsAdminPage();
             }
 
         } catch (error) {

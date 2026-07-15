@@ -1,0 +1,140 @@
+<link rel="stylesheet" href="../assets/css/catalog-admin.css">
+
+<div class="admin-wrapper">
+
+    <!-- ===== VISTA: GRID DE PRODUCTOS ===== -->
+    <div id="adminGridView">
+        <div class="admin-header">
+            <h2>🛍️ Gestión de Órdenes</h2>
+            <p>Busca, agrega y actualiza las órdenes de Personal Shopper.</p>
+        </div>
+
+        <div class="admin-search-bar">
+            <input type="text" id="adminSearchInput" placeholder="🔍 Buscar por cliente, producto..." oninput="filtrarOrdenes()" />
+            <button class="admin-btn-agregar" onclick="abrirFormNuevo()">+ Agregar Orden</button>
+        </div>
+
+        <div id="adminStatus" class="catalog-status">
+            <div class="spinner"></div>
+            <p>Cargando órdenes...</p>
+        </div>
+
+        <div id="adminGrid" class="admin-grid">
+            <table class="admin-table" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Imagen</th>
+                        <th>Cliente</th>
+                        <th>Telefono</th>
+                        <th>Producto</th>
+                        <th>Tamaño</th>
+                        <th>Cantidad</th>
+                        <th>Precio</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="adminTbody"></tbody>
+            </table>
+        </div>
+
+        <div class="no-results" id="adminNoResults">
+            😔 No se encontraron órdenes con esa búsqueda.
+        </div>
+    </div>
+
+    <!-- ===== VISTA: NUEVO PRODUCTO ===== -->
+    <div id="adminFormNuevoView" style="display:none;">
+        <div class="container">
+            <div class="card" style="cursor:default;">
+                <button onclick="volverAlGrid()" class="admin-btn-back">← Volver</button>
+
+                <i class="fas fa-plus-circle" style="font-size:2rem; color:var(--pink-accent); margin-top:0.5rem;"></i>
+                <h3 style="margin:0.5rem 0;">Nueva Orden</h3>
+
+                <div style="text-align:left;">
+                    <label style="font-weight:bold; font-size:0.9rem;">Nombre del Cliente: *</label>
+                    <input type="text" id="nuevoClientName" placeholder="Ej: Ana Rodriguez"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Teléfono del Cliente:</label>
+                    <input type="tel" id="nuevoClientPhone" placeholder="Ej: 88887777"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Nombre del Producto: *</label>
+                    <input type="text" id="nuevoProductName" placeholder="Ej: Tenis Nike Air Force 1"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Talla:</label>
+                    <input type="text" id="nuevoSize" placeholder="Ej: 7.5"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Cantidad: *</label>
+                    <input type="number" id="nuevoQuantity" value="1" min="1"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Precio (₡): *</label>
+                    <input type="number" id="nuevoPrice" placeholder="Ej: 65000"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">URL de la Imagen:</label>
+                    <input type="text" id="nuevoImageUrl" placeholder="https://ejemplo.com/imagen.jpg"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:1rem; box-sizing:border-box;">
+
+                    <button onclick="guardarNuevaOrden()"
+                        style="width:100%; padding:12px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
+                        Guardar Orden
+                    </button>
+
+                    <div id="nuevoMensaje" style="margin-top:0.8rem; font-weight:bold; text-align:center;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== VISTA: EDITAR Orden EXISTENTE ===== -->
+    <div id="adminFormEditView" style="display:none;">
+        <div class="container">
+            <div class="card" style="cursor:default;">
+                <button onclick="volverAlGrid()" class="admin-btn-back">← Volver</button>
+
+                <i class="fas fa-pencil-alt" style="font-size:2rem; color:var(--pink-accent); margin-top:0.5rem;"></i>
+                <h3 style="margin:0.5rem 0;">Editar Orden</h3>
+
+                <div style="text-align:left;">
+                    <label style="font-weight:bold; font-size:0.9rem;">Nombre del Cliente: *</label>
+                    <input type="text" id="editNombre" placeholder="Nombre del cliente"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Nombre del Producto: *</label>
+                    <input type="text" id="editProducto" placeholder="Nombre del producto"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Talla:</label>
+                    <input type="text" id="editTalla" placeholder="Talla del producto"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Cantidad: *</label>
+                    <input type="number" id="editCantidad" placeholder="Cantidad del producto"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Precio: *</label>
+                    <input type="number" id="editPrecio" placeholder="Precio del producto"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">URL de la Imagen: *</label>
+                    <input type="text" id="editImagen" placeholder="URL de la imagen del producto"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <button onclick="guardarEdicionCompleta()"
+                        style="width:100%; padding:12px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
+                        Guardar Cambios
+                    </button>
+
+                    <div id="editMensaje" style="margin-top:0.8rem; font-weight:bold; text-align:center;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
