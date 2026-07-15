@@ -9,7 +9,7 @@ exports.handler = async (event) => {
         }
         try {
             const res = await fetch(`${SUPABASE_URL}/rest/v1/status_tracking?select=id_status_tracking,status_name&order=id_status_tracking.asc`, {
-                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+                headers: { 'apikey': SUPABASE_KEY }
             });
             if (!res.ok) throw new Error(`Supabase ${res.status}`);
             const data = await res.json();
@@ -53,7 +53,6 @@ exports.handler = async (event) => {
             method: 'POST',
             headers: {
                 'apikey': SUPABASE_KEY,
-                'Authorization': `Bearer ${SUPABASE_KEY}`,
                 'Content-Type': 'application/json',
                 'Prefer': 'return=minimal'
             },

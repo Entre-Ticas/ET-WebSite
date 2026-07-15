@@ -3,9 +3,8 @@ const SUPABASE_KEY    = () => process.env.SUPABASE_SERVICE_ROLE_KEY;
 const ADMIN_SECRET    = () => process.env.ADMIN_SECRET;
 
 const sbHeaders = () => ({
-    'apikey':        SUPABASE_KEY(),
-    'Authorization': `Bearer ${SUPABASE_KEY()}`,
-    'Content-Type':  'application/json'
+    'apikey': SUPABASE_KEY(),
+    'Content-Type': 'application/json',
 });
 
 function verifyToken(token) {

@@ -4,8 +4,7 @@ const ADMIN_SECRET = () => process.env.ADMIN_SECRET;
 
 const sbHeaders = () => ({
     'apikey': SUPABASE_KEY(),
-    'Authorization': `Bearer ${SUPABASE_KEY()}`,
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
 });
 
 function verifyToken(token) {
@@ -106,7 +105,7 @@ exports.handler = async (event) => {
                     const bucketName = pathParts[5];
                     const filePath = pathParts.slice(6).join('/');
                     if (bucketName && filePath) {
-                        await fetch(`${SUPABASE_URL()}/storage/v1/object/${bucketName}/${filePath}`, { method: 'DELETE', headers: { 'apikey': SUPABASE_KEY(), 'Authorization': `Bearer ${SUPABASE_KEY()}` } });
+                        await fetch(`${SUPABASE_URL()}/storage/v1/object/${bucketName}/${filePath}`, { method: 'DELETE', headers: { 'apikey': SUPABASE_KEY() } });
                     }
                 } catch (storageError) { console.warn(`Registro de BD eliminado, pero falló borrado de archivo: ${storageError.message}`); }
             }

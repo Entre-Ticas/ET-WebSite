@@ -4,8 +4,7 @@ const ADMIN_SECRET = () => process.env.ADMIN_SECRET;
 
 const sbHeaders = () => ({
     'apikey': SUPABASE_KEY(),
-    'Authorization': `Bearer ${SUPABASE_KEY()}`,
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
 });
 
 function requireOrderItemsEnv() {

@@ -24,8 +24,7 @@ exports.handler = async (event) => {
             `${SUPABASE_URL}/rest/v1/users?User=eq.${encodeURIComponent(user)}&select=id,User,User_Name,Contraseña`,
             {
                 headers: {
-                    'apikey': SUPABASE_KEY,
-                    'Authorization': `Bearer ${SUPABASE_KEY}`
+                    'apikey': SUPABASE_KEY
                 }
             }
         );

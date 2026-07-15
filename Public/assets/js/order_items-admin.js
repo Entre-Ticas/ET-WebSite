@@ -114,10 +114,17 @@ function abrirFormNuevo() {
     document.getElementById('adminGridView').style.display = 'none';
     document.getElementById('adminFormNuevoView').style.display = 'block';
     // Limpiar formulario
-    const ids = ['nuevoClientName', 'nuevoClientPhone', 'nuevoProductName', 'nuevoSize', 'nuevoPrice', 'nuevoImageUrl'];
+    const ids = ['nuevoClientName', 'nuevoClientPhone', 'nuevoProductName', 'nuevoSize', 'nuevoPrice'];
     ids.forEach(id => document.getElementById(id).value = '');
     document.getElementById('nuevoQuantity').value = '1';
     document.getElementById('nuevoMensaje').innerHTML = '';
+
+    // Resetear el campo de imagen
+    document.getElementById('nuevoImageUrl').value = '';
+    const preview = document.getElementById('nuevoImagePreview');
+    if (preview) preview.querySelector('img').src = 'https://placehold.co/100x100/E19B9D/FFFFFF?text=?';
+    document.getElementById('nuevoImageStatus').textContent = '';
+    document.querySelector('.image-upload-input[onchange*="\'nuevo\'"]').value = null; // Limpiar el input file
 }
 
 async function guardarNuevaOrden() {
@@ -154,7 +161,7 @@ async function guardarNuevaOrden() {
                 size: document.getElementById('nuevoSize').value.trim() || null,
                 quantity: parseInt(document.getElementById('nuevoQuantity').value),
                 price: price,
-                image_url: document.getElementById('nuevoImageUrl').value.trim() || null,
+                image_url: document.getElementById('nuevoImageUrl').value || null, // Obtener URL del campo oculto
                 id_status: 1 // Por defecto, se crea como 'Pendiente' o 'Activo'
             })
         });
@@ -182,15 +189,26 @@ function abrirFormEdicion(id) {
     if (!orden) return;
     ordenIdActual = orderId;
 
-    const setVal = (elId, val) => document.getElementById(elId).value = val || '';
+    const setVal = (elId, val) => {
+        const el = document.getElementById(elId);
+        if (el) el.value = val || '';
+    };
+
     setVal('editNombre', orden.client_name); // Corresponde a 'editNombre' en el HTML
     setVal('editProducto', orden.product_name); // Corresponde a 'editProducto'
     setVal('editTalla', orden.size);
     setVal('editCantidad', orden.quantity);
     setVal('editPrecio', orden.price);
-    setVal('editImagen', orden.image_url);
-    // // El teléfono y el estado no están en el form de edición, los omitimos por ahora.
-    // setVal('editStatus', orden.id_status);
+    
+    // Manejo del campo de imagen
+    setVal('editImageUrl', orden.image_url); // Campo oculto
+    const preview = document.getElementById('editImagePreview');
+    if (preview) preview.querySelector('img').src = orden.image_url || 'https://placehold.co/100x100/E19B9D/FFFFFF?text=?';
+    const imageStatusEl = document.getElementById('editImageStatus');
+    if (imageStatusEl) imageStatusEl.textContent = '';
+    const fileInput = document.querySelector('.image-upload-input[onchange*="\'edit\'"]');
+    if (fileInput) fileInput.value = null;
+
     document.getElementById('editMensaje').innerHTML = '';
     
     document.getElementById('adminGridView').style.display = 'none';
@@ -229,7 +247,7 @@ async function guardarEdicion() {
                 size: document.getElementById('editTalla').value.trim() || null,
                 quantity: quantity,
                 price: price,
-                image_url: document.getElementById('editImagen').value.trim() || null,
+                image_url: document.getElementById('editImageUrl').value || null, // Obtener URL del campo oculto
                 id_status: todasLasOrdenes.find(o => Number(o.id) === Number(ordenIdActual))?.id_status || 1, // Mantenemos el estado que ya existía, ya que el campo no está en el form.
                 created_at: todasLasOrdenes.find(o => Number(o.id) === Number(ordenIdActual))?.created_at // Enviamos la fecha de creación original
             })
@@ -284,5 +302,52 @@ async function eliminarOrden(id) {
         alert(`Error al eliminar: ${error.message}`);
     }
 }
+
+async function handleImageUpload(event, formType) {
+    const fileInput = event.target;
+    const file = fileInput.files[0];
+    if (!file) return;
+
+    const statusEl = document.getElementById(`${formType}ImageStatus`);
+    const previewImg = document.getElementById(`${formType}ImagePreview`).querySelector('img');
+    const urlHiddenInput = document.getElementById(`${formType}ImageUrl`);
+
+    statusEl.textContent = 'Subiendo imagen...';
+    statusEl.style.color = 'var(--brown-text)';
+
+    try {
+        const session = getSession();
+        if (!session) throw new Error('Sesión expirada.');
+
+        // 1. Enviar el archivo binario directamente a la función de Netlify
+        const response = await fetch('/.netlify/functions/upload-image', {
+            method: 'POST',
+            headers: {
+                'Content-Type': file.type,
+                'x-admin-token': session.token,
+                'x-file-name': file.name // Enviamos el nombre del archivo en una cabecera personalizada
+            },
+            body: file // Enviamos el objeto File directamente
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error || 'No se pudo subir la imagen.');
+        }
+
+        const { imageUrl } = await response.json();
+
+        // 2. Actualizar la UI con la nueva URL
+        urlHiddenInput.value = imageUrl;
+        previewImg.src = imageUrl;
+        statusEl.textContent = '✅ Imagen subida.';
+        statusEl.style.color = '#28a745';
+
+    } catch (error) {
+        statusEl.textContent = `Error: ${error.message}`;
+        statusEl.style.color = 'red';
+    }
+}
+
 
 window.initOrderItemsAdminPage = loadAdminOrders;
