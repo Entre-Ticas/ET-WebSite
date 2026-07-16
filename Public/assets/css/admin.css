@@ -235,3 +235,21 @@
 }
 
 .admin-btn-copy-link:hover { opacity: 0.85; transform: scale(1.05); }
+
+    transform: rotate(45deg); opacity: 0; transition: opacity 0.2s;
+}
+.custom-checkbox-container input[type="checkbox"]:checked + .checkbox-label::after { opacity: 1; }
+
+/* Estilo para botones de icono en formularios (Subir/Tomar foto) */
+.admin-btn {
+    background: var(--pink-light);
+    border: none;
+    border-radius: 12px;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    color: var(--pink-accent);
+    font-size: 1rem;
+    transition: background-color 0.2s;
+}
+.admin-btn:hover { background-color: #f3bfc1; color: white; }

@@ -1,4 +1,3 @@
-/* Estilos básicos para la tarjeta de producto en el grid */
 .admin-card {
     background-color: #fff;
     border-radius: 15px;
@@ -57,7 +56,7 @@
     font-size: 1rem;
 }
 .admin-btn-icon.btn-delete:hover {
-    background-color: #dc3545; /* Un tono de rojo */
+    background-color: #dc3545; 
     color: white;
 }
 
@@ -67,3 +66,101 @@
     object-fit: cover;
     border-radius: 8px;
 }
+ .image-upload-container {
+        margin-bottom: 1rem;
+    }
+    .image-upload-container label {
+        font-weight: bold;
+        font-size: 0.9rem;
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+    .image-upload-input {
+        width: 100%;
+        margin-bottom: 0.8rem;
+        display: none;
+    }
+    .image-upload-content {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 0.8rem;
+    }
+    .image-upload-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+    }
+    .image-preview {
+        width: 100px;
+        height: 100px;
+        border: 2px dashed var(--pink-light);
+        border-radius: 10px;
+        overflow: hidden;
+        flex-shrink: 0; /* Evita que la imagen se encoja */
+    }
+    .image-preview img { width: 100%; height: 100%; object-fit: cover; }
+    .image-upload-status { font-size: 0.8rem; }
+
+    .admin-filter-select {
+        width: 100%;
+        padding: 4px 6px;
+        border: 1px solid var(--pink-light);
+        border-radius: 8px;
+        background-color: #fff;
+        color: var(--brown-text);
+        font-family: inherit;
+        font-size: 0.75rem;
+        box-sizing: border-box;
+    }
+
+    .custom-checkbox-container {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+        cursor: pointer;
+    }
+    .custom-checkbox-container input[type="checkbox"] {
+        display: none; 
+    }
+    .custom-checkbox-container .checkbox-label {
+        font-weight: bold;
+        font-size: 0.9rem;
+        position: relative;
+        padding-left: 30px; 
+        user-select: none;
+    }
+    .custom-checkbox-container .checkbox-label::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 20px;
+        height: 20px;
+        border: 2px solid var(--pink-accent);
+        border-radius: 5px;
+        background-color: white;
+        transition: all 0.2s;
+    }
+    .custom-checkbox-container input[type="checkbox"]:checked + .checkbox-label::before {
+        background-color: var(--pink-accent);
+        border-color: var(--pink-accent);
+    }
+    .custom-checkbox-container .checkbox-label::after {
+        content: '';
+        position: absolute;
+        left: 7px; 
+        top: 3px; 
+        width: 5px;
+        height: 10px;
+        border: solid white;
+        border-width: 0 3px 3px 0;
+        transform: rotate(45deg);
+        opacity: 0; /* Oculto por defecto */
+        transition: opacity 0.2s;
+    }
+    .custom-checkbox-container input[type="checkbox"]:checked + .checkbox-label::after {
+        opacity: 1; 
+    }
