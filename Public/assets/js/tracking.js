@@ -44,7 +44,6 @@ async function buscarTracking() {
         const infoHTML = `<div class="tracking-info-estado-wrap">
                 <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px;">
                     <span class="tracking-estado-badge" style="margin: 0;">${ultimoEstado}</span>
-                    <button class="btn-copy-link-public" onclick="copiarGuia(this, '${num}')" title="Copiar enlace directo"><i class="fas fa-link"></i></button>
                 </div>
             </div>` +
             infoItems.slice(1).map(i =>
