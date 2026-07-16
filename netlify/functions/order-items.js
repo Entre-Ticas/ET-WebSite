@@ -121,17 +121,18 @@ async function updateOrder(event) {
         }
 
         const orderId = Number(payload.id);
-        const updateData = {
-            client_name: payload.client_name,
-            client_phone: payload.client_phone,
-            product_name: payload.product_name,
-            size: payload.size,
-            quantity: payload.quantity,
-            price: payload.price,
-            image_url: payload.image_url,
-            id_status: payload.id_status
-        };
+        // Objeto para almacenar solo los campos que se van a actualizar.
+        const updateData = {};
 
+        // Lista de campos permitidos para actualizar.
+        const allowedFields = ['client_name', 'client_phone', 'product_name', 'size', 'quantity', 'price', 'image_url', 'id_status', 'usa_reviewed', 'bank_reviewed'];
+
+        // Llenar dinámicamente updateData solo con los campos presentes en el payload.
+        allowedFields.forEach(field => {
+            if (payload[field] !== undefined) {
+                updateData[field] = payload[field];
+            }
+        });
         const beforeResponse = await fetch(`${SUPABASE_URL()}/rest/v1/order_items?id=eq.${orderId}&select=*`, {
             method: 'GET',
             headers: sbHeaders()
@@ -172,16 +173,14 @@ async function updateOrder(event) {
             };
         }
 
-        const updated =
-            String(updatedRow.client_name ?? '') === String(updateData.client_name ?? '') &&
-            String(updatedRow.client_phone ?? '') === String(updateData.client_phone ?? '') &&
-            String(updatedRow.product_name ?? '') === String(updateData.product_name ?? '') &&
-            String(updatedRow.size ?? '') === String(updateData.size ?? '') &&
-            Number(updatedRow.quantity) === Number(updateData.quantity) &&
-            Number(updatedRow.price) === Number(updateData.price) &&
-            String(updatedRow.image_url ?? '') === String(updateData.image_url ?? '') &&
-            Number(updatedRow.id_status) === Number(updateData.id_status);
-
+        // Verificación mejorada: Comprueba que todos los campos enviados se hayan actualizado correctamente.
+        const updated = Object.keys(updateData).every(key => {
+            // Comparamos los valores, manejando nulos y tipos de datos.
+            const oldValue = updateData[key];
+            const newValue = updatedRow[key];
+            // Comparamos como strings para evitar problemas de tipo (ej: 'true' vs true)
+            return String(oldValue ?? '') === String(newValue ?? '');
+        });
         if (!updated) {
             return {
                 statusCode: 500,

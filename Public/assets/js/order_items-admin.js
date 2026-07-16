@@ -62,6 +62,7 @@ function displayAdminOrders(ordenes) {
     const table = document.querySelector('#adminGrid .admin-table');
     const tbody = document.getElementById('adminTbody');
     const noResults = document.getElementById('adminNoResults');
+    const template = document.getElementById('adminOrderItemTemplate');
 
     if (!table || !tbody || !noResults) return;
 
@@ -75,6 +76,8 @@ function displayAdminOrders(ordenes) {
     
     noResults.style.display = 'none';
     table.style.display = '';
+
+    const fragment = document.createDocumentFragment();
     
     ordenes.forEach(o => {
         tbody.innerHTML += `
@@ -87,12 +90,44 @@ function displayAdminOrders(ordenes) {
                 <td>${o.quantity || 0}</td>
                 <td>₡${(o.price || 0).toLocaleString('es-CR')}</td>
                 <td><span class="status-dot" style="background-color: ${o.id_status === 9 ? '#28a745' : '#ffc107'};"></span> ${o.status_name || 'Pendiente'}</td>
+                <td style="text-align: center;"><input type="checkbox" onchange="toggleReviewStatus(${o.id}, 'usa_reviewed', this)" ${o.usa_reviewed ? 'checked' : ''}></td>
+                <td style="text-align: center;"><input type="checkbox" onchange="toggleReviewStatus(${o.id}, 'bank_reviewed', this)" ${o.bank_reviewed ? 'checked' : ''}></td>
                 <td class="admin-actions-cell">
                     <button class="admin-btn-icon" onclick="abrirFormEdicion(${o.id})" title="Editar Orden"><i class="fas fa-pencil-alt"></i></button>
                     <button class="admin-btn-icon btn-delete" onclick="eliminarOrden(${o.id})" title="Eliminar Orden"><i class="fas fa-trash-alt"></i></button>
                 </td>
             </tr>`;
+        const clone = template.content.cloneNode(true);
+        
+        // Helper para rellenar campos
+        const setContent = (field, value) => {
+            const el = clone.querySelector(`[data-field="${field}"]`);
+            if (el) el.textContent = value;
+        };
+
+        clone.querySelector('[data-field="imageUrl"]').src = o.image_url || 'https://placehold.co/40x40/E19B9D/FFFFFF?text=?';
+        setContent('clientName', o.client_name || '');
+        setContent('clientPhone', o.client_phone || '');
+        setContent('productName', o.product_name || '');
+        setContent('size', o.size || '');
+        setContent('quantity', o.quantity || 0);
+        setContent('price', `₡${(o.price || 0).toLocaleString('es-CR')}`);
+        
+        clone.querySelector('[data-field="statusDot"]').style.backgroundColor = o.id_status === 9 ? '#28a745' : '#ffc107';
+        setContent('statusName', o.status_name || 'Pendiente');
+
+        clone.querySelector('[data-field="usaReviewed"]').checked = o.usa_reviewed;
+        clone.querySelector('[data-field="bankReviewed"]').checked = o.bank_reviewed;
+
+        const actionsCell = clone.querySelector('[data-field="actions"]');
+        actionsCell.innerHTML = `
+            <button class="admin-btn-icon" onclick="abrirFormEdicion(${o.id})" title="Editar Orden"><i class="fas fa-pencil-alt"></i></button>
+            <button class="admin-btn-icon btn-delete" onclick="eliminarOrden(${o.id})" title="Eliminar Orden"><i class="fas fa-trash-alt"></i></button>`;
+
+        fragment.appendChild(clone);
     });
+
+    tbody.appendChild(fragment);
 }
 
 function filtrarOrdenes() {
@@ -269,6 +304,52 @@ async function guardarEdicion() {
 
     } catch (error) {
         mensajeEl.textContent = `Error: ${error.message}`;
+    }
+}
+
+async function toggleReviewStatus(orderId, field, checkbox) {
+    const isChecked = checkbox.checked;
+
+    // Actualizar el estado local primero para una UI optimista
+    const orden = todasLasOrdenes.find(o => Number(o.id) === Number(orderId));
+    if (orden) {
+        orden[field] = isChecked;
+    } else {
+        alert(`Error interno: No se encontró la orden con ID ${orderId} para actualizar.`);
+        // Revertir el cambio en la UI porque no se puede procesar
+        checkbox.checked = !isChecked;
+        return;
+    }
+
+    try {
+        const session = getSession();
+        if (!session) throw new Error('Sesión expirada.');
+
+        const body = {
+            id: orderId,
+            [field]: isChecked,
+            client_phone: orden?.client_phone || null, // Requerido por la política RLS para la actualización.
+            created_at: orden?.created_at // Requerido por la política RLS para la actualización.
+        };
+
+        const response = await fetch('/.netlify/functions/order-items', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'x-admin-token': session.token },
+            body: JSON.stringify(body)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Respuesta de error no es JSON.' }));
+            throw new Error(errorData.error || `Error ${response.status}: No se pudo actualizar el estado.`);
+        }
+
+        // El estado ya se actualizó localmente, la API lo confirmó.
+
+    } catch (error) {
+        alert(`Error al actualizar: ${error.message}`);
+        // Revertir el cambio en la UI si la API falla
+        checkbox.checked = !isChecked;
+        if (orden) orden[field] = !isChecked;
     }
 }
 
