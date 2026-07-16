@@ -30,6 +30,19 @@
     }
     .image-preview img { width: 100%; height: 100%; object-fit: cover; }
     .image-upload-status { font-size: 0.8rem; }
+
+    /* Estilo para los dropdowns de filtro para que coincidan con los inputs */
+    .admin-filter-select {
+        width: 100%;
+        padding: 4px 6px;
+        border: 1px solid var(--pink-light);
+        border-radius: 8px;
+        background-color: #fff;
+        color: var(--brown-text);
+        font-family: inherit;
+        font-size: 0.75rem;
+        box-sizing: border-box;
+    }
 </style>
 
 <div class="admin-wrapper">
@@ -54,18 +67,39 @@
         <div id="adminGrid" class="admin-grid">
             <table class="admin-table" style="display: none;">
                 <thead>
-                    <tr>
-                        <th>Imagen</th>
-                        <th>Cliente</th>
-                        <th>Telefono</th>
-                        <th>Producto</th>
-                        <th>Tamaño</th>
-                        <th>Cantidad</th>
-                        <th>Precio</th>
-                        <th>Estado</th>
-                        <th>Rev. USA</th>
-                        <th>Rev. Banco</th>
-                        <th>Acciones</th>
+                    <tr class="admin-main-header">
+                        <th data-col="image">Imagen</th>
+                        <th class="sortable" onclick="sortBy('client_name')" data-col="client_name">Cliente <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortBy('client_phone')" data-col="client_phone">Teléfono <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortBy('product_name')" data-col="product_name">Producto <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortBy('size')" data-col="size">Talla <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortBy('quantity')" data-col="quantity">Cant. <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortBy('price')" data-col="price">Precio <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortBy('status_name')" data-col="status_name">Estado <span class="sort-arrow">↕</span></th>
+                        <th data-col="usa_reviewed">Rev. USA</th>
+                        <th data-col="bank_reviewed">Rev. Banco</th>
+                        <th data-col="actions">Acciones</th>
+                    </tr>
+                    <tr class="admin-filter-row">
+                        <td></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('client_name', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('client_phone', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('product_name', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('size', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('quantity', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('price', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('status_name', this.value)" /></td>
+                        <td>
+                            <select class="admin-filter-select" onchange="setColumnFilter('usa_reviewed', this.value)">
+                                <option value="">Todos</option><option value="true">Sí</option><option value="false">No</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select class="admin-filter-select" onchange="setColumnFilter('bank_reviewed', this.value)">
+                                <option value="">Todos</option><option value="true">Sí</option><option value="false">No</option>
+                            </select>
+                        </td>
+                        <td></td>
                     </tr>
                 </thead>
                 <tbody id="adminTbody"></tbody>
