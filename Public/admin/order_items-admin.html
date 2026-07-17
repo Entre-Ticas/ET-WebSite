@@ -98,7 +98,7 @@
                         style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
 
                     <label style="font-weight:bold; font-size:0.9rem;">Teléfono del Cliente: *</label>
-                    <input type="tel" id="nuevoClientPhone" placeholder="Ej: 88887777"
+                    <input type="tel" id="nuevoClientPhone" placeholder="Ej: xxxx7777" maxlength="4"
                         style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
 
                     <label style="font-weight:bold; font-size:0.9rem;">Nombre del Producto: *</label>
@@ -110,14 +110,14 @@
                         style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
 
                     <label style="font-weight:bold; font-size:0.9rem;">Cantidad:</label>
-                    <input type="number" id="nuevoQuantity" value="1" min="1"
+                    <input type="number" id="nuevoQuantity" value="1" min="1" max="9999"
                         style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
 
                     <label style="font-weight:bold; font-size:0.9rem;">Precio (₡): *</label>
                     <input type="number" id="nuevoPrice" placeholder="Ej: 65000"
                         style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
 
-                    <button onclick="guardarNuevaOrden()"
+                    <button id="btnGuardarNuevaOrden" onclick="guardarNuevaOrden()"
                         style="width:100%; padding:12px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
                         Guardar Orden
                     </button>
@@ -159,6 +159,10 @@
                     <input type="text" id="editNombre" placeholder="Nombre del cliente"
                         style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
 
+                    <label style="font-weight:bold; font-size:0.9rem;">Teléfono del Cliente: *</label>
+                    <input type="tel" id="editClientPhone" placeholder="Ej: xxxx7777" maxlength="4"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
                     <label style="font-weight:bold; font-size:0.9rem;">Nombre del Producto: *</label>
                     <input type="text" id="editProducto" placeholder="Nombre del producto"
                         style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
@@ -168,7 +172,7 @@
                         style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
 
                     <label style="font-weight:bold; font-size:0.9rem;">Cantidad:</label>
-                    <input type="number" id="editCantidad" placeholder="Cantidad del producto"
+                    <input type="number" id="editCantidad" placeholder="Cantidad del producto" max="9999"
                         style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
 
                     <label style="font-weight:bold; font-size:0.9rem;">Precio: *</label>
@@ -185,7 +189,7 @@
                         <span class="checkbox-label">Revisado por Banco</span>
                     </label>
                     
-                    <button onclick="guardarEdicionCompleta()"
+                    <button id="btnGuardarEdicion" onclick="guardarEdicionCompleta()"
                         style="width:100%; padding:12px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
                         Guardar Cambios
                     </button>

@@ -111,14 +111,13 @@ function renderOrders() {
 
     if (ordenes.length === 0) {
         noResults.style.display = 'block';
-        table.style.display = 'none';
         tbody.innerHTML = '';
         return;
     }
     
     noResults.style.display = 'none';
     table.style.display = '';
-
+    
     const rowsHtml = ordenes.map(o => `
             <tr>
                 <td><img src="${o.image_url || 'https://placehold.co/40x40/E19B9D/FFFFFF?text=?'}" class="admin-table-img" alt="Producto"></td>
@@ -201,6 +200,7 @@ function abrirFormNuevo() {
 
 async function guardarNuevaOrden() {
     const mensajeEl = document.getElementById('nuevoMensaje');
+    const botonGuardar = document.getElementById('btnGuardarNuevaOrden');
     mensajeEl.style.color = 'red';
     
     const client_name = document.getElementById('nuevoClientName').value.trim();
@@ -218,10 +218,11 @@ async function guardarNuevaOrden() {
     
     mensajeEl.textContent = 'Guardando...';
     mensajeEl.style.color = 'var(--brown-text)';
+    botonGuardar.disabled = true;
     
     try {
         const session = getSession();
-        if (!session) throw new Error('Sesión expirada.');
+        if (!session) throw new Error('Sesión expirada. Inicia sesión de nuevo.');
         
         const response = await fetch('/.netlify/functions/order-items', {
             method: 'POST',
@@ -244,12 +245,14 @@ async function guardarNuevaOrden() {
         mensajeEl.style.color = '#28a745';
 
         setTimeout(async () => {
-            await loadAdminOrders();
-            volverAlGrid();
+            await loadAdminOrders(); // Recargamos los datos en segundo plano
+            abrirFormNuevo();        // Limpiamos el formulario para la siguiente orden
+            botonGuardar.disabled = false; // Reactivamos el botón DESPUÉS de limpiar
         }, 1500);
 
     } catch (error) {
         mensajeEl.textContent = `Error: ${error.message}`;
+        botonGuardar.disabled = false;
     }
 }
 
@@ -267,6 +270,7 @@ function abrirFormEdicion(id) {
     };
 
     setVal('editNombre', orden.client_name); // Corresponde a 'editNombre' en el HTML
+    setVal('editClientPhone', orden.client_phone);
     setVal('editProducto', orden.product_name); // Corresponde a 'editProducto'
     setVal('editTalla', orden.size);
     setVal('editCantidad', orden.quantity);
@@ -294,6 +298,7 @@ function abrirFormEdicion(id) {
 
 async function guardarEdicion() {
     const mensajeEl = document.getElementById('editMensaje');
+    const botonGuardar = document.getElementById('btnGuardarEdicion');
     mensajeEl.style.color = 'red';
 
     const client_name = document.getElementById('editNombre').value.trim();
@@ -308,10 +313,11 @@ async function guardarEdicion() {
 
     mensajeEl.textContent = 'Guardando...';
     mensajeEl.style.color = 'var(--brown-text)';
+    botonGuardar.disabled = true;
 
     try {
         const session = getSession();
-        if (!session) throw new Error('Sesión expirada.');
+        if (!session) throw new Error('Sesión expirada. Inicia sesión de nuevo.');
 
         const response = await fetch('/.netlify/functions/order-items', {
             method: 'PUT',
@@ -319,7 +325,7 @@ async function guardarEdicion() {
             body: JSON.stringify({
                 id: ordenIdActual,
                 client_name: client_name,
-                client_phone: todasLasOrdenes.find(o => Number(o.id) === Number(ordenIdActual))?.client_phone || null, // Mantenemos el teléfono que ya existía
+                client_phone: document.getElementById('editClientPhone').value.trim() || null,
                 product_name: product_name,
                 size: document.getElementById('editTalla').value.trim() || null,
                 quantity: quantity,
@@ -343,10 +349,12 @@ async function guardarEdicion() {
         setTimeout(async () => {
             await loadAdminOrders();
             volverAlGrid();
+            botonGuardar.disabled = false; // Reactivamos el botón DESPUÉS de volver al grid
         }, 1500);
 
     } catch (error) {
         mensajeEl.textContent = `Error: ${error.message}`;
+        botonGuardar.disabled = false;
     }
 }
 
