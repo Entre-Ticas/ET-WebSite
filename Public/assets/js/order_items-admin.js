@@ -494,3 +494,17 @@ function triggerCameraUpload(formType) {
 
 
 window.initOrderItemsAdminPage = loadAdminOrders;
+
+function updateQuantity(inputId, delta) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+
+    let currentValue = parseInt(input.value, 10) || 0;
+    let newValue = currentValue + delta;
+
+    // Asegurarse de que el valor no sea menor que el mínimo (1)
+    if (newValue < 1) {
+        newValue = 1;
+    }
+    input.value = newValue;
+}

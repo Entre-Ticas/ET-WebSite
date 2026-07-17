@@ -164,3 +164,44 @@
     .custom-checkbox-container input[type="checkbox"]:checked + .checkbox-label::after {
         opacity: 1; 
     }
+
+    /* Estilos para el stepper de cantidad */
+    .quantity-stepper {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.8rem;
+    }
+    .stepper-btn {
+        background-color: var(--pink-light);
+        border: 1px solid var(--pink-accent);
+        color: var(--pink-accent);
+        cursor: pointer;
+        font-size: 1.2rem;
+        font-weight: bold;
+        width: 40px;
+        height: 40px;
+        transition: background-color 0.2s;
+    }
+    .stepper-btn:first-child { border-radius: 10px 0 0 10px; }
+    .stepper-btn:last-child { border-radius: 0 10px 10px 0; }
+    .stepper-btn:hover { background-color: var(--pink-accent); color: white; }
+
+    .quantity-stepper input[type="number"] {
+        width: 60px;
+        height: 40px;
+        text-align: center;
+        border: 1px solid var(--pink-accent);
+        border-left: none;
+        border-right: none;
+        font-size: 1rem;
+        font-weight: bold;
+        border-radius: 0;
+        margin-bottom: 0; /* Anular margen global */
+        box-sizing: border-box;
+        -moz-appearance: textfield; /* Firefox */
+    }
+    .quantity-stepper input[type="number"]::-webkit-outer-spin-button,
+    .quantity-stepper input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
