@@ -10,8 +10,6 @@ async function loadAdminProducts() {
 
     // 1. Inyectamos la estructura de la tabla INMEDIATAMENTE.
     gridContainer.innerHTML = `
-        <div id="adminStatus" class="admin-status" style="display: flex;"><div class="spinner"></div><p>Cargando...</p></div>
-        <div id="adminNoResults" style="display: none;"><p>No se encontraron resultados.</p></div>
         <table class="admin-table" style="display: none;">
             <thead>
                 <tr>
