@@ -159,7 +159,7 @@ function renderOrders() {
     
     const rowsHtml = ordenes.map(o => `
             <tr>
-                <td><img src="${o.image_url || 'https://placehold.co/40x40/E19B9D/FFFFFF?text=?'}" class="admin-table-img" alt="Producto"></td>
+                <td><img src="${o.image_url || 'https://placehold.co/40x40/E19B9D/FFFFFF?text=?'}" class="admin-table-img" alt="Producto" onclick="openImageModal('${o.image_url || ''}')"></td>
                 <td>${o.client_name || ''}</td>
                 <td>${o.client_phone || ''}</td>
                 <td>${o.product_name || ''}</td>
@@ -178,6 +178,21 @@ function renderOrders() {
 
     tbody.innerHTML = rowsHtml;
     actualizarIconosOrden();
+}
+
+/**
+ * Abre el modal para mostrar una imagen en grande.
+ * @param {string} src - La URL de la imagen a mostrar.
+ */
+function openImageModal(src) {
+    if (!src) return; // No hacer nada si no hay imagen
+    document.getElementById('modalImg').src = src;
+    document.getElementById('imgModal').classList.add('active');
+}
+
+/** Cierra el modal de la imagen. */
+function closeImageModal() {
+    document.getElementById('imgModal').classList.remove('active');
 }
 
 function verFactura(invoiceId) {

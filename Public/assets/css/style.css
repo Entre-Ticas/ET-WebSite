@@ -60,6 +60,36 @@ body {
         background: none;
         border: none;
     }
+    .img-modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.75);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+    }
+    .img-modal-overlay.active {
+        display: flex;
+    }
+    .img-modal-overlay img {
+        max-width: 90vw;
+        max-height: 85vh;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        margin: 0;
+    }
+    .img-modal-overlay .close-btn {
+        position: absolute;
+        top: 20px;
+        right: 25px;
+        font-size: 2rem;
+        color: white;
+        cursor: pointer;
+        line-height: 1;
+        background: none;
+        border: none;
+    }
     @media (max-width: 480px) {
         .product-grid { grid-template-columns: repeat(2, 1fr); gap: 1rem; }
         .product-info { padding: 0.75rem; }
