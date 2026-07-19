@@ -48,7 +48,6 @@ async function loadAdminOrders() {
                     <th class="sortable" onclick="sortBy('size')" data-col="size">Talla <span class="sort-arrow">↕</span></th>
                     <th class="sortable" onclick="sortBy('quantity')" data-col="quantity">Cant. <span class="sort-arrow">↕</span></th>
                     <th class="sortable" onclick="sortBy('price')" data-col="price">Precio <span class="sort-arrow">↕</span></th>
-                    <th class="sortable" onclick="sortBy('status_name')" data-col="status_name">Estado <span class="sort-arrow">↕</span></th>
                     <th data-col="usa_reviewed">Rev. USA</th>
                     <th data-col="bank_reviewed">Rev. Banco</th>
                     <th data-col="actions">Acciones</th>
@@ -61,7 +60,6 @@ async function loadAdminOrders() {
                     <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('size', this.value)" /></td>
                     <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('quantity', this.value)" /></td>
                     <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('price', this.value)" /></td>
-                    <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('status_name', this.value)" /></td>
                     <td><select class="admin-filter-select" onchange="setColumnFilter('usa_reviewed', this.value)"><option value="">Todos</option><option value="true">Sí</option><option value="false">No</option></select></td>
                     <td><select class="admin-filter-select" onchange="setColumnFilter('bank_reviewed', this.value)"><option value="">Todos</option><option value="true">Sí</option><option value="false">No</option></select></td>
                     <td></td>
@@ -130,7 +128,6 @@ function renderOrders() {
         (o.size || '').toLowerCase().includes(orderItemsColumnFilters.size) &&
         String(o.quantity || '').toLowerCase().includes(orderItemsColumnFilters.quantity) &&
         String(o.price || '').toLowerCase().includes(orderItemsColumnFilters.price) &&
-        (o.status_name || '').toLowerCase().includes(orderItemsColumnFilters.status_name) &&
         (orderItemsColumnFilters.usa_reviewed === '' || String(o.usa_reviewed) === orderItemsColumnFilters.usa_reviewed) &&
         (orderItemsColumnFilters.bank_reviewed === '' || String(o.bank_reviewed) === orderItemsColumnFilters.bank_reviewed)
     );
@@ -169,11 +166,11 @@ function renderOrders() {
                 <td>${o.size || ''}</td>
                 <td>${o.quantity || 0}</td>
                 <td>₡${(o.price || 0).toLocaleString('es-CR')}</td>
-                <td><span class="status-dot" style="background-color: ${o.id_status === 9 ? '#28a745' : '#ffc107'};"></span> ${o.status_name || 'Pendiente'}</td>
                 <td style="text-align: center;"><input type="checkbox" onchange="toggleReviewStatus(${o.id}, 'usa_reviewed', this)" ${o.usa_reviewed ? 'checked' : ''}></td>
                 <td style="text-align: center;"><input type="checkbox" onchange="toggleReviewStatus(${o.id}, 'bank_reviewed', this)" ${o.bank_reviewed ? 'checked' : ''}></td>
                 <td class="admin-actions-cell">
                     <button class="admin-btn-action btn-edit" onclick="abrirFormEdicion(${o.id})" title="Editar Orden"><i class="fas fa-pencil-alt"></i></button>
+                    <button class="admin-btn-action btn-invoice" onclick="verFactura(${o.invoice_id})" title="Ver Factura"><i class="fas fa-file-invoice-dollar"></i></button>
                     <button class="admin-btn-action btn-delete" onclick="eliminarOrden(${o.id})" title="Eliminar Orden"><i class="fas fa-trash-alt"></i></button>
                 </td>
             </tr>`
@@ -181,6 +178,10 @@ function renderOrders() {
 
     tbody.innerHTML = rowsHtml;
     actualizarIconosOrden();
+}
+
+function verFactura(invoiceId) {
+    if (typeof loadPage === 'function') loadPage('admin/invoice', invoiceId);
 }
 
 function sortBy(col) {

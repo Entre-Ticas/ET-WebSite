@@ -1,0 +1,88 @@
+.invoice-summary-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.summary-card {
+    background-color: #fff;
+    border: 1px solid var(--pink-light);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.summary-card h4 {
+    margin-top: 0;
+    color: var(--pink-accent);
+    border-bottom: 2px solid var(--pink-light);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.summary-card p {
+    margin: 0.5rem 0;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.summary-card .balance-due {
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: #c0392b;
+    margin-top: 1rem;
+    background-color: #f9e5e5;
+    padding: 0.5rem;
+    border-radius: 8px;
+}
+
+.add-payment-section {
+    margin-bottom: 2rem;
+    text-align: left;
+}
+
+.payment-form-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto;
+    gap: 1rem;
+    align-items: center;
+}
+
+.payment-form-grid input {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--pink-light);
+    box-sizing: border-box;
+}
+
+.invoice-details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+.details-card {
+    background-color: #fff;
+    border: 1px solid var(--pink-light);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.details-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.details-table th, .details-table td {
+    text-align: left;
+    padding: 0.8rem;
+    border-bottom: 1px solid var(--pink-light);
+}
+
+.details-table th {
+    color: var(--pink-accent);
+}

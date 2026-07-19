@@ -432,10 +432,12 @@ body {
 .admin-btn-action.btn-edit { background-color: #f3bfc1; color: white; }
 .admin-btn-action.btn-update { background-color: var(--pink-accent); color: white; }
 .admin-btn-action.btn-track { background-color: #f3bfc1; color: white; }
+.admin-btn-action.btn-invoice { background-color: #a8d8b9; color: white; } /* Verde para facturas */
 .admin-btn-action.btn-delete { background-color: #f5c6cb; color: white; } 
 
 .admin-btn-action.btn-edit:hover,
 .admin-btn-action.btn-update:hover,
+.admin-btn-action.btn-invoice:hover,
 .admin-btn-action.btn-track:hover { opacity: 0.85; background-color: var(--pink-accent); }
 
 /* Colores específicos para acciones comunes */
