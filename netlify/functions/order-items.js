@@ -1,219 +1,201 @@
-const SUPABASE_URL = () => process.env.SUPABASE_URL;
-const SUPABASE_KEY = () => process.env.SUPABASE_SERVICE_ROLE_KEY;
-const ADMIN_SECRET = () => process.env.ADMIN_SECRET;
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const sbHeaders = () => ({
-    'apikey': SUPABASE_KEY(),
-    'Content-Type': 'application/json',
-});
+const STATUS_ABIERTA = 1; // Asumimos que el ID del estado 'Abierta' o 'Activa' es 1. ¡Verifícalo en tu tabla `status`!
 
-function requireOrderItemsEnv() {
-    const missing = [];
-    if (!SUPABASE_URL()) missing.push('SUPABASE_URL');
-    if (!SUPABASE_KEY()) missing.push('SUPABASE_SERVICE_ROLE_KEY');
-    if (!ADMIN_SECRET()) missing.push('ADMIN_SECRET');
-    if (missing.length > 0) {
-        throw new Error(`Faltan variables de entorno: ${missing.join(', ')}`);
-    }
-}
+const sbHeaders = {
+    'apikey': supabaseKey,
+    'Authorization': `Bearer ${supabaseKey}`,
+    'Content-Type': 'application/json'
+};
 
+// Utilidad de verificación de token (consistente con el resto del proyecto)
+const ADMIN_SECRET = process.env.ADMIN_SECRET;
 function verifyToken(token) {
-    if (!token || !ADMIN_SECRET()) return false;
+    if (!token) return false;
     try {
         const decoded = Buffer.from(token, 'base64').toString('utf8');
         const [secret, , expiry] = decoded.split(':');
-        return secret === ADMIN_SECRET() && Date.now() <= parseInt(expiry);
-    } catch { return false; }
+        return secret === ADMIN_SECRET && Date.now() <= parseInt(expiry);
+    } catch (e) {
+        console.error('Error de verificación de token:', e.message);
+        return false;
+    }
 }
 
-exports.handler = async (event) => {
-    // La verificación de variables de entorno se hace en cada función para claridad.
-    try {
-        requireOrderItemsEnv();
-    } catch (error) {
-        return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
-    }
-
+exports.handler = async (event, context) => {
     const token = event.headers['x-admin-token'];
-    const user = await verifyToken(token);
-    if (!user) {
-        return {
-            statusCode: 401,
-            body: JSON.stringify({ error: 'Acceso no autorizado.' }),
-        };
+    const unauthorized = {
+        statusCode: 401,
+        body: JSON.stringify({ error: 'No autorizado. Se requiere token de administrador.' }),
+    };
+
+    if (!verifyToken(token)) {
+        return unauthorized;
     }
 
-    switch (event.httpMethod) {
-        case 'GET':
-            return getOrders(event);
-        case 'POST':
-            return createOrder(event);
-        case 'PUT':
-            return updateOrder(event);
-        case 'DELETE':
-            return deleteOrder(event);
-        default:
-            return { statusCode: 405, body: 'Método no permitido' };
+    try {
+        switch (event.httpMethod) {
+            case 'GET':
+                return await getOrderItems(event);
+            case 'POST':
+                return await createOrderItem(event);
+            case 'PUT':
+                return await updateOrderItem(event);
+            case 'DELETE':
+                return await deleteOrderItem(event);
+            default:
+                return { statusCode: 405, body: JSON.stringify({ error: 'Método no permitido' }) };
+        }
+    } catch (error) {
+        console.error('Error en la función order-items:', error);
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: 'Error interno del servidor.', details: error.message }),
+        };
     }
 };
 
-async function getOrders() {
-    try {
-        const response = await fetch(`${SUPABASE_URL()}/rest/v1/rpc/get_admin_order_items`, {
+async function getOrderItems(event) {
+    // Por ahora, mantenemos la llamada a la función existente para no romper la vista de admin.
+    // En un futuro paso, podríamos mejorar esto.
+    const response = await fetch(`${supabaseUrl}/rest/v1/rpc/get_admin_order_items`, {
+        method: 'POST',
+        headers: sbHeaders
+    });
+
+    if (!response.ok) throw new Error(`Error de Supabase: ${await response.text()}`);
+
+    const data = await response.json();
+    return { statusCode: 200, body: JSON.stringify(data) };
+}
+
+async function createOrderItem(event) {
+    console.log("--- createOrderItem: INICIO ---");
+    const body = JSON.parse(event.body);
+    console.log("Body recibido:", JSON.stringify(body, null, 2));
+
+    const { client_phone, client_name, product_name, quantity, price, size, image_url } = body;
+
+    if (!client_phone || !client_name || !product_name || !price) { // Mantenemos la validación original
+        console.error("Validación fallida: Faltan campos obligatorios.");
+        return { statusCode: 400, body: JSON.stringify({ error: 'Faltan campos obligatorios: client_phone, client_name, product_name, price.' }) };
+    }
+
+    // --- INICIA LA NUEVA LÓGICA ---
+
+    // 1. Buscar una factura "abierta" para ese cliente.
+    console.log(`Buscando factura abierta para client_phone: ${client_phone} con id_status: ${STATUS_ABIERTA}`);
+    const findInvoiceUrl = `${supabaseUrl}/rest/v1/invoices?select=id&client_phone=eq.${client_phone}&id_status=eq.${STATUS_ABIERTA}&limit=1`;
+    const findResponse = await fetch(findInvoiceUrl, { headers: sbHeaders });
+
+    if (!findResponse.ok) throw new Error(`Error buscando factura: ${await findResponse.text()}`);
+
+    const open_invoices = await findResponse.json();
+    const open_invoice = open_invoices[0] || null;
+
+    let invoiceId;
+
+    // 2. Decidir si crear una nueva factura o usar la existente.
+    if (open_invoice) {
+        invoiceId = open_invoice.id;
+        console.log(`Factura existente encontrada. Usando ID: ${invoiceId}`);
+    } else {
+        console.log("No se encontró factura abierta. Creando una nueva...");
+        const createInvoiceUrl = `${supabaseUrl}/rest/v1/invoices`;
+        const createResponse = await fetch(createInvoiceUrl, {
             method: 'POST',
-            headers: sbHeaders()
+            headers: { ...sbHeaders, 'Prefer': 'return=representation' },
+            body: JSON.stringify({
+                client_phone: client_phone,
+                client_name: client_name,
+                id_status: STATUS_ABIERTA,
+                paid: false
+            })
         });
 
-        if (!response.ok) throw new Error(`Supabase error: ${await response.text()}`);
-        const data = await response.json();
+        if (!createResponse.ok) {
+            const errorText = await createResponse.text();
+            console.error("¡ERROR FATAL al crear la factura! Abortando.", errorText);
+            throw new Error(`Error creando factura: ${errorText}`);
+        }
 
-        return {
-            statusCode: 200,
-            body: JSON.stringify(data),
-        };
-    } catch (error) {
-        console.error('Error en getOrders:', error);
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: 'No se pudieron obtener las órdenes.' }),
-        };
+        const [new_invoice] = await createResponse.json();
+        invoiceId = new_invoice.id;
+        console.log(`Nueva factura creada con éxito. ID: ${invoiceId}`);
     }
+
+    // 3. Insertar el nuevo order_item asignándole el invoiceId.
+    const itemToInsert = {
+        client_phone: client_phone, // Enviando el teléfono del cliente
+        client_name: client_name,   // Enviando el nombre del cliente
+        product_name: product_name,
+        quantity: quantity || 1,
+        price: price,
+        size: size,
+        image_url: image_url,
+        invoice_id: invoiceId, // ¡Aquí se asigna la factura!
+        id_status: STATUS_ABIERTA, // El item también nace 'Activo'
+        usa_reviewed: false,
+        bank_reviewed: false
+    };
+
+    console.log("Intentando insertar el siguiente order_item:", JSON.stringify(itemToInsert, null, 2));
+
+    const createItemUrl = `${supabaseUrl}/rest/v1/order_items`;
+    const itemResponse = await fetch(createItemUrl, {
+        method: 'POST',
+        headers: { ...sbHeaders, 'Prefer': 'return=representation' },
+        body: JSON.stringify(itemToInsert)
+    });
+
+    if (!itemResponse.ok) {
+        const errorText = await itemResponse.text();
+        console.error("¡ERROR FATAL al insertar el order_item! Abortando.", errorText);
+        throw new Error(`Error insertando item: ${errorText}`);
+    }
+
+    const [new_item] = await itemResponse.json();
+    // --- FIN DE LA NUEVA LÓGICA ---
+    console.log("Operación completada con éxito. Devolviendo el nuevo item:", JSON.stringify(new_item, null, 2));
+
+    return { statusCode: 201, body: JSON.stringify(new_item) };
 }
 
-async function createOrder(event) {
-    try {
-        const payload = JSON.parse(event.body);
-        const insertData = {
-            client_name: payload.client_name,
-            client_phone: payload.client_phone,
-            product_name: payload.product_name,
-            size: payload.size,
-            quantity: payload.quantity,
-            price: payload.price,
-            image_url: payload.image_url,
-            id_status: payload.id_status || 1,
-            created_at: new Date().toISOString() // Añadimos la fecha de creación
-        };
+async function updateOrderItem(event) {
+    const body = JSON.parse(event.body);
+    const { id, ...updateData } = body;
 
-        const response = await fetch(`${SUPABASE_URL()}/rest/v1/order_items`, {
-            method: 'POST',
-            headers: { ...sbHeaders(), 'Prefer': 'return=representation' },
-            body: JSON.stringify(insertData)
-        });
-
-        if (!response.ok) throw new Error(`Supabase error: ${await response.text()}`);
-        const [data] = await response.json();
-        return { statusCode: 201, body: JSON.stringify(data) };
-    } catch (error) {
-        console.error('Error en createOrder:', error);
-        return { statusCode: 500, body: JSON.stringify({ error: 'No se pudo crear la orden.' }) };
-    }
-}
-
-async function updateOrder(event) {
-    try {
-        const payload = JSON.parse(event.body);
-        if (payload.id === undefined || payload.id === null) {
-            return {
-                statusCode: 400,
-                body: JSON.stringify({ error: 'Se requiere un ID para actualizar.' })
-            };
-        }
-
-        const orderId = Number(payload.id);
-        // Objeto para almacenar solo los campos que se van a actualizar.
-        const updateData = {};
-
-        // Lista de campos permitidos para actualizar.
-        const allowedFields = ['client_name', 'client_phone', 'product_name', 'size', 'quantity', 'price', 'image_url', 'id_status', 'usa_reviewed', 'bank_reviewed'];
-
-        // Llenar dinámicamente updateData solo con los campos presentes en el payload.
-        allowedFields.forEach(field => {
-            if (payload[field] !== undefined) {
-                updateData[field] = payload[field];
-            }
-        });
-        const beforeResponse = await fetch(`${SUPABASE_URL()}/rest/v1/order_items?id=eq.${orderId}&select=*`, {
-            method: 'GET',
-            headers: sbHeaders()
-        });
-
-        if (!beforeResponse.ok) throw new Error(`Supabase error: ${await beforeResponse.text()}`);
-
-        const beforeRows = await beforeResponse.json();
-        if (!Array.isArray(beforeRows) || beforeRows.length === 0) {
-            return {
-                statusCode: 404,
-                body: JSON.stringify({ error: `No se encontró la orden con ID ${orderId} para actualizar.` })
-            };
-        }
-
-        const response = await fetch(`${SUPABASE_URL()}/rest/v1/order_items?id=eq.${orderId}`, {
-            method: 'PATCH',
-            headers: { ...sbHeaders(), 'Prefer': 'return=representation' },
-            body: JSON.stringify(updateData)
-        });
-
-        if (!response.ok) throw new Error(`Supabase error: ${await response.text()}`);
-
-        const afterResponse = await fetch(`${SUPABASE_URL()}/rest/v1/order_items?id=eq.${orderId}&select=*`, {
-            method: 'GET',
-            headers: sbHeaders()
-        });
-
-        if (!afterResponse.ok) throw new Error(`Supabase error: ${await afterResponse.text()}`);
-
-        const afterRows = await afterResponse.json();
-        const updatedRow = Array.isArray(afterRows) ? afterRows[0] : null;
-
-        if (!updatedRow) {
-            return {
-                statusCode: 404,
-                body: JSON.stringify({ error: `No se encontró la orden con ID ${orderId} para actualizar.` })
-            };
-        }
-
-        // Verificación mejorada: Comprueba que todos los campos enviados se hayan actualizado correctamente.
-        const updated = Object.keys(updateData).every(key => {
-            // Comparamos los valores, manejando nulos y tipos de datos.
-            const oldValue = updateData[key];
-            const newValue = updatedRow[key];
-            // Comparamos como strings para evitar problemas de tipo (ej: 'true' vs true)
-            return String(oldValue ?? '') === String(newValue ?? '');
-        });
-        if (!updated) {
-            return {
-                statusCode: 500,
-                body: JSON.stringify({ error: `La orden con ID ${orderId} no se actualizó en la base.` })
-            };
-        }
-
-        return { statusCode: 200, body: JSON.stringify(updatedRow) };
-    } catch (error) {
-        console.error('Error en updateOrder:', error);
-        return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
-    }
-}
-
-async function deleteOrder(event) {
-    const id = event.queryStringParameters?.id;
     if (!id) {
-        return { statusCode: 400, body: JSON.stringify({ error: 'Se requiere un ID para eliminar.' }) };
+        return { statusCode: 400, body: JSON.stringify({ error: 'Se requiere el ID del item para actualizar.' }) };
     }
-    try {
-        const response = await fetch(`${SUPABASE_URL()}/rest/v1/order_items?id=eq.${id}`, {
-            method: 'DELETE',
-            headers: { ...sbHeaders(), 'Prefer': 'return=minimal' }
-        });
 
-        if (!response.ok) throw new Error(`Supabase error: ${await response.text()}`);
+    const updateUrl = `${supabaseUrl}/rest/v1/order_items?id=eq.${id}`;
+    const response = await fetch(updateUrl, {
+        method: 'PATCH',
+        headers: { ...sbHeaders, 'Prefer': 'return=representation' },
+        body: JSON.stringify(updateData)
+    });
 
-        return {
-            statusCode: 200,
-            body: JSON.stringify({ message: 'Orden eliminada correctamente.' }),
-        };
-    } catch (error) {
-        console.error('Error en deleteOrder:', error);
-        return { statusCode: 500, body: JSON.stringify({ error: 'No se pudo eliminar la orden.' }) };
+    if (!response.ok) throw new Error(`Error actualizando item: ${await response.text()}`);
+
+    const [data] = await response.json();
+    return { statusCode: 200, body: JSON.stringify(data) };
+}
+
+async function deleteOrderItem(event) {
+    const id = event.queryStringParameters.id;
+
+    if (!id) {
+        return { statusCode: 400, body: JSON.stringify({ error: 'Se requiere el parámetro "id" para eliminar.' }) };
     }
+
+    const deleteUrl = `${supabaseUrl}/rest/v1/order_items?id=eq.${id}`;
+    const response = await fetch(deleteUrl, {
+        method: 'DELETE',
+        headers: sbHeaders
+    });
+
+    if (!response.ok) throw new Error(`Error eliminando item: ${await response.text()}`);
+    return { statusCode: 204, body: '' }; // 204 No Content
 }

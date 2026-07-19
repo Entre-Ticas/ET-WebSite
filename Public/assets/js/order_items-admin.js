@@ -184,7 +184,7 @@ function abrirFormNuevo() {
     document.getElementById('adminGridView').style.display = 'none';
     document.getElementById('adminFormNuevoView').style.display = 'block';
     // Limpiar formulario
-    const ids = ['nuevoClientName', 'nuevoClientPhone', 'nuevoProductName', 'nuevoSize', 'nuevoPrice'];
+    const ids = ['nuevoClientName', 'nuevoClientPhone', 'nuevoProductName', 'nuevoSize', 'nuevoPrice']; // Aseguramos que 'nuevoClientPhone' esté en la lista.
     ids.forEach(id => document.getElementById(id).value = '');
     document.getElementById('nuevoQuantity').value = '1';
     document.getElementById('nuevoMensaje').innerHTML = '';
@@ -204,10 +204,12 @@ async function guardarNuevaOrden() {
     mensajeEl.style.color = 'red';
     
     const client_name = document.getElementById('nuevoClientName').value.trim();
+    const client_phone = document.getElementById('nuevoClientPhone').value.trim();
     const product_name = document.getElementById('nuevoProductName').value.trim();
     const price = parseFloat(document.getElementById('nuevoPrice').value);
     
-    if (!client_name || !product_name || !price) {
+    // ¡CAMBIO CLAVE! Hacemos que el teléfono sea obligatorio aquí.
+    if (!client_name || !client_phone || !product_name || !price) {
         mensajeEl.textContent = 'Por favor, completa todos los campos obligatorios (*).';
         return;
     }
@@ -229,7 +231,7 @@ async function guardarNuevaOrden() {
             headers: { 'Content-Type': 'application/json', 'x-admin-token': session.token },
             body: JSON.stringify({
                 client_name: client_name,
-                client_phone: document.getElementById('nuevoClientPhone').value.trim() || null,
+                client_phone: client_phone,
                 product_name: product_name,
                 size: document.getElementById('nuevoSize').value.trim() || null,
                 quantity: parseInt(document.getElementById('nuevoQuantity').value),
@@ -249,7 +251,6 @@ async function guardarNuevaOrden() {
             abrirFormNuevo();        // Limpiamos el formulario para la siguiente orden
             botonGuardar.disabled = false; // Reactivamos el botón DESPUÉS de limpiar
         }, 1500);
-
     } catch (error) {
         mensajeEl.textContent = `Error: ${error.message}`;
         botonGuardar.disabled = false;
