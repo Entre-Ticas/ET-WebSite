@@ -156,12 +156,11 @@ async function loadPage(page, param = null) {
                 if (input) { input.value = param; buscarTracking(); }
             } else if (page === 'informacion' && typeof loadInfo === 'function' && param) {
                 loadInfo(param);
-            } else if (page === 'admin/tracking' && typeof loadAdmin === 'function') {
-                loadAdmin();
+            // --- INICIALIZACIÓN DE PÁGINAS DE ADMINISTRACIÓN ---
+            } else if (page === 'admin/tracking' && typeof window.initTrackingAdminPage === 'function') {
+                window.initTrackingAdminPage();
             } else if (page === 'admin/catalog' && typeof window.initCatalogAdminPage === 'function') {
-                // La inicialización se maneja dentro del propio HTML de catalog-admin
-                // por lo que no se necesita una llamada explícita aquí.
-                // window.initCatalogAdminPage();
+                window.initCatalogAdminPage();
             } else if (page === 'admin/order_items' && typeof window.initOrderItemsAdminPage === 'function') {
                 window.initOrderItemsAdminPage();
             }

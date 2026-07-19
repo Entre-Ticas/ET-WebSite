@@ -2,15 +2,32 @@
 let allCatalogProducts = [];
 
 async function loadAdminProducts() {
-    const table = document.querySelector('#adminGrid .admin-table');
-    const status = document.getElementById('adminStatus');
-
-    if (!table || !status) {
-        console.error("No se encontraron elementos de la tabla o estado en el DOM.");
+    const gridContainer = document.getElementById('adminGrid');
+    if (!gridContainer) {
+        console.error("El contenedor 'adminGrid' no existe en el HTML de la página.");
         return;
     }
 
-    table.style.display = 'none'; // Ocultar la tabla mientras se carga
+    // 1. Inyectamos la estructura de la tabla INMEDIATAMENTE.
+    gridContainer.innerHTML = `
+        <div id="adminStatus" class="admin-status" style="display: flex;"><div class="spinner"></div><p>Cargando...</p></div>
+        <div id="adminNoResults" style="display: none;"><p>No se encontraron resultados.</p></div>
+        <table class="admin-table" style="display: none;">
+            <thead>
+                <tr>
+                    <th>Imagen</th>
+                    <th>Nombre</th>
+                    <th>Categoría</th>
+                    <th>Precio</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="adminTbody"></tbody>
+        </table>
+    `;
+
+    const status = document.getElementById('adminStatus');
     status.style.display = 'flex'; // Mostrar 'Cargando...'
 
     try {
@@ -31,7 +48,9 @@ async function loadAdminProducts() {
         console.error('Error al cargar productos para admin:', error);
         status.innerHTML = '<p>😕 Error al cargar los productos. Intenta de nuevo.</p>';
     } finally {
-        status.style.display = 'none'; // Ocultar 'Cargando...'
+        if (status) {
+            status.style.display = 'none'; // Ocultar 'Cargando...'
+        }
     }
 }
 

@@ -1,10 +1,10 @@
 // Gestión de Órdenes (Personal Shopper)
 
 let todasLasOrdenes = [];
-let globalSearch = '';
-let sortColumn = null;
-let sortDir = 'asc';
-let columnFilters = {
+let orderItemsGlobalSearch = ''; 
+let orderItemsSortColumn = null; 
+let orderItemsSortDir = 'asc';   
+let orderItemsColumnFilters = { 
     client_name: '', client_phone: '', product_name: '', size: '', quantity: '',
     price: '', status_name: '', usa_reviewed: '', bank_reviewed: ''
 };
@@ -30,15 +30,49 @@ async function cargarEstadosOrdenes() {
 }
 
 async function loadAdminOrders() {
-    const table = document.querySelector('#adminGrid .admin-table');
-    const statusEl = document.getElementById('adminStatus');
-
-    if (!table || !statusEl) {
-        console.error("No se encontraron elementos de la tabla o estado en el DOM.");
+    const gridContainer = document.getElementById('adminGrid');
+    if (!gridContainer) {
+        console.error("El contenedor 'adminGrid' no existe en el HTML de la página.");
         return;
     }
 
-    table.style.display = 'none'; // Ocultar la tabla mientras se carga
+    // 1. Inyectamos la estructura de la tabla INMEDIATAMENTE.
+    gridContainer.innerHTML = `
+        <div id="adminStatus" class="admin-status" style="display: flex;"><div class="spinner"></div><p>Cargando...</p></div>
+        <div id="adminNoResults" style="display: none;"><p>No se encontraron resultados.</p></div>
+        <table class="admin-table" style="display: none;">
+            <thead>
+                <tr class="admin-main-header">
+                    <th data-col="image">Imagen</th>
+                    <th class="sortable" onclick="sortBy('client_name')" data-col="client_name">Cliente <span class="sort-arrow">↕</span></th>
+                    <th class="sortable" onclick="sortBy('client_phone')" data-col="client_phone">Teléfono <span class="sort-arrow">↕</span></th>
+                    <th class="sortable" onclick="sortBy('product_name')" data-col="product_name">Producto <span class="sort-arrow">↕</span></th>
+                    <th class="sortable" onclick="sortBy('size')" data-col="size">Talla <span class="sort-arrow">↕</span></th>
+                    <th class="sortable" onclick="sortBy('quantity')" data-col="quantity">Cant. <span class="sort-arrow">↕</span></th>
+                    <th class="sortable" onclick="sortBy('price')" data-col="price">Precio <span class="sort-arrow">↕</span></th>
+                    <th class="sortable" onclick="sortBy('status_name')" data-col="status_name">Estado <span class="sort-arrow">↕</span></th>
+                    <th data-col="usa_reviewed">Rev. USA</th>
+                    <th data-col="bank_reviewed">Rev. Banco</th>
+                    <th data-col="actions">Acciones</th>
+                </tr>
+                <tr class="admin-filter-row">
+                    <td></td>
+                    <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('client_name', this.value)" /></td>
+                    <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('client_phone', this.value)" /></td>
+                    <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('product_name', this.value)" /></td>
+                    <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('size', this.value)" /></td>
+                    <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('quantity', this.value)" /></td>
+                    <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('price', this.value)" /></td>
+                    <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('status_name', this.value)" /></td>
+                    <td><select class="admin-filter-select" onchange="setColumnFilter('usa_reviewed', this.value)"><option value="">Todos</option><option value="true">Sí</option><option value="false">No</option></select></td>
+                    <td><select class="admin-filter-select" onchange="setColumnFilter('bank_reviewed', this.value)"><option value="">Todos</option><option value="true">Sí</option><option value="false">No</option></select></td>
+                    <td></td>
+                </tr>
+            </thead>
+            <tbody id="adminTbody"></tbody>
+        </table>`;
+
+    const statusEl = document.getElementById('adminStatus');
     statusEl.style.display = 'flex'; // Mostrar 'Cargando...'
 
     await cargarEstadosOrdenes();
@@ -60,8 +94,18 @@ async function loadAdminOrders() {
 
     } catch (err) {
         statusEl.innerHTML = `<p style="color:red;">⚠️ Error al cargar: ${err.message}</p>`;
+        statusEl.style.display = 'flex'; // Mantenemos visible el mensaje de error
     } finally {
-        statusEl.style.display = 'none';
+        // Ocultamos el spinner solo si no hubo un error que mostrar
+        if (!statusEl.innerHTML.includes('Error')) {
+            statusEl.style.display = 'none';
+
+            // ¡CORRECCIÓN CLAVE! Hacemos visible la tabla aquí.
+            const table = document.querySelector('#adminGrid .admin-table');
+            if (table) {
+                table.style.display = '';
+            }
+        }
     }
 }
 
@@ -74,36 +118,36 @@ function renderOrders() {
 
     // 1. Aplicar búsqueda global
     let lista = todasLasOrdenes.filter(o =>
-        !globalSearch ||
-        (o.client_name || '').toLowerCase().includes(globalSearch) ||
-        (o.product_name || '').toLowerCase().includes(globalSearch) ||
-        (o.client_phone || '').toLowerCase().includes(globalSearch)
+        !orderItemsGlobalSearch ||
+        (o.client_name || '').toLowerCase().includes(orderItemsGlobalSearch) ||
+        (o.product_name || '').toLowerCase().includes(orderItemsGlobalSearch) ||
+        (o.client_phone || '').toLowerCase().includes(orderItemsGlobalSearch)
     );
 
     // 2. Aplicar filtros por columna
     lista = lista.filter(o =>
-        (o.client_name || '').toLowerCase().includes(columnFilters.client_name) &&
-        (o.client_phone || '').toLowerCase().includes(columnFilters.client_phone) &&
-        (o.product_name || '').toLowerCase().includes(columnFilters.product_name) &&
-        (o.size || '').toLowerCase().includes(columnFilters.size) &&
-        String(o.quantity || '').toLowerCase().includes(columnFilters.quantity) &&
-        String(o.price || '').toLowerCase().includes(columnFilters.price) &&
-        (o.status_name || '').toLowerCase().includes(columnFilters.status_name) &&
-        (columnFilters.usa_reviewed === '' || String(o.usa_reviewed) === columnFilters.usa_reviewed) &&
-        (columnFilters.bank_reviewed === '' || String(o.bank_reviewed) === columnFilters.bank_reviewed)
+        (o.client_name || '').toLowerCase().includes(orderItemsColumnFilters.client_name) &&
+        (o.client_phone || '').toLowerCase().includes(orderItemsColumnFilters.client_phone) &&
+        (o.product_name || '').toLowerCase().includes(orderItemsColumnFilters.product_name) &&
+        (o.size || '').toLowerCase().includes(orderItemsColumnFilters.size) &&
+        String(o.quantity || '').toLowerCase().includes(orderItemsColumnFilters.quantity) &&
+        String(o.price || '').toLowerCase().includes(orderItemsColumnFilters.price) &&
+        (o.status_name || '').toLowerCase().includes(orderItemsColumnFilters.status_name) &&
+        (orderItemsColumnFilters.usa_reviewed === '' || String(o.usa_reviewed) === orderItemsColumnFilters.usa_reviewed) &&
+        (orderItemsColumnFilters.bank_reviewed === '' || String(o.bank_reviewed) === orderItemsColumnFilters.bank_reviewed)
     );
 
     // 3. Aplicar ordenamiento
-    if (sortColumn) {
+    if (orderItemsSortColumn) {
         lista.sort((a, b) => {
-            let valA = a[sortColumn] || '';
-            let valB = b[sortColumn] || '';
+            let valA = a[orderItemsSortColumn] || '';
+            let valB = b[orderItemsSortColumn] || '';
 
             if (typeof valA === 'number' && typeof valB === 'number') {
-                return sortDir === 'asc' ? valA - valB : valB - valA;
+                return orderItemsSortDir === 'asc' ? valA - valB : valB - valA;
             }
             const comparison = String(valA).localeCompare(String(valB), 'es', { sensitivity: 'base' });
-            return sortDir === 'asc' ? comparison : -comparison;
+            return orderItemsSortDir === 'asc' ? comparison : -comparison;
         });
     }
 
@@ -142,17 +186,17 @@ function renderOrders() {
 }
 
 function sortBy(col) {
-    if (sortColumn === col) {
-        sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    if (orderItemsSortColumn === col) {
+        orderItemsSortDir = orderItemsSortDir === 'asc' ? 'desc' : 'asc';
     } else {
-        sortColumn = col;
-        sortDir = 'asc';
+        orderItemsSortColumn = col;
+        orderItemsSortDir = 'asc';
     }
     renderOrders();
 }
 
 function setColumnFilter(col, value) {
-    columnFilters[col] = value.toLowerCase();
+    orderItemsColumnFilters[col] = value.toLowerCase();
     renderOrders();
 }
 
@@ -161,16 +205,16 @@ function actualizarIconosOrden() {
         const col = th.dataset.col;
         const arrow = th.querySelector('.sort-arrow');
         if (!arrow) return;
-        if (sortColumn !== col) {
+        if (orderItemsSortColumn !== col) {
             arrow.textContent = '↕';
         } else {
-            arrow.textContent = sortDir === 'asc' ? '▲' : '▼';
+            arrow.textContent = orderItemsSortDir === 'asc' ? '▲' : '▼';
         }
     });
 }
 
 function filtrarOrdenes() {
-    globalSearch = document.getElementById('adminSearchInput').value.toLowerCase().trim();
+    orderItemsGlobalSearch = document.getElementById('adminSearchInput').value.toLowerCase().trim();
     renderOrders();
 }
 

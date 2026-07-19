@@ -1,5 +1,4 @@
-if (window.location.pathname.includes('/admin/tracking')) {
-    // Gestión de paquetes
+// Gestión de paquetes
 
     let todosLosTrackings = [];
     let adminIdTracking = null;
@@ -26,8 +25,37 @@ if (window.location.pathname.includes('/admin/tracking')) {
     }
 
     async function loadAdmin() {
-        const statusEl = document.getElementById('adminStatus');
-        if (!statusEl) return;
+        const gridContainer = document.getElementById('adminGrid');
+        if (!gridContainer) {
+            console.error("El contenedor 'adminGrid' no existe en el HTML de la página.");
+            return;
+        }
+
+        // 1. Inyectamos la estructura de la tabla INMEDIATAMENTE.
+        gridContainer.innerHTML = `
+            <div id="adminStatus" class="admin-status" style="display: flex;"><div class="spinner"></div><p>Cargando...</p></div>
+            <div id="adminNoResults" style="display: none;"><p>No se encontraron resultados.</p></div>
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th class="sortable" onclick="sortBy('cliente')" data-col="cliente">Cliente <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortBy('producto')" data-col="producto">Producto <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortBy('guia')" data-col="guia">Guía <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortBy('fecha')" data-col="fecha">F. Compra <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortBy('estado')" data-col="estado">Estado Actual <span class="sort-arrow">↕</span></th>
+                        <th></th>
+                    </tr>
+                    <tr class="admin-filter-row">
+                        <td><input type="text" placeholder="Filtrar..." value="${columnFilters.cliente}" oninput="setColumnFilter('cliente', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." value="${columnFilters.producto}" oninput="setColumnFilter('producto', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." value="${columnFilters.guia}" oninput="setColumnFilter('guia', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." value="${columnFilters.fecha}" oninput="setColumnFilter('fecha', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." value="${columnFilters.estado}" oninput="setColumnFilter('estado', this.value)" /></td>
+                        <td></td>
+                    </tr>
+                </thead>
+                <tbody id="adminTableBody"></tbody>
+            </table>`;
 
         cargarEstados();
 
@@ -44,6 +72,7 @@ if (window.location.pathname.includes('/admin/tracking')) {
             if (!response.ok) throw new Error(`Error ${response.status}`);
 
             todosLosTrackings = await response.json();
+            const statusEl = document.getElementById('adminStatus');
             statusEl.style.display = 'none';
             renderTrackings();
         } catch (err) {
@@ -121,45 +150,9 @@ if (window.location.pathname.includes('/admin/tracking')) {
                 </tr>`;
         }).join('');
 
-        // Buscamos el cuerpo de la tabla. Si no existe, inicializamos la estructura una sola vez.
-        let tbody = document.getElementById('adminTableBody');
-        if (!tbody) {
-            inicializarTablaAdmin(grid);
-            tbody = document.getElementById('adminTableBody');
-        }
-
-        // Actualizamos solo el contenido del cuerpo y los iconos de ordenamiento
+        const tbody = document.getElementById('adminTableBody');
         tbody.innerHTML = filas;
         actualizarIconosOrden();
-    }
-
-    /**
-     * Inyecta la estructura base de la tabla (thead e inputs de filtro).
-     * Esto solo corre la primera vez que se carga la vista o si se refresca el contenedor.
-     */
-    function inicializarTablaAdmin(container) {
-        container.innerHTML = `
-            <table class="admin-table">
-                <thead>
-                    <tr>
-                        <th class="sortable" onclick="sortBy('cliente')" data-col="cliente">Cliente <span class="sort-arrow">↕</span></th>
-                        <th class="sortable" onclick="sortBy('producto')" data-col="producto">Producto <span class="sort-arrow">↕</span></th>
-                        <th class="sortable" onclick="sortBy('guia')" data-col="guia">Guía <span class="sort-arrow">↕</span></th>
-                        <th class="sortable" onclick="sortBy('fecha')" data-col="fecha">F. Compra <span class="sort-arrow">↕</span></th>
-                        <th class="sortable" onclick="sortBy('estado')" data-col="estado">Estado Actual <span class="sort-arrow">↕</span></th>
-                        <th></th>
-                    </tr>
-                    <tr class="admin-filter-row">
-                        <td><input type="text" placeholder="Filtrar..." value="${columnFilters.cliente}" oninput="setColumnFilter('cliente', this.value)" /></td>
-                        <td><input type="text" placeholder="Filtrar..." value="${columnFilters.producto}" oninput="setColumnFilter('producto', this.value)" /></td>
-                        <td><input type="text" placeholder="Filtrar..." value="${columnFilters.guia}" oninput="setColumnFilter('guia', this.value)" /></td>
-                        <td><input type="text" placeholder="Filtrar..." value="${columnFilters.fecha}" oninput="setColumnFilter('fecha', this.value)" /></td>
-                        <td><input type="text" placeholder="Filtrar..." value="${columnFilters.estado}" oninput="setColumnFilter('estado', this.value)" /></td>
-                        <td></td>
-                    </tr>
-                </thead>
-                <tbody id="adminTableBody"></tbody>
-            </table>`;
     }
 
     function actualizarIconosOrden() {
@@ -465,4 +458,6 @@ if (window.location.pathname.includes('/admin/tracking')) {
             mensaje.innerHTML = `⚠️ Error: ${error.message}`;
         }
     }
-}
+
+// Hacemos la función de inicialización global para que main.js pueda llamarla.
+window.initTrackingAdminPage = loadAdmin;
