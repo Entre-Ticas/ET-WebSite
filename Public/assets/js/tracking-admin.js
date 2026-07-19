@@ -141,10 +141,10 @@
                     <td>${fecha}</td>
                     <td class="admin-td-estado">${t.ultimo_estado || 'Sin estado'}</td>
                     <td class="admin-actions-cell">
-                        <button class="admin-btn-edit" onclick="abrirFormEdicionCompleta('${t.id_tracking}')" title="Editar Paquete"><i class="fas fa-pencil-alt"></i></button>
-                        <button class="admin-btn-actualizar" onclick="abrirFormEstado(${t.id_tracking})" title="Actualizar Estado"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button class="admin-btn-action btn-edit" onclick="abrirFormEdicionCompleta('${t.id_tracking}')" title="Editar Paquete"><i class="fas fa-pencil-alt"></i></button>
+                        <button class="admin-btn-action btn-update" onclick="abrirFormEstado(${t.id_tracking})" title="Actualizar Estado"><i class="fa-solid fa-pen-to-square"></i></button>
                         ${guia !== '—' ? `
-                            <button class="admin-btn-track" onclick="irARastreo('${guia.replace(/'/g, "\\'")}')" title="Rastrear paquete"><i class="fa-solid fa-truck-fast"></i></button>
+                            <button class="admin-btn-action btn-track" onclick="irARastreo('${guia.replace(/'/g, "\\'")}')" title="Rastrear paquete"><i class="fa-solid fa-truck-fast"></i></button>
                         ` : ''}
                     </td>
                 </tr>`;

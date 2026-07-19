@@ -85,9 +85,9 @@ function displayAdminProducts(products) {
                 <td>₡${p.price ? p.price.toLocaleString('es-CR') : '0'}</td>
                 <td><span class="status-dot ${p.stock === 'entrega inmediata' ? 'available' : 'unavailable'}"></span> ${p.stock}</td>
                 <td>
-                    <button class="admin-btn-icon" onclick="abrirFormEdicionCompleta(${p.id})" title="Editar Producto"><i class="fas fa-pencil-alt"></i></button>
-                    <button class="admin-btn-icon" onclick="abrirFormEstado(${p.id})" title="Actualizar Estado"><i class="fa fa-edit"></i></button>
-                    <button class="admin-btn-icon btn-delete" onclick="eliminarProducto(${p.id}, '${imageUrl}')" title="Eliminar Producto"><i class="fas fa-trash-alt"></i></button>
+                    <button class="admin-btn-action btn-edit" onclick="abrirFormEdicionCompleta(${p.id})" title="Editar Producto"><i class="fas fa-pencil-alt"></i></button>
+                    <button class="admin-btn-action btn-update" onclick="abrirFormEstado(${p.id})" title="Actualizar Estado"><i class="fa fa-edit"></i></button>
+                    <button class="admin-btn-action btn-delete" onclick="eliminarProducto(${p.id}, '${imageUrl}')" title="Eliminar Producto"><i class="fas fa-trash-alt"></i></button>
                 </td>
             </tr>
         `;

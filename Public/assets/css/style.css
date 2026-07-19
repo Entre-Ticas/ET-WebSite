@@ -405,3 +405,42 @@ body {
 .nav-dropdown:hover .nav-dropdown-content {
     display: block;
 }
+
+/* ========================================= */
+/* ESTILOS ESTANDARIZADOS PARA BOTONES ADMIN */
+/* ========================================= */
+.admin-btn-action {
+    background: none; 
+    border: 1px solid rgba(112, 78, 54, 0.2);
+    color: var(--brown-text);
+    cursor: pointer;
+    padding: 5px 8px;
+    border-radius: 6px;
+    margin: 0 2px;
+    transition: all 0.2s ease;
+    font-size: 0.8rem; 
+}
+
+.admin-btn-action:hover {
+    background-color: #fdf0f1; /* Un rosado muy pálido al pasar el mouse */
+    border-color: var(--pink-accent);
+    color: var(--pink-accent);
+    transform: translateY(-1px);
+}
+
+/* Colores específicos para cada tipo de botón, como en Tracking Admin */
+.admin-btn-action.btn-edit { background-color: #f3bfc1; color: white; }
+.admin-btn-action.btn-update { background-color: var(--pink-accent); color: white; }
+.admin-btn-action.btn-track { background-color: #f3bfc1; color: white; }
+.admin-btn-action.btn-delete { background-color: #f5c6cb; color: white; } 
+
+.admin-btn-action.btn-edit:hover,
+.admin-btn-action.btn-update:hover,
+.admin-btn-action.btn-track:hover { opacity: 0.85; background-color: var(--pink-accent); }
+
+/* Colores específicos para acciones comunes */
+.admin-btn-action.btn-delete:hover {
+    background-color: #ffdddd;
+    border-color: #dc3545;
+    color: #dc3545;
+}

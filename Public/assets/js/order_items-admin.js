@@ -175,8 +175,8 @@ function renderOrders() {
                 <td style="text-align: center;"><input type="checkbox" onchange="toggleReviewStatus(${o.id}, 'usa_reviewed', this)" ${o.usa_reviewed ? 'checked' : ''}></td>
                 <td style="text-align: center;"><input type="checkbox" onchange="toggleReviewStatus(${o.id}, 'bank_reviewed', this)" ${o.bank_reviewed ? 'checked' : ''}></td>
                 <td class="admin-actions-cell">
-                    <button class="admin-btn-icon" onclick="abrirFormEdicion(${o.id})" title="Editar Orden"><i class="fas fa-pencil-alt"></i></button>
-                    <button class="admin-btn-icon btn-delete" onclick="eliminarOrden(${o.id})" title="Eliminar Orden"><i class="fas fa-trash-alt"></i></button>
+                    <button class="admin-btn-action btn-edit" onclick="abrirFormEdicion(${o.id})" title="Editar Orden"><i class="fas fa-pencil-alt"></i></button>
+                    <button class="admin-btn-action btn-delete" onclick="eliminarOrden(${o.id})" title="Eliminar Orden"><i class="fas fa-trash-alt"></i></button>
                 </td>
             </tr>`
     ).join('');
