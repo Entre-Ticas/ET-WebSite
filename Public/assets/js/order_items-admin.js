@@ -180,21 +180,6 @@ function renderOrders() {
     actualizarIconosOrden();
 }
 
-/**
- * Abre el modal para mostrar una imagen en grande.
- * @param {string} src - La URL de la imagen a mostrar.
- */
-function openImageModal(src) {
-    if (!src) return; // No hacer nada si no hay imagen
-    document.getElementById('modalImg').src = src;
-    document.getElementById('imgModal').classList.add('active');
-}
-
-/** Cierra el modal de la imagen. */
-function closeImageModal() {
-    document.getElementById('imgModal').classList.remove('active');
-}
-
 function verFactura(invoiceId) {
     if (typeof loadPage === 'function') loadPage('admin/invoice', invoiceId);
 }

@@ -71,7 +71,7 @@ function renderProducts(products) {
         const card = document.createElement('div');
         card.className = 'product-card';
         card.innerHTML = `
-            <div class="product-img-wrapper ${isOutOfStock ? 'img-sepia' : ''}" onclick="openModal('${fullSrc}')">
+            <div class="product-img-wrapper ${isOutOfStock ? 'img-sepia' : ''}" onclick="openImageModal('${fullSrc}')">
                 <img src="${thumbSrc}" alt="${p.name}" loading="lazy" onerror="this.onerror=null; this.src='https://placehold.co/400x400?text=Imagen+no+disponible'">
                 <span class="product-badge ${badgeClass}">${p.stock}</span>
             </div>
@@ -95,14 +95,5 @@ function filterProducts() {
     document.getElementById('noResults').style.display = filtered.length === 0 ? 'block' : 'none';
 }
 
-function openModal(src) {
-    document.getElementById('modalImg').src = src;
-    document.getElementById('imgModal').classList.add('active');
-}
-
-function closeModal() {
-    document.getElementById('imgModal').classList.remove('active');
-}
-
 // Eventos globales para el modal
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeImageModal(); });

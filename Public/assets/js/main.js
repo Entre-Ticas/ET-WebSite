@@ -63,6 +63,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (menu && links && links.classList.contains('active') && !menu.contains(e.target)) {
             toggleSocialMenu();
         }
+
+        // --- LÓGICA GLOBAL PARA CERRAR MODAL DE IMAGEN ---
+        // Si se hace clic en el fondo oscuro del modal...
+        if (e.target.id === 'imgModal') {
+            closeImageModal();
+        }
+        // Si se hace clic en el botón de cerrar (o en el ícono dentro de él)...
+        if (e.target.closest('.close-btn')) {
+            closeImageModal();
+        }
+        // --- FIN LÓGICA GLOBAL ---
+
     });
 });
 
@@ -147,6 +159,10 @@ async function loadPage(page, param = null) {
 
             container.innerHTML = html;
 
+            // Ejecutamos la limpieza en el siguiente ciclo de eventos,
+            // asegurando que el DOM se haya actualizado.
+            setTimeout(() => cleanupLegacyModalEvents(), 0);
+
             if (page === 'calc') {
                 // La función init() ya se llama dentro del calc.html revertido
                 if (typeof init === 'function') init();
@@ -204,6 +220,38 @@ async function copiarGuia(btn, guia) {
     } catch (err) {
         console.error('Error al copiar:', err);
     }
+}
+
+/**
+ * Abre el modal para mostrar una imagen en grande.
+ * @param {string} src - La URL de la imagen a mostrar.
+ */
+function openImageModal(src) {
+    if (!src) return; // No hacer nada si no hay imagen
+    const modal = document.getElementById('imgModal');
+    const modalImg = document.getElementById('modalImg');
+    if (modal && modalImg) {
+        modalImg.src = src;
+        modal.classList.add('active');
+    }
+}
+
+/** Cierra el modal de la imagen. */
+function closeImageModal() {
+    document.getElementById('imgModal')?.classList.remove('active');
+}
+
+/**
+ * Busca y elimina los atributos onclick obsoletos del modal de imagen
+ * para prevenir errores en la consola. La lógica de cierre real
+ * está centralizada en el event listener global de main.js.
+ */
+function cleanupLegacyModalEvents() {
+    const modalOverlay = document.getElementById('imgModal');
+    const modalCloseBtn = modalOverlay?.querySelector('.close-btn');
+
+    if (modalOverlay) modalOverlay.removeAttribute('onclick');
+    if (modalCloseBtn) modalCloseBtn.removeAttribute('onclick');
 }
 
 window.loadPage = loadPage;
