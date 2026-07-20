@@ -126,6 +126,22 @@
         <img id="modalImg" src="">
     </div>
 
+    <!-- Modal Genérico para Confirmaciones y Formularios -->
+    <div id="genericModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 id="genericModalTitle" class="modal-title"></h5>
+                <button onclick="closeGenericModal()" class="close-btn">&times;</button>
+            </div>
+            <div id="genericModalBody" class="modal-body">
+                <!-- El contenido se inyectará aquí con JavaScript -->
+            </div>
+            <div id="genericModalFooter" class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="closeGenericModal()">OK</button>
+            </div>
+        </div>
+    </div>
     
     <script src="assets/js/setup.js"></script>
     <script src="assets/js/script.js"></script>

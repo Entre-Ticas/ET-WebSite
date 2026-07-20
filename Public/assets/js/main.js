@@ -255,4 +255,29 @@ function cleanupLegacyModalEvents() {
     if (modalCloseBtn) modalCloseBtn.removeAttribute('onclick');
 }
 
+/**
+ * Abre un modal genérico con contenido personalizado.
+ * @param {string} title - El título para el encabezado del modal.
+ * @param {string} bodyHtml - El contenido HTML para el cuerpo del modal.
+ * @param {string} footerHtml - El HTML para los botones del pie de página.
+ */
+function openGenericModal(title, bodyHtml, footerHtml = '') {
+    document.getElementById('genericModalTitle').textContent = title;
+    document.getElementById('genericModalBody').innerHTML = bodyHtml;
+    
+    // Si se provee un footer personalizado, lo usamos.
+    // Si no, la función no hace nada y se usan los botones por defecto del HTML.
+    if (footerHtml !== '') {
+        document.getElementById('genericModalFooter').innerHTML = footerHtml;
+    }
+
+    document.getElementById('genericModal').classList.add('active');
+}
+
+/** Cierra el modal genérico. */
+function closeGenericModal() {
+    document.getElementById('genericModal').classList.remove('active');
+}
+
+
 window.loadPage = loadPage;

@@ -577,4 +577,81 @@ body {
     font-size: 0.9rem;
     font-weight: bold;
 }
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 9990;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+.modal-overlay.active {
+    display: flex;
+}
+.modal-content {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+    animation: modal-pop-in 0.3s ease;
+}
+@keyframes modal-pop-in {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+}
+.modal-title {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--brown-text);
+}
+.modal-body {
+    margin-bottom: 1.5rem;
+    color: var(--brown-text);
+}
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    border-top: 1px solid #eee;
+    padding-top: 1rem;
+}
+
+/* Estilos para los botones dentro del footer del modal */
+.modal-footer .btn {
+    padding: 8px 20px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.modal-footer .btn-primary {
+    background-color: var(--pink-accent);
+    color: white;
+    border-color: var(--pink-accent);
+}
+.modal-footer .btn-primary:hover {
+    opacity: 0.85;
+}
+
+.modal-footer .btn-secondary {
+    background-color: #f0f0f0;
+    color: var(--brown-text);
+}
+.modal-footer .btn-secondary:hover {
+    background-color: #e6e6e6;
 }
