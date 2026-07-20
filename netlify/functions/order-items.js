@@ -71,9 +71,7 @@ async function getOrderItems(event) {
 }
 
 async function createOrderItem(event) {
-    console.log("--- createOrderItem: INICIO ---");
     const body = JSON.parse(event.body);
-    console.log("Body recibido:", JSON.stringify(body, null, 2));
 
     const { client_phone, client_name, product_name, quantity, price, size, image_url } = body;
 
@@ -85,7 +83,6 @@ async function createOrderItem(event) {
     // --- INICIA LA NUEVA LÓGICA ---
 
     // 1. Buscar una factura "abierta" para ese cliente.
-    console.log(`Buscando factura abierta para client_phone: ${client_phone} con id_status: ${STATUS_ABIERTA}`);
     const findInvoiceUrl = `${supabaseUrl}/rest/v1/invoices?select=id&client_phone=eq.${client_phone}&id_status=eq.${STATUS_ABIERTA}&limit=1`;
     const findResponse = await fetch(findInvoiceUrl, { headers: sbHeaders });
 
@@ -99,9 +96,7 @@ async function createOrderItem(event) {
     // 2. Decidir si crear una nueva factura o usar la existente.
     if (open_invoice) {
         invoiceId = open_invoice.id;
-        console.log(`Factura existente encontrada. Usando ID: ${invoiceId}`);
     } else {
-        console.log("No se encontró factura abierta. Creando una nueva...");
         const createInvoiceUrl = `${supabaseUrl}/rest/v1/invoices`;
         const createResponse = await fetch(createInvoiceUrl, {
             method: 'POST',
@@ -122,7 +117,6 @@ async function createOrderItem(event) {
 
         const [new_invoice] = await createResponse.json();
         invoiceId = new_invoice.id;
-        console.log(`Nueva factura creada con éxito. ID: ${invoiceId}`);
     }
 
     // 3. Insertar el nuevo order_item asignándole el invoiceId.
@@ -140,7 +134,6 @@ async function createOrderItem(event) {
         bank_reviewed: false
     };
 
-    console.log("Intentando insertar el siguiente order_item:", JSON.stringify(itemToInsert, null, 2));
 
     const createItemUrl = `${supabaseUrl}/rest/v1/order_items`;
     const itemResponse = await fetch(createItemUrl, {
@@ -156,8 +149,6 @@ async function createOrderItem(event) {
     }
 
     const [new_item] = await itemResponse.json();
-    // --- FIN DE LA NUEVA LÓGICA ---
-    console.log("Operación completada con éxito. Devolviendo el nuevo item:", JSON.stringify(new_item, null, 2));
 
     return { statusCode: 201, body: JSON.stringify(new_item) };
 }

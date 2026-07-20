@@ -31,7 +31,6 @@
         });
     });
     
-    console.log("¡Calculadoras inicializadas!");
  }
 
 async function getExchange() {

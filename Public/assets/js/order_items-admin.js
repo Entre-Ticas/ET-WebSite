@@ -306,8 +306,6 @@ function handleMultiEdit() {
     const selectedOrders = todasLasOrdenes.filter(o => selectedIds.includes(o.id));
     const existingInvoices = [...new Set(selectedOrders.map(o => o.invoice_id).filter(id => id != null))];
 
-    console.log('Facturas existentes en la selección:', existingInvoices);
-
     let invoiceAlertHtml = '';
     if (existingInvoices.length > 0) {
         invoiceAlertHtml = `

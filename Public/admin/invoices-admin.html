@@ -1,0 +1,100 @@
+<link rel="stylesheet" href="../assets/css/order_items-admin.css"> <!-- Reutilizamos el CSS de órdenes -->
+
+<div class="admin-wrapper">
+
+    <!-- ===== VISTA: GRID DE FACTURAS ===== -->
+    <div id="adminGridView">
+        <div class="admin-header">
+            <h2>🧾 Gestión de Facturas</h2>
+            <p>Busca, agrupa y gestiona las facturas de los clientes.</p>
+        </div>
+
+        <div class="admin-search-bar">
+            <input type="text" id="adminSearchInput" placeholder="🔍 Buscar por cliente, teléfono o ID de factura..." oninput="filtrarFacturas()" />
+            <!-- El botón de agregar podría ser para crear una factura manual en el futuro -->
+            <!-- <button class="admin-btn-agregar" onclick="abrirFormNuevaFactura()">+ Agregar Factura</button> -->
+        </div>
+        <div class="admin-multi-select-toolbar">
+            <label for="multiSelectToggle">
+                <input type="checkbox" id="multiSelectToggle" onchange="toggleMultiSelect(this.checked)">
+                <span id="multiSelectLabel">Seleccionar Varios</span>
+            </label>
+            <div id="multiActionContainer" style="display: none;">
+                <button id="multiEditBtn" class="admin-btn-action btn-edit" onclick="handleMultiEdit()" title="Editar Seleccionados"><i class="fas fa-pencil-alt"></i></button>
+                <button id="multiDeleteBtn" class="admin-btn-action btn-delete" onclick="handleMultiDelete()" title="Eliminar Seleccionados"><i class="fas fa-trash-alt"></i></button>
+            </div>
+        </div>
+
+        <div id="adminStatus" class="catalog-status">
+            <div class="spinner"></div>
+            <p>Cargando facturas...</p>
+        </div>
+
+        <div id="adminGrid" class="admin-grid">
+            <table class="admin-table" style="display: none;">
+                <thead>
+                    <tr class="admin-main-header">
+                        <th class="col-select" style="display: none;"><input type="checkbox" onchange="toggleSelectAll(this.checked)"></th>
+                        <th class="sortable" onclick="sortBy('id')" data-col="id">ID Factura <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortBy('client_name')" data-col="client_name">Cliente <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortBy('client_phone')" data-col="client_phone">Teléfono <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortBy('invoice_date')" data-col="invoice_date">Fecha <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortBy('status_name')" data-col="status_name">Estado <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortBy('items_count')" data-col="items_count">Items <span class="sort-arrow">↕</span></th>
+                        <th data-col="paid">Pagada</th>
+                        <th>Acciones</th>
+                    </tr>
+                    <tr class="admin-filter-row">
+                        <td class="col-select" style="display: none;"></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('id', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('client_name', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('client_phone', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('invoice_date', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('status_name', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('items_count', this.value)" /></td>
+                        <td>
+                            <select class="admin-filter-select" onchange="setColumnFilter('paid', this.value)">
+                                <option value="">Todos</option><option value="true">Sí</option><option value="false">No</option>
+                            </select>
+                        </td>
+                        <td></td>
+                    </tr>
+                </thead>
+                <tbody id="adminTbody"></tbody>
+                <tfoot id="adminTableFooter" style="display: none;">
+                    <tr>
+                        <td id="footerColspan">
+                            <div class="admin-pagination-container" style="margin-top: 0;">
+                                <div class="pagination-info" id="paginationInfo">
+                                    <!-- Se rellena con JS -->
+                                </div>
+                                <div class="pagination-controls">
+                                    <div class="pagination-rows-selector">
+                                        <span>Filas:</span>
+                                        <select id="rowsPerPageSelector" onchange="changeRowsPerPage(this.value)">
+                                            <option value="10">10</option>
+                                            <option value="30">30</option>
+                                            <option value="50">50</option>
+                                            <option value="100">100</option>
+                                            <option value="-1">Todos</option>
+                                        </select>
+                                    </div>
+                                    <div class="pagination-nav" id="paginationNav">
+                                        <!-- Se rellena con JS -->
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <div class="no-results" id="adminNoResults">
+            😔 No se encontraron facturas con esa búsqueda.
+        </div>
+    </div>
+
+    <!-- Aquí irían los modales o formularios para editar/crear facturas en el futuro -->
+
+</div>

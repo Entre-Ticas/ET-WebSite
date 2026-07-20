@@ -108,7 +108,7 @@ async function loadPage(page, param = null) {
     
     // --- INICIO: LÓGICA DE SEGURIDAD ---
     // Lista de rutas que requieren que el usuario esté autenticado.
-    const protectedRoutes = ['admin/tracking', 'admin/catalog', 'admin/order_items'];
+    const protectedRoutes = ['admin/tracking', 'admin/catalog', 'admin/order_items', 'admin/invoices'];
     // Verificamos si la página solicitada es protegida Y si el usuario NO tiene una sesión activa.
     // La función getSession() ya existe en auth.js y nos dice si hay un token válido.
     if (protectedRoutes.includes(page) && !getSession()) {
@@ -142,6 +142,7 @@ async function loadPage(page, param = null) {
                 'admin/tracking': 'admin/tracking-admin.html',
                 'admin/catalog': 'admin/catalog-admin.html',
                 'admin/order_items': 'admin/order_items-admin.html',
+                'admin/invoices': 'admin/invoices-admin.html', // Nueva ruta
                 'admin/invoice': 'admin/invoice-admin.html', // Nueva ruta
                 'info': 'InformationImg/info.html',
                 'informacion': 'InformationImg/infoImg.html',
@@ -181,6 +182,8 @@ async function loadPage(page, param = null) {
                 window.initCatalogAdminPage();
             } else if ((page === 'admin/order_items' || page === 'ordenes') && typeof window.initOrderItemsAdminPage === 'function') {
                 window.initOrderItemsAdminPage();
+            } else if (page === 'admin/invoices' && typeof window.initInvoicesAdminPage === 'function') {
+                window.initInvoicesAdminPage();
             } else if (page === 'admin/invoice' && typeof window.initInvoiceAdminPage === 'function' && param) {
                 window.initInvoiceAdminPage(param);
             }
