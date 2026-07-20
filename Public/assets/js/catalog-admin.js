@@ -1,5 +1,9 @@
 // Variable para almacenar todos los productos y poder filtrar sobre ella.
 let allCatalogProducts = [];
+let catalogCurrentPage = 1;
+let catalogRowsPerPage = 10;
+// NOTA: El ordenamiento y filtro por columna no están implementados aún en esta vista.
+// Se deja preparado para el futuro.
 
 async function loadAdminProducts() {
     const gridContainer = document.getElementById('adminGrid');
@@ -7,23 +11,6 @@ async function loadAdminProducts() {
         console.error("El contenedor 'adminGrid' no existe en el HTML de la página.");
         return;
     }
-
-    // 1. Inyectamos la estructura de la tabla INMEDIATAMENTE.
-    gridContainer.innerHTML = `
-        <table class="admin-table" style="display: none;">
-            <thead>
-                <tr>
-                    <th>Imagen</th>
-                    <th>Nombre</th>
-                    <th>Categoría</th>
-                    <th>Precio</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody id="adminTbody"></tbody>
-        </table>
-    `;
 
     const status = document.getElementById('adminStatus');
     status.style.display = 'flex'; // Mostrar 'Cargando...'
@@ -40,15 +27,14 @@ async function loadAdminProducts() {
 
         await cargarOpcionesDeEstado();
 
+        // Ocultamos el spinner ANTES de renderizar, para que la tabla aparezca correctamente.
+        status.style.display = 'none';
+        
         displayAdminProducts(allCatalogProducts); // Mostrar los productos
 
     } catch (error) {
         console.error('Error al cargar productos para admin:', error);
         status.innerHTML = '<p>😕 Error al cargar los productos. Intenta de nuevo.</p>';
-    } finally {
-        if (status) {
-            status.style.display = 'none'; // Ocultar 'Cargando...'
-        }
     }
 }
 
@@ -64,20 +50,30 @@ function displayAdminProducts(products) {
 
     tbody.innerHTML = ''; // Limpiar solo el cuerpo de la tabla
 
-    if (products.length === 0) {
+    const totalRows = products.length;
+
+    // Aplicar paginación
+    const startIndex = (catalogCurrentPage - 1) * catalogRowsPerPage;
+    const endIndex = catalogRowsPerPage === -1 ? totalRows : startIndex + catalogRowsPerPage;
+    const paginatedItems = products.slice(startIndex, endIndex);
+
+    if (paginatedItems.length === 0) {
         noResults.style.display = 'block';
         table.style.display = 'none'; // Ocultar la tabla si no hay productos
-        return;
+        tbody.innerHTML = ''; // Limpiamos el cuerpo de la tabla
+        // Aún así, renderizamos la paginación para poder navegar
+        renderCatalogPagination(totalRows); 
+        return; // Salimos para no intentar renderizar filas vacías
     }
     
     noResults.style.display = 'none';
     table.style.display = ''; // Asegurarse de que la tabla sea visible
     
-    products.forEach(p => {
+    paginatedItems.forEach(p => {
         const imageUrl = p.img || ''; // CORRECCIÓN: Usar 'img' que viene del backend
         tbody.innerHTML += `
             <tr>
-                <td><img src="${imageUrl || 'https://placehold.co/20x20/E19B9D/FFFFFF?text=ET'}" alt="${p.name}" class="admin-table-img"></td>
+                <td><img src="${imageUrl || 'https://placehold.co/40x40/E19B9D/FFFFFF?text=?'}" alt="${p.name}" class="admin-table-img" onclick="openImageModal('${imageUrl || ''}')"></td>
                 <td>${p.name}</td>
                 <td>${p.category}</td>
                 <td>₡${p.price ? p.price.toLocaleString('es-CR') : '0'}</td>
@@ -90,15 +86,71 @@ function displayAdminProducts(products) {
             </tr>
         `;
     });
+
+    renderCatalogPagination(totalRows);
+}
+
+function renderCatalogPagination(totalRows) {
+    const tfoot = document.getElementById('adminTableFooter');
+    if (!tfoot) return;
+
+    if (totalRows <= 10) {
+        tfoot.style.display = 'none';
+        return;
+    }
+
+    tfoot.style.display = '';
+
+    const totalPages = catalogRowsPerPage === -1 ? 1 : Math.ceil(totalRows / catalogRowsPerPage);
+    const startItem = (catalogCurrentPage - 1) * catalogRowsPerPage + 1;
+    const endItem = catalogRowsPerPage === -1 ? totalRows : Math.min(catalogCurrentPage * catalogRowsPerPage, totalRows);
+
+    const table = document.querySelector('#adminGrid .admin-table');
+    // Hacemos la búsqueda del encabezado más robusta para que encuentre la primera fila del thead.
+    const headerRow = table.querySelector('thead tr');
+    if (!headerRow) return; // Salir si no hay encabezado
+
+    const numColumns = headerRow.cells.length;
+    document.getElementById('footerColspan').colSpan = numColumns;
+
+    const infoEl = document.getElementById('paginationInfo');
+    const navEl = document.getElementById('paginationNav');
+    const selectorEl = document.getElementById('rowsPerPageSelector');
+
+    // CORRECCIÓN: Asegurarse de que todos los elementos se actualicen.
+    // La lógica anterior tenía condicionales que podían fallar.
+    // Esta versión es más directa y robusta.
+    infoEl.innerHTML = `Mostrando <strong>${startItem} - ${endItem}</strong> de <strong>${totalRows}</strong>`;
+    selectorEl.value = catalogRowsPerPage;
+    
+    navEl.innerHTML = `
+        <button onclick="changeCatalogPage(${catalogCurrentPage - 1})" ${catalogCurrentPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
+        <span>Página <strong>${catalogCurrentPage}</strong> de ${totalPages}</span>
+        <button onclick="changeCatalogPage(${catalogCurrentPage + 1})" ${catalogCurrentPage >= totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>
+    `;
+}
+
+function changeCatalogPage(newPage) {
+    catalogCurrentPage = newPage;
+    filtrarProductos(); // Re-filtramos para aplicar la nueva página
+}
+
+function changeCatalogRowsPerPage(value) {
+    catalogRowsPerPage = parseInt(value, 10);
+    catalogCurrentPage = 1;
+    filtrarProductos(); // Re-filtramos con el nuevo número de filas
 }
 
 /**
  * Filtra los productos basándose en el input de búsqueda.
  */
 function filtrarProductos() {
+    // Al filtrar, siempre volvemos a la primera página para evitar confusiones.
+    if (typeof catalogCurrentPage === 'undefined' || catalogCurrentPage === 0) catalogCurrentPage = 1;
+
     const searchTerm = document.getElementById('adminSearchInput').value.toLowerCase();
     const filteredProducts = allCatalogProducts.filter(p =>
-        p.product_name.toLowerCase().includes(searchTerm) ||
+        p.name.toLowerCase().includes(searchTerm) ||
         p.category.toLowerCase().includes(searchTerm)
     );
     displayAdminProducts(filteredProducts);
@@ -243,18 +295,18 @@ async function eliminarProducto(id, imageUrl) {
 
 async function cargarOpcionesDeEstado() {
     try {
-        const res = await fetch('/.netlify/functions/catalog-status');
-        if (!res.ok) throw new Error('No se pudieron cargar los estados.');
+        // const res = await fetch('/.netlify/functions/catalog-status');
+        // if (!res.ok) throw new Error('No se pudieron cargar los estados.');
         
-        const estados = await res.json();
-        const options = estados.map(e =>
-            `<option value="${e.id}">${e.name}</option>`
-        ).join('');
+        // const estados = await res.json();
+        // const options = estados.map(e =>
+        //     `<option value="${e.id}">${e.name}</option>`
+        // ).join('');
 
-        ['nuevoEstado', 'adminSelectEstado'].forEach(id => {
-            const sel = document.getElementById(id);
-            if (sel) sel.innerHTML = '<option value="">-- Selecciona --</option>' + options;
-        });
+        // ['nuevoEstado', 'adminSelectEstado'].forEach(id => {
+        //     const sel = document.getElementById(id);
+        //     if (sel) sel.innerHTML = '<option value="">-- Selecciona --</option>' + options;
+        // });
     } catch (error) {
         console.error(error.message);
     }
