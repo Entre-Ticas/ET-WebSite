@@ -38,38 +38,6 @@ async function loadAdminOrders() {
         return;
     }
 
-    // 1. Inyectamos la estructura de la tabla INMEDIATAMENTE.
-    gridContainer.innerHTML = `
-        <table class="admin-table" style="display: none;">
-            <thead>
-                <tr class="admin-main-header">
-                    <th data-col="image">Imagen</th>
-                    <th class="sortable" onclick="sortBy('client_name')" data-col="client_name">Cliente <span class="sort-arrow">↕</span></th>
-                    <th class="sortable" onclick="sortBy('client_phone')" data-col="client_phone">Teléfono <span class="sort-arrow">↕</span></th>
-                    <th class="sortable" onclick="sortBy('product_name')" data-col="product_name">Producto <span class="sort-arrow">↕</span></th>
-                    <th class="sortable" onclick="sortBy('size')" data-col="size">Talla <span class="sort-arrow">↕</span></th>
-                    <th class="sortable" onclick="sortBy('quantity')" data-col="quantity">Cant. <span class="sort-arrow">↕</span></th>
-                    <th class="sortable" onclick="sortBy('price')" data-col="price">Precio <span class="sort-arrow">↕</span></th>
-                    <th data-col="usa_reviewed">Rev. USA</th>
-                    <th data-col="bank_reviewed">Rev. Banco</th>
-                    <th data-col="actions">Acciones</th>
-                </tr>
-                <tr class="admin-filter-row">
-                    <td></td>
-                    <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('client_name', this.value)" /></td>
-                    <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('client_phone', this.value)" /></td>
-                    <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('product_name', this.value)" /></td>
-                    <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('size', this.value)" /></td>
-                    <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('quantity', this.value)" /></td>
-                    <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('price', this.value)" /></td>
-                    <td><select class="admin-filter-select" onchange="setColumnFilter('usa_reviewed', this.value)"><option value="">Todos</option><option value="true">Sí</option><option value="false">No</option></select></td>
-                    <td><select class="admin-filter-select" onchange="setColumnFilter('bank_reviewed', this.value)"><option value="">Todos</option><option value="true">Sí</option><option value="false">No</option></select></td>
-                    <td></td>
-                </tr>
-            </thead>
-            <tbody id="adminTbody"></tbody>
-        </table>`;
-
     const statusEl = document.getElementById('adminStatus');
     statusEl.style.display = 'flex'; // Mostrar 'Cargando...'
 
@@ -189,58 +157,44 @@ function renderOrders() {
 }
 
 function renderPagination(totalRows) {
-    const table = document.querySelector('#adminGrid .admin-table');
-    if (!table) return;
-
-    // Buscamos o creamos el tfoot
-    let tfoot = table.querySelector('tfoot');
-    if (!tfoot) {
-        tfoot = document.createElement('tfoot');
-        table.appendChild(tfoot);
-    }
+    const tfoot = document.getElementById('adminTableFooter');
+    if (!tfoot) return;
 
     // Solo ocultar la paginación si el total de filas es menor que la opción más pequeña (10).
-    // De esta forma, si eliges "100" y tienes 80 filas, la paginación seguirá visible
-    // para que puedas volver a cambiar la selección.
     if (totalRows <= 10) {
-        tfoot.innerHTML = '';
+        tfoot.style.display = 'none';
         return;
     }
+
+    tfoot.style.display = ''; // Hacemos visible el footer
 
     const totalPages = rowsPerPage === -1 ? 1 : Math.ceil(totalRows / rowsPerPage);
     const startItem = (currentPage - 1) * rowsPerPage + 1;
     const endItem = rowsPerPage === -1 ? totalRows : Math.min(currentPage * rowsPerPage, totalRows);
+    
+    // Actualizamos el colspan de la celda del footer
+    const table = document.querySelector('#adminGrid .admin-table');
     const numColumns = table.querySelector('thead .admin-main-header').cells.length;
+    document.getElementById('footerColspan').colSpan = numColumns;
 
-    // Rellenamos el tfoot con una única fila y una celda que abarca todas las columnas
-    tfoot.innerHTML = `
-        <tr>
-            <td colspan="${numColumns}">
-                <div class="admin-pagination-container" style="margin-top: 0;">
-                    <div class="pagination-info">
-                        Mostrando <strong>${startItem} - ${endItem}</strong> de <strong>${totalRows}</strong>
-                    </div>
-                    <div class="pagination-controls">
-                        <div class="pagination-rows-selector">
-                            <span>Filas:</span>
-                            <select onchange="changeRowsPerPage(this.value)">
-                                <option value="10" ${rowsPerPage == 10 ? 'selected' : ''}>10</option>
-                                <option value="30" ${rowsPerPage == 30 ? 'selected' : ''}>30</option>
-                                <option value="50" ${rowsPerPage == 50 ? 'selected' : ''}>50</option>
-                                <option value="100" ${rowsPerPage == 100 ? 'selected' : ''}>100</option>
-                                <option value="-1" ${rowsPerPage == -1 ? 'selected' : ''}>Todos</option>
-                            </select>
-                        </div>
-                        <div class="pagination-nav">
-                            <button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
-                            <span>Página <strong>${currentPage}</strong> de ${totalPages}</span>
-                            <button onclick="changePage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>
-                        </div>
-                    </div>
-                </div>
-            </td>
-        </tr>
-    `;
+    // Actualizamos los elementos individuales
+    const infoEl = document.getElementById('paginationInfo');
+    const navEl = document.getElementById('paginationNav');
+    const selectorEl = document.getElementById('rowsPerPageSelector');
+
+    if (infoEl) {
+        infoEl.innerHTML = `Mostrando <strong>${startItem} - ${endItem}</strong> de <strong>${totalRows}</strong>`;
+    }
+    if (selectorEl) {
+        selectorEl.value = rowsPerPage;
+    }
+    if (navEl) {
+        navEl.innerHTML = `
+            <button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
+            <span>Página <strong>${currentPage}</strong> de ${totalPages}</span>
+            <button onclick="changePage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>
+        `;
+    }
 }
 
 function changePage(newPage) {
