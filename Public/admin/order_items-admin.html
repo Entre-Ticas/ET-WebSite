@@ -13,6 +13,16 @@
             <input type="text" id="adminSearchInput" placeholder="🔍 Buscar por cliente, producto..." oninput="filtrarOrdenes()" />
             <button class="admin-btn-agregar" onclick="abrirFormNuevo()">+ Agregar Orden</button>
         </div>
+        <div class="admin-multi-select-toolbar">
+            <label for="multiSelectToggle">
+                <input type="checkbox" id="multiSelectToggle" onchange="toggleMultiSelect(this.checked)"> Seleccionar Varios
+            </label>
+            <div id="multiActionContainer" style="display: none;">
+                <span id="selectionCounter">0 seleccionados</span>
+                <button id="multiEditBtn" class="admin-btn-action btn-edit" onclick="handleMultiEdit()"><i class="fas fa-pencil-alt"></i> </button>
+                <button id="multiDeleteBtn" class="admin-btn-action btn-delete" onclick="handleMultiDelete()"><i class="fas fa-trash-alt"></i> </button>
+            </div>
+        </div>
 
         <div id="adminStatus" class="catalog-status">
             <div class="spinner"></div>
@@ -23,7 +33,8 @@
             <table class="admin-table" style="display: none;">
                 <thead>
                     <tr class="admin-main-header">
-                        <th data-col="image">Imagen</th>
+                        <th class="col-select" style="display: none;"><input type="checkbox" onchange="toggleSelectAll(this.checked)"></th>
+                        <th>Img</th>
                         <th class="sortable" onclick="sortBy('client_name')" data-col="client_name">Cliente <span class="sort-arrow">↕</span></th>
                         <th class="sortable" onclick="sortBy('client_phone')" data-col="client_phone">Teléfono <span class="sort-arrow">↕</span></th>
                         <th class="sortable" onclick="sortBy('product_name')" data-col="product_name">Producto <span class="sort-arrow">↕</span></th>
@@ -31,10 +42,10 @@
                         <th class="sortable" onclick="sortBy('quantity')" data-col="quantity">Cant. <span class="sort-arrow">↕</span></th>
                         <th class="sortable" onclick="sortBy('price')" data-col="price">Precio <span class="sort-arrow">↕</span></th>
                         <th data-col="usa_reviewed">Rev. USA</th>
-                        <th data-col="bank_reviewed">Rev. Banco</th>
-                        <th data-col="actions">Acciones</th>
+                        <th>Acciones</th>
                     </tr>
                     <tr class="admin-filter-row">
+                        <td class="col-select" style="display: none;"></td>
                         <td></td>
                         <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('client_name', this.value)" /></td>
                         <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('client_phone', this.value)" /></td>
@@ -42,14 +53,8 @@
                         <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('size', this.value)" /></td>
                         <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('quantity', this.value)" /></td>
                         <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('price', this.value)" /></td>
-                        <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('status_name', this.value)" /></td>
                         <td>
                             <select class="admin-filter-select" onchange="setColumnFilter('usa_reviewed', this.value)">
-                                <option value="">Todos</option><option value="true">Sí</option><option value="false">No</option>
-                            </select>
-                        </td>
-                        <td>
-                            <select class="admin-filter-select" onchange="setColumnFilter('bank_reviewed', this.value)">
                                 <option value="">Todos</option><option value="true">Sí</option><option value="false">No</option>
                             </select>
                         </td>

@@ -544,3 +544,37 @@ body {
     color: var(--brown-text);
     white-space: nowrap;
 }
+
+/* Barra de herramientas para selección múltiple */
+.admin-multi-select-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem; /* Espacio entre el checkbox y los botones */
+    text-align: left;
+    padding: 0.5rem;
+    margin-top: 0.5rem;
+    background-color: var(--pink-light);
+    border-radius: 8px;
+}
+
+.admin-multi-select-toolbar label {
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--brown-text);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: bold;
+}
+
+.admin-multi-select-toolbar #multiActionContainer {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.admin-multi-select-toolbar #selectionCounter {
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+}

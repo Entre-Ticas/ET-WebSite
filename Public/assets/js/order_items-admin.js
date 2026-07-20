@@ -8,7 +8,7 @@ let orderItemsSortColumn = null;
 let orderItemsSortDir = 'asc';   
 let orderItemsColumnFilters = { 
     client_name: '', client_phone: '', product_name: '', size: '', quantity: '',
-    price: '', status_name: '', usa_reviewed: '', bank_reviewed: ''
+    price: '', status_name: '', usa_reviewed: ''
 };
 
 async function cargarEstadosOrdenes() {
@@ -98,8 +98,7 @@ function renderOrders() {
         (o.size || '').toLowerCase().includes(orderItemsColumnFilters.size) &&
         String(o.quantity || '').toLowerCase().includes(orderItemsColumnFilters.quantity) &&
         String(o.price || '').toLowerCase().includes(orderItemsColumnFilters.price) &&
-        (orderItemsColumnFilters.usa_reviewed === '' || String(o.usa_reviewed) === orderItemsColumnFilters.usa_reviewed) &&
-        (orderItemsColumnFilters.bank_reviewed === '' || String(o.bank_reviewed) === orderItemsColumnFilters.bank_reviewed)
+        (orderItemsColumnFilters.usa_reviewed === '' || String(o.usa_reviewed) === orderItemsColumnFilters.usa_reviewed)
     );
 
     // 3. Aplicar ordenamiento
@@ -134,6 +133,7 @@ function renderOrders() {
     
     const rowsHtml = paginatedItems.map(o => `
             <tr>
+                <td class="col-select" style="display: none;"><input type="checkbox" class="row-selector" data-id="${o.id}" onchange="updateMultiSelectActions()"></td>
                 <td><img src="${o.image_url || 'https://placehold.co/40x40/E19B9D/FFFFFF?text=?'}" class="admin-table-img" alt="Producto" onclick="openImageModal('${o.image_url || ''}')"></td>
                 <td>${o.client_name || ''}</td>
                 <td>${o.client_phone || ''}</td>
@@ -142,7 +142,6 @@ function renderOrders() {
                 <td>${o.quantity || 0}</td>
                 <td>₡${(o.price || 0).toLocaleString('es-CR')}</td>
                 <td style="text-align: center;"><input type="checkbox" onchange="toggleReviewStatus(${o.id}, 'usa_reviewed', this)" ${o.usa_reviewed ? 'checked' : ''}></td>
-                <td style="text-align: center;"><input type="checkbox" onchange="toggleReviewStatus(${o.id}, 'bank_reviewed', this)" ${o.bank_reviewed ? 'checked' : ''}></td>
                 <td class="admin-actions-cell">
                     <button class="admin-btn-action btn-edit" onclick="abrirFormEdicion(${o.id})" title="Editar Orden"><i class="fas fa-pencil-alt"></i></button>
                     <button class="admin-btn-action btn-invoice" onclick="verFactura(${o.invoice_id})" title="Ver Factura"><i class="fas fa-file-invoice-dollar"></i></button>
@@ -153,6 +152,8 @@ function renderOrders() {
 
     tbody.innerHTML = rowsHtml;
     actualizarIconosOrden();
+    // Forzamos la re-evaluación de la visibilidad de la columna de selección
+    toggleMultiSelect(document.getElementById('multiSelectToggle')?.checked || false);
     renderPagination(totalRows);
 }
 
@@ -247,6 +248,44 @@ function filtrarOrdenes() {
     renderOrders();
 }
 
+function toggleMultiSelect(isMultiSelect) {
+    const selectColumns = document.querySelectorAll('.col-select');
+    selectColumns.forEach(col => {
+        col.style.display = isMultiSelect ? '' : 'none';
+    });
+
+    // Si se desactiva la selección múltiple, nos aseguramos de que los botones de acción se oculten.
+    if (!isMultiSelect) {
+        document.getElementById('multiActionContainer').style.display = 'none'; // Sigue funcionando igual
+    }
+    updateMultiSelectActions();
+}
+
+function toggleSelectAll(isChecked) {
+    const rowCheckboxes = document.querySelectorAll('.row-selector');
+    rowCheckboxes.forEach(chk => {
+        chk.checked = isChecked;
+    });
+    updateMultiSelectActions();
+}
+
+function getSelectedOrderIds() {
+    return Array.from(document.querySelectorAll('.row-selector:checked'))
+                .map(chk => Number(chk.dataset.id));
+}
+
+function updateMultiSelectActions() {
+    const selectedIds = getSelectedOrderIds();
+    const container = document.getElementById('multiActionContainer');
+    const counter = document.getElementById('selectionCounter');
+    const isMultiSelectActive = document.getElementById('multiSelectToggle').checked;
+
+    const showActions = isMultiSelectActive && selectedIds.length > 0;
+
+    container.style.display = showActions ? 'flex' : 'none'; // Cambiado a 'flex' para alinear los botones
+    counter.textContent = `${selectedIds.length} seleccionados`;
+}
+
 function volverAlGrid() {
     document.getElementById('adminGridView').style.display = 'block';
     document.getElementById('adminFormNuevoView').style.display = 'none';
@@ -281,7 +320,6 @@ async function guardarNuevaOrden() {
     const product_name = document.getElementById('nuevoProductName').value.trim();
     const price = parseFloat(document.getElementById('nuevoPrice').value);
     
-    // ¡CAMBIO CLAVE! Hacemos que el teléfono sea obligatorio aquí.
     if (!client_name || !client_phone || !product_name || !price) {
         mensajeEl.textContent = 'Por favor, completa todos los campos obligatorios (*).';
         return;
