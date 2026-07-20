@@ -368,7 +368,8 @@ body {
 
 .admin-table tbody td {
     font-size: 0.82rem;   
-    padding: 6px 14px;     
+    padding: 6px 14px;
+}
 
 .admin-actions-cell button {
     font-size: 0.75rem;   
@@ -475,4 +476,71 @@ body {
     background-color: #ffdddd;
     border-color: #dc3545;
     color: #dc3545;
+}
+
+
+.admin-pagination-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+    background-color: #fff;
+    border: none; 
+    border-top: 1px solid var(--pink-light); /* Dejamos solo el borde superior */
+    font-size: 0.85rem;
+}
+
+.pagination-info {
+    color: #777;
+}
+
+.pagination-controls, .pagination-rows-selector {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    margin-top: 0.2rem;
+}
+
+.pagination-rows-selector select {
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--pink-light);
+    background-color: #fff;
+    color: var(--brown-text);
+    margin-left: 8px;
+}
+
+.pagination-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.2rem;
+}
+
+.pagination-nav button {
+    background: var(--pink-light);
+    border: none;
+    color: var(--pink-accent);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.pagination-nav button:hover:not(:disabled) {
+    background: var(--pink-accent);
+    color: white;
+    transform: scale(1.1);
+}
+
+.pagination-nav button:disabled {
+    cursor: not-allowed;
+    background-color: #f9f9f9;
+    color: #ccc;
+}
+
+.pagination-nav span {
+    color: var(--brown-text);
+    white-space: nowrap;
 }

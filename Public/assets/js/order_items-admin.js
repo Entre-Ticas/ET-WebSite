@@ -2,6 +2,8 @@
 
 let todasLasOrdenes = [];
 let orderItemsGlobalSearch = ''; 
+let currentPage = 1;
+let rowsPerPage = 10; // Valor por defecto
 let orderItemsSortColumn = null; 
 let orderItemsSortDir = 'asc';   
 let orderItemsColumnFilters = { 
@@ -146,18 +148,23 @@ function renderOrders() {
         });
     }
 
-    const ordenes = lista; // Renombramos para el resto de la función
+    const totalRows = lista.length;
 
-    if (ordenes.length === 0) {
+    // 4. Aplicar paginación
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = rowsPerPage === -1 ? totalRows : startIndex + rowsPerPage;
+    const paginatedItems = lista.slice(startIndex, endIndex);
+
+    if (paginatedItems.length === 0 && orderItemsGlobalSearch) {
         noResults.style.display = 'block';
+        table.style.display = 'none';
         tbody.innerHTML = '';
-        return;
+    } else {
+        noResults.style.display = 'none';
+        table.style.display = '';
     }
     
-    noResults.style.display = 'none';
-    table.style.display = '';
-    
-    const rowsHtml = ordenes.map(o => `
+    const rowsHtml = paginatedItems.map(o => `
             <tr>
                 <td><img src="${o.image_url || 'https://placehold.co/40x40/E19B9D/FFFFFF?text=?'}" class="admin-table-img" alt="Producto" onclick="openImageModal('${o.image_url || ''}')"></td>
                 <td>${o.client_name || ''}</td>
@@ -178,6 +185,73 @@ function renderOrders() {
 
     tbody.innerHTML = rowsHtml;
     actualizarIconosOrden();
+    renderPagination(totalRows);
+}
+
+function renderPagination(totalRows) {
+    const table = document.querySelector('#adminGrid .admin-table');
+    if (!table) return;
+
+    // Buscamos o creamos el tfoot
+    let tfoot = table.querySelector('tfoot');
+    if (!tfoot) {
+        tfoot = document.createElement('tfoot');
+        table.appendChild(tfoot);
+    }
+
+    // Solo ocultar la paginación si el total de filas es menor que la opción más pequeña (10).
+    // De esta forma, si eliges "100" y tienes 80 filas, la paginación seguirá visible
+    // para que puedas volver a cambiar la selección.
+    if (totalRows <= 10) {
+        tfoot.innerHTML = '';
+        return;
+    }
+
+    const totalPages = rowsPerPage === -1 ? 1 : Math.ceil(totalRows / rowsPerPage);
+    const startItem = (currentPage - 1) * rowsPerPage + 1;
+    const endItem = rowsPerPage === -1 ? totalRows : Math.min(currentPage * rowsPerPage, totalRows);
+    const numColumns = table.querySelector('thead .admin-main-header').cells.length;
+
+    // Rellenamos el tfoot con una única fila y una celda que abarca todas las columnas
+    tfoot.innerHTML = `
+        <tr>
+            <td colspan="${numColumns}">
+                <div class="admin-pagination-container" style="margin-top: 0;">
+                    <div class="pagination-info">
+                        Mostrando <strong>${startItem} - ${endItem}</strong> de <strong>${totalRows}</strong>
+                    </div>
+                    <div class="pagination-controls">
+                        <div class="pagination-rows-selector">
+                            <span>Filas:</span>
+                            <select onchange="changeRowsPerPage(this.value)">
+                                <option value="10" ${rowsPerPage == 10 ? 'selected' : ''}>10</option>
+                                <option value="30" ${rowsPerPage == 30 ? 'selected' : ''}>30</option>
+                                <option value="50" ${rowsPerPage == 50 ? 'selected' : ''}>50</option>
+                                <option value="100" ${rowsPerPage == 100 ? 'selected' : ''}>100</option>
+                                <option value="-1" ${rowsPerPage == -1 ? 'selected' : ''}>Todos</option>
+                            </select>
+                        </div>
+                        <div class="pagination-nav">
+                            <button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
+                            <span>Página <strong>${currentPage}</strong> de ${totalPages}</span>
+                            <button onclick="changePage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    `;
+}
+
+function changePage(newPage) {
+    currentPage = newPage;
+    renderOrders();
+}
+
+function changeRowsPerPage(value) {
+    rowsPerPage = parseInt(value, 10);
+    currentPage = 1; // Volver a la primera página
+    renderOrders();
 }
 
 function verFactura(invoiceId) {
@@ -195,6 +269,7 @@ function sortBy(col) {
 }
 
 function setColumnFilter(col, value) {
+    currentPage = 1;
     orderItemsColumnFilters[col] = value.toLowerCase();
     renderOrders();
 }
@@ -213,6 +288,7 @@ function actualizarIconosOrden() {
 }
 
 function filtrarOrdenes() {
+    currentPage = 1;
     orderItemsGlobalSearch = document.getElementById('adminSearchInput').value.toLowerCase().trim();
     renderOrders();
 }
