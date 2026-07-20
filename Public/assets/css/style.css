@@ -3,7 +3,7 @@ body {
       background: linear-gradient(to bottom, #ffe6f0, #fff5fa);
       color: #4b2e2e;
       text-align: center;
-      padding: 30px;
+      padding: 0px;
       margin: 0;
     }
 
@@ -549,9 +549,9 @@ body {
 .admin-multi-select-toolbar {
     display: flex;
     align-items: center;
-    gap: 1.5rem; /* Espacio entre el checkbox y los botones */
+    justify-content: space-between; /* Mueve los elementos a los extremos */
     text-align: left;
-    padding: 0.5rem;
+    padding: 0.5rem 0.8rem;
     margin-top: 0.5rem;
     background-color: var(--pink-light);
     border-radius: 8px;
@@ -570,7 +570,7 @@ body {
 .admin-multi-select-toolbar #multiActionContainer {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.4rem; /* Reducimos aún más el espacio entre los botones */
 }
 
 .admin-multi-select-toolbar #selectionCounter {

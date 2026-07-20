@@ -33,12 +33,9 @@
         <a onclick="loadPage('info')">Info</a>
         <a class="navAdminLink" onclick="loadPage('admin/tracking')" style="display:none;">Tracking-Admin</a>
         <a class="navAdminLink" onclick="loadPage('admin/catalog')" style="display:none;">Catalog-Admin</a>
-        <a onclick="loadPage('admin/order_items')" class="navAdminLink" style="display: none;">
-        <i class="fas fa-shopping-basket"></i> Órdenes
-    </a>
+        <a class="navAdminLink" onclick="loadPage('ordenes')" style="display: none;">Órdenes</a>
     </nav>
 
-    <!-- Botón flotante de login, discreto en esquina superior derecha -->
     <button id="floatingLoginBtn" onclick="abrirLoginModal()" title="Iniciar sesión"
         style="position:fixed; top:4px; right:4px; z-index:8000; background:transparent; border:none; cursor:pointer; opacity:0.12; transition:opacity 0.3s;"
         onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.12'">

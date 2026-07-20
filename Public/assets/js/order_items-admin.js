@@ -254,9 +254,16 @@ function toggleMultiSelect(isMultiSelect) {
         col.style.display = isMultiSelect ? '' : 'none';
     });
 
-    // Si se desactiva la selección múltiple, nos aseguramos de que los botones de acción se oculten.
+    // Si se desactiva la selección múltiple, limpiamos todo para evitar acciones accidentales.
     if (!isMultiSelect) {
-        document.getElementById('multiActionContainer').style.display = 'none'; // Sigue funcionando igual
+        // 1. Deseleccionamos todas las filas visibles
+        document.querySelectorAll('.row-selector').forEach(chk => chk.checked = false);
+        
+        // 2. Deseleccionamos el checkbox "maestro" de la cabecera
+        const selectAllCheckbox = document.querySelector('.admin-main-header .col-select input[type="checkbox"]');
+        if (selectAllCheckbox) {
+            selectAllCheckbox.checked = false;
+        }
     }
     updateMultiSelectActions();
 }
@@ -276,14 +283,19 @@ function getSelectedOrderIds() {
 
 function updateMultiSelectActions() {
     const selectedIds = getSelectedOrderIds();
-    const container = document.getElementById('multiActionContainer');
-    const counter = document.getElementById('selectionCounter');
+    const actionContainer = document.getElementById('multiActionContainer');
+    const label = document.getElementById('multiSelectLabel');
     const isMultiSelectActive = document.getElementById('multiSelectToggle').checked;
 
-    const showActions = isMultiSelectActive && selectedIds.length > 0;
+    if (!isMultiSelectActive) {
+        actionContainer.style.display = 'none';
+        label.textContent = 'Seleccionar Varios';
+        return;
+    }
 
-    container.style.display = showActions ? 'flex' : 'none'; // Cambiado a 'flex' para alinear los botones
-    counter.textContent = `${selectedIds.length} seleccionados`;
+    const hasSelection = selectedIds.length > 0;
+    actionContainer.style.display = hasSelection ? 'flex' : 'none';
+    label.textContent = hasSelection ? `${selectedIds.length} Seleccionados` : 'Seleccionar Varios';
 }
 
 function volverAlGrid() {

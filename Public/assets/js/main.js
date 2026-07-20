@@ -144,7 +144,8 @@ async function loadPage(page, param = null) {
                 'admin/order_items': 'admin/order_items-admin.html',
                 'admin/invoice': 'admin/invoice-admin.html', // Nueva ruta
                 'info': 'InformationImg/info.html',
-                'informacion': 'InformationImg/infoImg.html'
+                'informacion': 'InformationImg/infoImg.html',
+                'ordenes': 'admin/order_items-admin.html'
             };
             const url = routes[page];
             if (!url) {
@@ -178,7 +179,7 @@ async function loadPage(page, param = null) {
                 window.initTrackingAdminPage();
             } else if (page === 'admin/catalog' && typeof window.initCatalogAdminPage === 'function') {
                 window.initCatalogAdminPage();
-            } else if (page === 'admin/order_items' && typeof window.initOrderItemsAdminPage === 'function') {
+            } else if ((page === 'admin/order_items' || page === 'ordenes') && typeof window.initOrderItemsAdminPage === 'function') {
                 window.initOrderItemsAdminPage();
             } else if (page === 'admin/invoice' && typeof window.initInvoiceAdminPage === 'function' && param) {
                 window.initInvoiceAdminPage(param);
