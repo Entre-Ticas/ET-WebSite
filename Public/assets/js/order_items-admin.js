@@ -299,10 +299,136 @@ function updateMultiSelectActions() {
 }
 
 function handleMultiEdit() {
-    // Esta función se implementará en el siguiente paso.
     const selectedIds = getSelectedOrderIds();
     if (selectedIds.length === 0) return;
-    alert(`Funcionalidad de edición para ${selectedIds.length} órdenes aún no implementada.`);
+
+    // Obtener las facturas existentes de las órdenes seleccionadas
+    const selectedOrders = todasLasOrdenes.filter(o => selectedIds.includes(o.id));
+    const existingInvoices = [...new Set(selectedOrders.map(o => o.invoice_id).filter(id => id != null))];
+
+    console.log('Facturas existentes en la selección:', existingInvoices);
+
+    let invoiceAlertHtml = '';
+    if (existingInvoices.length > 0) {
+        invoiceAlertHtml = `
+            <div class="modal-alert">
+                <i class="fas fa-info-circle"></i>
+                <span>Facturas actuales: <strong>${existingInvoices.join(', ')}</strong></span>
+            </div>
+        `;
+    }
+
+    const title = `Editar ${selectedIds.length} Órdenes`;
+    
+    const body = `
+        ${invoiceAlertHtml}
+        <p style="font-size: 0.9rem; margin-top: 0; color: #777;">
+            Introduce los nuevos valores para los campos que deseas actualizar. Los campos que dejes en blanco no se modificarán.
+        </p>
+        <div style="text-align: left; margin-bottom: 1rem;">
+            <label style="font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 4px;">Nombre del Cliente:</label>
+            <input type="text" id="multiEditClientName" placeholder="Nuevo nombre para todos"
+                   style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); box-sizing:border-box;">
+        </div>
+        <div style="text-align: left; margin-bottom: 1rem;">
+            <label style="font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 4px;">Teléfono (últimos 4 dígitos):</label>
+            <input type="tel" id="multiEditClientPhone" placeholder="Nuevo teléfono para todos" maxlength="4"
+                   style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); box-sizing:border-box;">
+            <small id="multiEditPhoneError" style="color: red; display: none; margin-top: 4px;">El teléfono debe ser numérico de 4 dígitos.</small>
+        </div>
+        <div style="text-align: left;">
+            <label style="font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 4px;">Asignar a Factura (ID):</label>
+            <input type="number" id="multiEditInvoiceId" placeholder="ID de la factura"
+                   style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); box-sizing:border-box;">
+            <div id="multiEditError" style="color: red; margin-top: 1rem; font-weight: bold; display: none;"></div>
+        </div>
+    `;
+
+    const footer = `
+        <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmMultiEdit()">Guardar Cambios</button>
+    `;
+
+    openGenericModal(title, body, footer);
+}
+
+async function confirmMultiEdit() {
+    const idsToUpdate = getSelectedOrderIds();
+    const newName = document.getElementById('multiEditClientName').value.trim();
+    const newPhone = document.getElementById('multiEditClientPhone').value.trim();
+    const newInvoiceId = document.getElementById('multiEditInvoiceId').value.trim();
+    const generalErrorEl = document.getElementById('multiEditError');
+    const phoneErrorEl = document.getElementById('multiEditPhoneError');
+
+    // Validación
+    if (newPhone && (!/^\d{4}$/.test(newPhone))) {
+        phoneErrorEl.style.display = 'block';
+        return;
+    }
+    phoneErrorEl.style.display = 'none';
+    generalErrorEl.style.display = 'none';
+
+    if (idsToUpdate.length === 0 || (!newName && !newPhone && !newInvoiceId)) {
+        closeGenericModal();
+        return;
+    }
+
+    // Deshabilitar botones para evitar doble clic
+    const footerButtons = document.querySelectorAll('#genericModalFooter .btn');
+    footerButtons.forEach(btn => btn.disabled = true);
+    generalErrorEl.textContent = 'Actualizando...';
+    generalErrorEl.style.color = 'var(--brown-text)';
+    generalErrorEl.style.display = 'block';
+
+    try {
+        const session = getSession();
+        if (!session) throw new Error('Sesión expirada.');
+
+        // Si no se va a cambiar la factura, no hay nada que validar.
+        // El backend ya valida si el ID existe, así que esta lógica es para el frontend.
+        // No necesitamos una validación extra aquí por ahora.
+
+        const updatePromises = idsToUpdate.map(id => {
+            const orden = todasLasOrdenes.find(o => o.id === id);
+            if (!orden) return Promise.resolve(); // Si no se encuentra la orden, se ignora
+
+            const payload = {
+                id: id,
+                client_name: newName || orden.client_name,
+                client_phone: newPhone || orden.client_phone,
+                invoice_id: newInvoiceId ? parseInt(newInvoiceId) : orden.invoice_id
+            };
+            
+            // Devolvemos la promesa del fetch para poder manejarla después.
+            return fetch('/.netlify/functions/order-items', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'x-admin-token': session.token },
+                body: JSON.stringify(payload)
+            });
+        });
+
+        const responses = await Promise.all(updatePromises);
+
+        // Verificamos si ALGUNA de las respuestas no fue exitosa.
+        const failedResponse = responses.find(res => !res.ok);
+        if (failedResponse) {
+            const errorData = await failedResponse.json();
+            throw new Error(errorData.error || `Error ${failedResponse.status}`);
+        }
+
+        const modalBody = document.getElementById('genericModalBody');
+        modalBody.innerHTML = `✅ Se actualizaron ${idsToUpdate.length} órdenes con éxito.`;
+        document.getElementById('genericModalFooter').innerHTML = ''; // Limpiar botones
+
+        modalBody.innerHTML = `✅ Se actualizaron ${idsToUpdate.length} órdenes con éxito.`;
+        setTimeout(() => { closeGenericModal(); loadAdminOrders(); }, 1500);
+
+    } catch (error) {
+        // Si hay un error, lo mostramos y reactivamos los botones.
+        generalErrorEl.textContent = `⚠️ ${error.message}`;
+        generalErrorEl.style.color = 'red';
+        footerButtons.forEach(btn => btn.disabled = false);
+    }
 }
 
 function handleMultiDelete() {

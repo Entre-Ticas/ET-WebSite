@@ -664,3 +664,45 @@ body {
 .modal-footer .btn-danger:hover {
     opacity: 0.85;
 }
+
+/* Estilo para alertas informativas dentro del modal genérico */
+.modal-alert {
+    background-color: #fdf0f1; /* Un rosado muy pálido */
+    color: var(--brown-text);
+    border: 1px solid var(--pink-light);
+    border-radius: 8px;
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.9rem;
+}
+
+/* Estilo para alertas informativas dentro del modal genérico */
+.modal-alert {
+    background-color: #fdf0f1; /* Un rosado muy pálido */
+    color: var(--brown-text);
+    border: 1px solid var(--pink-light);
+    border-radius: 8px;
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.9rem;
+}
+
+/* Estilo para alertas informativas dentro del modal genérico */
+.modal-alert {
+    background-color: #fdf0f1; /* Un rosado muy pálido */
+    color: var(--brown-text);
+    border: 1px solid var(--pink-light);
+    border-radius: 8px;
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.9rem;
+}

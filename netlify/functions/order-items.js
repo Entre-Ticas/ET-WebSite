@@ -170,6 +170,21 @@ async function updateOrderItem(event) {
         return { statusCode: 400, body: JSON.stringify({ error: 'Se requiere el ID del item para actualizar.' }) };
     }
 
+    // --- INICIO: Validación de Llave Foránea ---
+    // Si se está intentando asignar una factura, verificamos que exista primero.
+    if (updateData.invoice_id) {
+        const checkInvoiceUrl = `${supabaseUrl}/rest/v1/invoices?id=eq.${updateData.invoice_id}&select=id&limit=1`;
+        const checkResponse = await fetch(checkInvoiceUrl, { headers: sbHeaders });
+        
+        if (!checkResponse.ok) throw new Error(`Error verificando factura: ${await checkResponse.text()}`);
+
+        const existingInvoice = await checkResponse.json();
+        if (!existingInvoice || existingInvoice.length === 0) {
+            return { statusCode: 404, body: JSON.stringify({ error: `La factura con ID ${updateData.invoice_id} no existe.` }) };
+        }
+    }
+    // --- FIN: Validación ---
+
     const updateUrl = `${supabaseUrl}/rest/v1/order_items?id=eq.${id}`;
     const response = await fetch(updateUrl, {
         method: 'PATCH',
