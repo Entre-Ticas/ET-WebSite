@@ -298,6 +298,62 @@ function updateMultiSelectActions() {
     label.textContent = hasSelection ? `${selectedIds.length} Seleccionados` : 'Seleccionar Varios';
 }
 
+function handleMultiEdit() {
+    // Esta función se implementará en el siguiente paso.
+    const selectedIds = getSelectedOrderIds();
+    if (selectedIds.length === 0) return;
+    alert(`Funcionalidad de edición para ${selectedIds.length} órdenes aún no implementada.`);
+}
+
+function handleMultiDelete() {
+    const selectedIds = getSelectedOrderIds();
+    if (selectedIds.length === 0) return;
+
+    const title = 'Confirmar Eliminación';
+    const body = `¿Estás seguro de que deseas eliminar <strong>${selectedIds.length}</strong> órdenes seleccionadas? Esta acción no se puede deshacer.`;
+    
+    const footer = `
+        <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
+        <button class="btn btn-danger" onclick="confirmMultiDelete()">Eliminar</button>
+    `;
+
+    openGenericModal(title, body, footer);
+}
+
+async function confirmMultiDelete() {
+    const idsToDelete = getSelectedOrderIds();
+    if (idsToDelete.length === 0) {
+        closeGenericModal();
+        return;
+    }
+
+    const modalBody = document.getElementById('genericModalBody');
+    const modalFooter = document.getElementById('genericModalFooter');
+    modalBody.innerHTML = `<div class="spinner"></div><p>Eliminando ${idsToDelete.length} órdenes...</p>`;
+    modalFooter.innerHTML = ''; // Ocultar botones durante el proceso
+
+    try {
+        const session = getSession();
+        if (!session) throw new Error('Sesión expirada.');
+
+        const deletePromises = idsToDelete.map(id => 
+            fetch(`/.netlify/functions/order-items?id=${id}`, {
+                method: 'DELETE',
+                headers: { 'x-admin-token': session.token }
+            })
+        );
+
+        // Esperamos a que todas las promesas se completen
+        await Promise.all(deletePromises);
+
+        modalBody.innerHTML = `✅ Se eliminaron ${idsToDelete.length} órdenes con éxito.`;
+        setTimeout(() => { closeGenericModal(); loadAdminOrders(); }, 1500);
+
+    } catch (error) {
+        modalBody.innerHTML = `⚠️ Error al eliminar: ${error.message}`;
+    }
+}
+
 function volverAlGrid() {
     document.getElementById('adminGridView').style.display = 'block';
     document.getElementById('adminFormNuevoView').style.display = 'none';
