@@ -1,11 +1,15 @@
 // Gestión de paquetes
 
     let todosLosTrackings = [];
-    let adminIdTracking = null;
-    let globalSearch = '';
-    let sortColumn = null;
-    let sortDir = 'asc';
-    let columnFilters = { cliente: '', producto: '', guia: '', fecha: '', estado: '' };
+    let trackingAdminIdTracking = null;
+    let trackingGlobalSearch = '';
+    let trackingSortColumn = null;
+    let trackingSortDir = 'asc';
+    let trackingColumnFilters = { cliente: '', producto: '', guia: '', fecha: '', estado: '' };
+
+    // Variables de paginación con prefijo único
+    let trackingCurrentPage = 1;
+    let trackingRowsPerPage = 10;
 
     async function cargarEstados() {
         try {
@@ -31,30 +35,6 @@
             return;
         }
 
-        // 1. Inyectamos la estructura de la tabla INMEDIATAMENTE.
-        gridContainer.innerHTML = `
-            <table class="admin-table">
-                <thead>
-                    <tr>
-                        <th class="sortable" onclick="sortBy('cliente')" data-col="cliente">Cliente <span class="sort-arrow">↕</span></th>
-                        <th class="sortable" onclick="sortBy('producto')" data-col="producto">Producto <span class="sort-arrow">↕</span></th>
-                        <th class="sortable" onclick="sortBy('guia')" data-col="guia">Guía <span class="sort-arrow">↕</span></th>
-                        <th class="sortable" onclick="sortBy('fecha')" data-col="fecha">F. Compra <span class="sort-arrow">↕</span></th>
-                        <th class="sortable" onclick="sortBy('estado')" data-col="estado">Estado Actual <span class="sort-arrow">↕</span></th>
-                        <th></th>
-                    </tr>
-                    <tr class="admin-filter-row">
-                        <td><input type="text" placeholder="Filtrar..." value="${columnFilters.cliente}" oninput="setColumnFilter('cliente', this.value)" /></td>
-                        <td><input type="text" placeholder="Filtrar..." value="${columnFilters.producto}" oninput="setColumnFilter('producto', this.value)" /></td>
-                        <td><input type="text" placeholder="Filtrar..." value="${columnFilters.guia}" oninput="setColumnFilter('guia', this.value)" /></td>
-                        <td><input type="text" placeholder="Filtrar..." value="${columnFilters.fecha}" oninput="setColumnFilter('fecha', this.value)" /></td>
-                        <td><input type="text" placeholder="Filtrar..." value="${columnFilters.estado}" oninput="setColumnFilter('estado', this.value)" /></td>
-                        <td></td>
-                    </tr>
-                </thead>
-                <tbody id="adminTableBody"></tbody>
-            </table>`;
-
         cargarEstados();
 
         try {
@@ -72,6 +52,7 @@
             todosLosTrackings = await response.json();
             const statusEl = document.getElementById('adminStatus');
             statusEl.style.display = 'none';
+            document.querySelector('#adminGrid .admin-table').style.display = '';
             renderTrackings();
         } catch (err) {
             statusEl.innerHTML = `<p style="color:red;">⚠️ Error al cargar: ${err.message}</p>`;
@@ -80,54 +61,65 @@
 
     function renderTrackings() {
         const grid = document.getElementById('adminGrid');
+        const tbody = document.getElementById('adminTbody');
         const noResults = document.getElementById('adminNoResults');
-        if (!grid) return;
+        if (!grid || !tbody) return;
 
         // Aplicar búsqueda global
         let lista = todosLosTrackings.filter(t =>
-            !globalSearch ||
-            (t.cliente || '').toLowerCase().includes(globalSearch) ||
-            (t.producto || '').toLowerCase().includes(globalSearch) ||
-            (t.codigo_seguimiento_interno || '').toLowerCase().includes(globalSearch) ||
-            (t.codigo_seguimiento_externo || '').toLowerCase().includes(globalSearch)
+            !trackingGlobalSearch ||
+            (t.cliente || '').toLowerCase().includes(trackingGlobalSearch) ||
+            (t.producto || '').toLowerCase().includes(trackingGlobalSearch) ||
+            (t.codigo_seguimiento_interno || '').toLowerCase().includes(trackingGlobalSearch) ||
+            (t.codigo_seguimiento_externo || '').toLowerCase().includes(trackingGlobalSearch)
         );
 
         // Aplicar filtros por columna
         lista = lista.filter(t => {
             const guia = (t.codigo_seguimiento_externo || t.codigo_seguimiento_interno || t.guia_externa || t.guia_interna || '').toLowerCase();
-            const fecha = t.fecha_compra
-                ? new Date(t.fecha_compra).toLocaleDateString('es-CR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-                : '';
+            const fecha = t.fecha_compra ? new Date(t.fecha_compra).toLocaleDateString('es-CR') : '';
             return (
-                (t.cliente || '').toLowerCase().includes(columnFilters.cliente) &&
-                (t.producto || '').toLowerCase().includes(columnFilters.producto) &&
-                guia.includes(columnFilters.guia) &&
-                fecha.includes(columnFilters.fecha) &&
-                (t.ultimo_estado || '').toLowerCase().includes(columnFilters.estado)
+                (t.cliente || '').toLowerCase().includes(trackingColumnFilters.cliente) &&
+                (t.producto || '').toLowerCase().includes(trackingColumnFilters.producto) &&
+                guia.includes(trackingColumnFilters.guia) &&
+                fecha.includes(trackingColumnFilters.fecha) &&
+                (t.ultimo_estado || '').toLowerCase().includes(trackingColumnFilters.estado)
             );
         });
 
         // Aplicar ordenamiento
-        if (sortColumn) {
+        if (trackingSortColumn) {
             lista = [...lista].sort((a, b) => {
                 let va = '', vb = '';
-                if (sortColumn === 'cliente')  { va = a.cliente || ''; vb = b.cliente || ''; }
-                if (sortColumn === 'producto') { va = a.producto || ''; vb = b.producto || ''; }
-                if (sortColumn === 'guia')     { va = a.codigo_seguimiento_externo || a.codigo_seguimiento_interno || ''; vb = b.codigo_seguimiento_externo || b.codigo_seguimiento_interno || ''; }
-                if (sortColumn === 'fecha')    { va = a.fecha_compra || ''; vb = b.fecha_compra || ''; }
-                if (sortColumn === 'estado')   { va = a.ultimo_estado || ''; vb = b.ultimo_estado || ''; }
+                if (trackingSortColumn === 'cliente')  { va = a.cliente || ''; vb = b.cliente || ''; }
+                if (trackingSortColumn === 'producto') { va = a.producto || ''; vb = b.producto || ''; }
+                if (trackingSortColumn === 'guia')     { va = a.codigo_seguimiento_externo || a.codigo_seguimiento_interno || ''; vb = b.codigo_seguimiento_externo || b.codigo_seguimiento_interno || ''; }
+                if (trackingSortColumn === 'fecha')    { va = a.fecha_compra || ''; vb = b.fecha_compra || ''; }
+                if (trackingSortColumn === 'estado')   { va = a.ultimo_estado || ''; vb = b.ultimo_estado || ''; }
                 const cmp = va.localeCompare(vb, 'es', { sensitivity: 'base' });
-                return sortDir === 'asc' ? cmp : -cmp;
+                return trackingSortDir === 'asc' ? cmp : -cmp;
             });
         }
 
-        noResults.style.display = lista.length === 0 ? 'block' : 'none';
+        const totalRows = lista.length;
 
-        const filas = lista.map(t => {
+        // Aplicar paginación
+        const startIndex = (trackingCurrentPage - 1) * trackingRowsPerPage;
+        const endIndex = trackingRowsPerPage === -1 ? totalRows : startIndex + trackingRowsPerPage;
+        const paginatedItems = lista.slice(startIndex, endIndex);
+
+        if (paginatedItems.length === 0) {
+            noResults.style.display = 'block';
+            tbody.innerHTML = '';
+            renderTrackingPagination(totalRows);
+            return;
+        }
+
+        noResults.style.display = 'none';
+
+        const filas = paginatedItems.map(t => {
             const guia  = t.codigo_seguimiento_externo || t.codigo_seguimiento_interno || t.guia_externa || t.guia_interna || '—';
-            const fecha = t.fecha_compra
-                ? new Date(t.fecha_compra).toLocaleDateString('es-CR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-                : '—';
+            const fecha = t.fecha_compra ? new Date(t.fecha_compra).toLocaleDateString('es-CR') : '—';
             const guiaCelda = guia !== '—' 
                 ? `<button class="admin-btn-copiar" onclick="copiarGuia(this, '${guia.replace(/'/g, "\\'")}')">${guia} <i class="fa-regular fa-copy"></i></button>`
                 : '—';
@@ -139,7 +131,7 @@
                     <td>${fecha}</td>
                     <td class="admin-td-estado">${t.ultimo_estado || 'Sin estado'}</td>
                     <td class="admin-actions-cell">
-                        <button class="admin-btn-action btn-edit" onclick="abrirFormEdicionCompleta('${t.id_tracking}')" title="Editar Paquete"><i class="fas fa-pencil-alt"></i></button>
+                        <button class="admin-btn-action btn-edit" onclick="abrirFormEdicionCompleta(${t.id_tracking})" title="Editar Paquete"><i class="fas fa-pencil-alt"></i></button>
                         <button class="admin-btn-action btn-update" onclick="abrirFormEstado(${t.id_tracking})" title="Actualizar Estado"><i class="fa-solid fa-pen-to-square"></i></button>
                         ${guia !== '—' ? `
                             <button class="admin-btn-action btn-track" onclick="irARastreo('${guia.replace(/'/g, "\\'")}')" title="Rastrear paquete"><i class="fa-solid fa-truck-fast"></i></button>
@@ -148,38 +140,87 @@
                 </tr>`;
         }).join('');
 
-        const tbody = document.getElementById('adminTableBody');
         tbody.innerHTML = filas;
-        actualizarIconosOrden();
+        actualizarTrackingIconosOrden();
+        renderTrackingPagination(totalRows);
     }
 
-    function actualizarIconosOrden() {
+    function renderTrackingPagination(totalRows) {
+        const tfoot = document.getElementById('adminTableFooter');
+        if (!tfoot) return;
+
+        if (totalRows <= 10) {
+            tfoot.style.display = 'none';
+            return;
+        }
+
+        tfoot.style.display = '';
+
+        const totalPages = trackingRowsPerPage === -1 ? 1 : Math.ceil(totalRows / trackingRowsPerPage);
+        const startItem = (trackingCurrentPage - 1) * trackingRowsPerPage + 1;
+        const endItem = trackingRowsPerPage === -1 ? totalRows : Math.min(trackingCurrentPage * trackingRowsPerPage, totalRows);
+
+        const table = document.querySelector('#adminGrid .admin-table');
+        const headerRow = table.querySelector('thead tr');
+        if (!headerRow) return;
+
+        const numColumns = headerRow.cells.length;
+        document.getElementById('footerColspan').colSpan = numColumns;
+
+        const infoEl = document.getElementById('paginationInfo');
+        const navEl = document.getElementById('paginationNav');
+        const selectorEl = document.getElementById('rowsPerPageSelector');
+
+        infoEl.innerHTML = `Mostrando <strong>${startItem} - ${endItem}</strong> de <strong>${totalRows}</strong>`;
+        selectorEl.value = trackingRowsPerPage;
+
+        navEl.innerHTML = `
+            <button onclick="changeTrackingPage(${trackingCurrentPage - 1})" ${trackingCurrentPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
+            <span>Página <strong>${trackingCurrentPage}</strong> de ${totalPages}</span>
+            <button onclick="changeTrackingPage(${trackingCurrentPage + 1})" ${trackingCurrentPage >= totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>
+        `;
+    }
+
+    function changeTrackingPage(newPage) {
+        trackingCurrentPage = newPage;
+        renderTrackings();
+    }
+
+    function changeTrackingRowsPerPage(value) {
+        trackingRowsPerPage = parseInt(value, 10);
+        trackingCurrentPage = 1;
+        renderTrackings();
+    }
+
+    function actualizarTrackingIconosOrden() {
         document.querySelectorAll('.admin-table th.sortable').forEach(th => {
             const col = th.dataset.col;
             const arrow = th.querySelector('.sort-arrow');
             if (!arrow) return;
-            if (sortColumn !== col) arrow.textContent = '↕';
-            else arrow.textContent = sortDir === 'asc' ? '▲' : '▼';
+            if (trackingSortColumn !== col) arrow.textContent = '↕';
+            else arrow.textContent = trackingSortDir === 'asc' ? '▲' : '▼';
         });
     }
 
-    function sortBy(col) {
-        if (sortColumn === col) {
-            sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    function trackingSortBy(col) {
+        if (trackingSortColumn === col) {
+            trackingSortDir = trackingSortDir === 'asc' ? 'desc' : 'asc';
         } else {
-            sortColumn = col;
-            sortDir = 'asc';
+            trackingSortColumn = col;
+            trackingSortDir = 'asc';
         }
         renderTrackings();
     }
 
-    function setColumnFilter(col, val) {
-        columnFilters[col] = val.toLowerCase();
+    function setTrackingColumnFilter(col, val) {
+        trackingCurrentPage = 1;
+        trackingColumnFilters[col] = val.toLowerCase();
         renderTrackings();
     }
 
     function filtrarTrackings() {
-        globalSearch = document.getElementById('adminSearchInput').value.toLowerCase().trim();
+        trackingCurrentPage = 1;
+        trackingGlobalSearch = document.getElementById('adminSearchInput').value.toLowerCase().trim();
         renderTrackings();
     }
 
@@ -189,7 +230,7 @@
         const tracking = todosLosTrackings.find(t => t.id_tracking === idTracking);
         if (!tracking) return;
 
-        adminIdTracking = idTracking;
+        trackingAdminIdTracking = idTracking;
 
         const guia = tracking.codigo_seguimiento_externo || tracking.codigo_seguimiento_interno || '—';
         document.getElementById('adminFormPaqueteInfo').innerHTML = `
@@ -219,7 +260,7 @@
         const detalle  = document.getElementById('adminDetalle').value.trim();
         const mensaje  = document.getElementById('adminMensaje');
 
-        if (!adminIdTracking) return alert('No hay paquete seleccionado.');
+        if (!trackingAdminIdTracking) return alert('No hay paquete seleccionado.');
         if (!idStatus) return alert('Selecciona un estado.');
 
         mensaje.innerHTML = 'Guardando...';
@@ -232,7 +273,7 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'x-admin-token': session.token },
                 body: JSON.stringify({
-                    id_tracking:        adminIdTracking,
+                    id_tracking:        trackingAdminIdTracking,
                     id_status_tracking: parseInt(idStatus),
                     detalle:            detalle || null,
                     fecha_hora:         null
@@ -241,7 +282,7 @@
 
             if (!response.ok) throw new Error('Error al guardar.');
 
-            const idx = todosLosTrackings.findIndex(t => t.id_tracking === adminIdTracking);
+            const idx = todosLosTrackings.findIndex(t => t.id_tracking === trackingAdminIdTracking);
             if (idx !== -1) {
                 const selectEl = document.getElementById('adminSelectEstado');
                 todosLosTrackings[idx].ultimo_estado = selectEl.options[selectEl.selectedIndex].text;
@@ -262,13 +303,14 @@
 
     function abrirFormEdicionCompleta(idTracking) {
         // Buscamos el tracking en la lista global
-        const tracking = todosLosTrackings.find(t => String(t.id_tracking) === String(idTracking));
+        const trackingId = Number(idTracking);
+        const tracking = todosLosTrackings.find(t => t.id_tracking === trackingId);
         if (!tracking) {
             alert('No se encontró el paquete para editar.');
             return;
         }
 
-        adminIdTracking = idTracking;
+        trackingAdminIdTracking = trackingId;
 
         // Rellenar los campos de texto
         const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
@@ -337,7 +379,7 @@
         const fechaMiami  = document.getElementById('editFechaMiami')?.value || null; // Obtenemos el valor directo del input date
         const mensaje     = document.getElementById('editMensaje') || { set innerHTML(v){} };
 
-        if (!adminIdTracking) return (mensaje.innerHTML = '⚠️ No hay paquete seleccionado para editar.');
+        if (!trackingAdminIdTracking) return (mensaje.innerHTML = '⚠️ No hay paquete seleccionado para editar.');
         if (!cliente)  return (mensaje.innerHTML = '⚠️ El cliente es requerido.');
         if (!producto) return (mensaje.innerHTML = '⚠️ El producto es requerido.');
         if (!fechaCompra) return (mensaje.innerHTML = '⚠️ La fecha de compra es requerida.');
@@ -352,7 +394,7 @@
                 method: 'PUT', // Cambiamos a PUT para indicar una actualización
                 headers: { 'Content-Type': 'application/json', 'x-admin-token': session.token },
                 body: JSON.stringify({
-                    id_tracking:                adminIdTracking,
+                    id_tracking:                trackingAdminIdTracking,
                     cliente:                    cliente,
                     producto:                   producto,
                     codigo_seguimiento_externo: guiaExt      || null,

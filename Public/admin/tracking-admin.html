@@ -17,7 +17,45 @@
             <p>Cargando paquetes...</p>
         </div>
 
-        <div id="adminGrid" class="admin-grid"></div>
+        <div id="adminGrid" class="admin-grid">
+            <table class="admin-table" style="display: none;">
+                <thead>
+                    <tr class="admin-main-header">
+                        <th class="sortable" onclick="trackingSortBy('cliente')" data-col="cliente">Cliente <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="trackingSortBy('producto')" data-col="producto">Producto <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="trackingSortBy('guia')" data-col="guia">Guía <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="trackingSortBy('fecha')" data-col="fecha">F. Compra <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="trackingSortBy('estado')" data-col="estado">Estado Actual <span class="sort-arrow">↕</span></th>
+                        <th>Acciones</th>
+                    </tr>
+                    <tr class="admin-filter-row">
+                        <td><input type="text" placeholder="Filtrar..." oninput="setTrackingColumnFilter('cliente', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setTrackingColumnFilter('producto', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setTrackingColumnFilter('guia', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setTrackingColumnFilter('fecha', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setTrackingColumnFilter('estado', this.value)" /></td>
+                        <td></td>
+                    </tr>
+                </thead>
+                <tbody id="adminTbody"></tbody>
+                <tfoot id="adminTableFooter" style="display: none;">
+                    <tr>
+                        <td id="footerColspan">
+                            <div class="admin-pagination-container" style="margin-top: 0;">
+                                <div class="pagination-info" id="paginationInfo"></div>
+                                <div class="pagination-controls">
+                                    <div class="pagination-rows-selector">
+                                        <span>Filas:</span>
+                                        <select id="rowsPerPageSelector" onchange="changeTrackingRowsPerPage(this.value)"><option value="10">10</option><option value="30">30</option><option value="50">50</option><option value="100">100</option><option value="-1">Todos</option></select>
+                                    </div>
+                                    <div class="pagination-nav" id="paginationNav"></div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
 
         <div class="no-results" id="adminNoResults">
             😔 No se encontraron paquetes con esa búsqueda.
