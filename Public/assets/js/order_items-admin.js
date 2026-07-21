@@ -80,8 +80,11 @@ function renderOrders() {
     const tbody = document.getElementById('adminTbody');
     const noResults = document.getElementById('adminNoResults');
 
-    if (!table || !tbody || !noResults) return;
-
+    if (!table || !tbody || !noResults) {
+        console.error("Error: No se encontraron los elementos de la tabla (table, tbody, noResults).");
+        return;
+    }
+    
     // 1. Aplicar búsqueda global
     let lista = todasLasOrdenes.filter(o =>
         !orderItemsGlobalSearch ||
@@ -122,15 +125,19 @@ function renderOrders() {
     const endIndex = rowsPerPage === -1 ? totalRows : startIndex + rowsPerPage;
     const paginatedItems = lista.slice(startIndex, endIndex);
 
-    if (paginatedItems.length === 0 && orderItemsGlobalSearch) {
+    // Comprobamos si hay algún filtro activo (global o por columna)
+    const isAnyFilterActive = orderItemsGlobalSearch || Object.values(orderItemsColumnFilters).some(v => v !== '');
+
+    if (lista.length === 0 && isAnyFilterActive) {
         noResults.style.display = 'block';
-        table.style.display = 'none';
-        tbody.innerHTML = '';
     } else {
         noResults.style.display = 'none';
-        table.style.display = '';
     }
     
+    // Asegurarnos de que la tabla siempre esté visible para mantener los filtros
+    table.style.display = '';
+    tbody.innerHTML = ''; // Limpiamos el cuerpo antes de renderizar
+
     const rowsHtml = paginatedItems.map(o => `
             <tr>
                 <td class="col-select" style="display: none;"><input type="checkbox" class="row-selector" data-id="${o.id}" onchange="updateMultiSelectActions()"></td>
@@ -223,7 +230,7 @@ function sortBy(col) {
     renderOrders();
 }
 
-function setColumnFilter(col, value) {
+function setOrderColumnFilter(col, value) {
     currentPage = 1;
     orderItemsColumnFilters[col] = value.toLowerCase();
     renderOrders();

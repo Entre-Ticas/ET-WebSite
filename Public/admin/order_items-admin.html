@@ -47,14 +47,14 @@
                     <tr class="admin-filter-row">
                         <td class="col-select" style="display: none;"></td>
                         <td></td>
-                        <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('client_name', this.value)" /></td>
-                        <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('client_phone', this.value)" /></td>
-                        <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('product_name', this.value)" /></td>
-                        <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('size', this.value)" /></td>
-                        <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('quantity', this.value)" /></td>
-                        <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('price', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setOrderColumnFilter('client_name', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setOrderColumnFilter('client_phone', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setOrderColumnFilter('product_name', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setOrderColumnFilter('size', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setOrderColumnFilter('quantity', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setOrderColumnFilter('price', this.value)" /></td>
                         <td>
-                            <select class="admin-filter-select" onchange="setColumnFilter('usa_reviewed', this.value)">
+                            <select class="admin-filter-select" onchange="setOrderColumnFilter('usa_reviewed', this.value)">
                                 <option value="">Todos</option><option value="true">Sí</option><option value="false">No</option>
                             </select>
                         </td>
