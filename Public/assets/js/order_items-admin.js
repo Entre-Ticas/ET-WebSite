@@ -298,7 +298,7 @@ function updateMultiSelectActions() {
     label.textContent = hasSelection ? `${selectedIds.length} Seleccionados` : 'Seleccionar Varios';
 }
 
-function handleMultiEdit() {
+function handleOrderMultiEdit() {
     const selectedIds = getSelectedOrderIds();
     if (selectedIds.length === 0) return;
 
@@ -311,7 +311,7 @@ function handleMultiEdit() {
         invoiceAlertHtml = `
             <div class="modal-alert">
                 <i class="fas fa-info-circle"></i>
-                <span>Facturas actuales: <strong>${existingInvoices.join(', ')}</strong></span>
+                <span>¿Vas a reasignar estos ítems? Actualmente pertenecen a: <strong>${existingInvoices.join(', ')}</strong></span>
             </div>
         `;
     }
@@ -319,7 +319,7 @@ function handleMultiEdit() {
     const title = `Editar ${selectedIds.length} Órdenes`;
     
     const body = `
-        ${invoiceAlertHtml}
+       
         <p style="font-size: 0.9rem; margin-top: 0; color: #777;">
             Introduce los nuevos valores para los campos que deseas actualizar. Los campos que dejes en blanco no se modificarán.
         </p>
@@ -339,18 +339,19 @@ function handleMultiEdit() {
             <input type="number" id="multiEditInvoiceId" placeholder="ID de la factura"
                    style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); box-sizing:border-box;">
             <div id="multiEditError" style="color: red; margin-top: 1rem; font-weight: bold; display: none;"></div>
+             ${invoiceAlertHtml}
         </div>
     `;
 
     const footer = `
         <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
-        <button class="btn btn-primary" onclick="confirmMultiEdit()">Guardar Cambios</button>
+        <button class="btn btn-primary" onclick="confirmOrderMultiEdit()">Guardar Cambios</button>
     `;
 
     openGenericModal(title, body, footer);
 }
 
-async function confirmMultiEdit() {
+async function confirmOrderMultiEdit() {
     const idsToUpdate = getSelectedOrderIds();
     const newName = document.getElementById('multiEditClientName').value.trim();
     const newPhone = document.getElementById('multiEditClientPhone').value.trim();
@@ -429,7 +430,7 @@ async function confirmMultiEdit() {
     }
 }
 
-function handleMultiDelete() {
+function handleOrderMultiDelete() {
     const selectedIds = getSelectedOrderIds();
     if (selectedIds.length === 0) return;
 
@@ -438,13 +439,13 @@ function handleMultiDelete() {
     
     const footer = `
         <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
-        <button class="btn btn-danger" onclick="confirmMultiDelete()">Eliminar</button>
+        <button class="btn btn-danger" onclick="confirmOrderMultiDelete()">Eliminar</button>
     `;
 
     openGenericModal(title, body, footer);
 }
 
-async function confirmMultiDelete() {
+async function confirmOrderMultiDelete() {
     const idsToDelete = getSelectedOrderIds();
     if (idsToDelete.length === 0) {
         closeGenericModal();
