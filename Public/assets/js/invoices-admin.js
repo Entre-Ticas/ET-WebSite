@@ -6,6 +6,7 @@ let invoicesCurrentPage = 1;
 let invoicesRowsPerPage = 10;
 let invoicesSortColumn = 'invoice_date'; 
 let invoicesSortDir = 'desc';   
+let editingInvoiceId = null;
 let invoicesColumnFilters = { 
     id: '', client_name: '', client_phone: '', invoice_date: '', status_name: '', items_count: '', paid: ''
 };
@@ -98,11 +99,10 @@ function renderInvoices() {
             let valA = a[invoicesSortColumn] || '';
             let valB = b[invoicesSortColumn] || '';
 
-            // CORRECCIÓN: Asegurarnos de que el conteo de items se ordene como número.
             if (invoicesSortColumn === 'items_count') {
-                valA = parseInt(valA, 10) || 0;
-                valB = parseInt(valB, 10) || 0;
-                return invoicesSortDir === 'asc' ? valA - valB : valB - valA;
+                return invoicesSortDir === 'asc'
+                    ? String(valA).localeCompare(String(valB), 'es', { sensitivity: 'base' })
+                    : String(valB).localeCompare(String(valA), 'es', { sensitivity: 'base' });
             }
             if (invoicesSortColumn === 'invoice_date') {
                 valA = new Date(valA);
@@ -138,9 +138,10 @@ function renderInvoices() {
                 <td>${f.client_phone || ''}</td>
                 <td>${f.invoice_date ? new Date(f.invoice_date).toLocaleDateString('es-CR') : 'N/A'}</td>
                 <td>${f.status_name || 'N/A'}</td>
-                <td style="text-align: center;">${parseInt(f.items_count, 10) || 0}</td>
-                <td style="text-align: center;"><input type="checkbox" onchange="togglePaidStatus(${f.id}, this)" ${f.paid ? 'checked' : ''}></td>
+                <td style="text-align: center;">${f.items_count || '0'}</td>
+                <td style="text-align: center;"><input type="checkbox" id="paid-cb-${f.id}" onclick="confirmTogglePaid(${f.id}, this)" ${f.paid ? 'checked' : ''}></td>
                 <td class="admin-actions-cell">
+                    <button class="admin-btn-action btn-edit" onclick="openInvoiceEditForm(${f.id})" title="Editar Factura"><i class="fas fa-pencil-alt"></i></button>
                     <button class="admin-btn-action btn-invoice" onclick="viewInvoiceDetail(${f.id})" title="Ver Detalle de Factura"><i class="fas fa-eye"></i></button>
                     <button class="admin-btn-action btn-delete" onclick="eliminarFactura(${f.id})" title="Eliminar Factura"><i class="fas fa-trash-alt"></i></button>
                 </td>
@@ -202,50 +203,60 @@ function viewInvoiceDetail(invoiceId) {
     if (typeof loadPage === 'function') loadPage('admin/invoice', invoiceId);
 }
 
+function backToInvoicesGrid() {
+    const gridView = document.getElementById('adminGridView');
+    const newView = document.getElementById('adminFormNuevoView');
+    const editView = document.getElementById('adminFormEditView');
+
+    if (gridView) gridView.style.display = 'block';
+    if (newView) newView.style.display = 'none';
+    if (editView) editView.style.display = 'none';
+}
+
+function toLocalDateTimeInputValue(value) {
+    if (!value) return '';
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+
+    const pad = (n) => String(n).padStart(2, '0');
+    const year = date.getFullYear();
+    const month = pad(date.getMonth() + 1);
+    const day = pad(date.getDate());
+    const hours = pad(date.getHours());
+    const minutes = pad(date.getMinutes());
+
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
 function openNewInvoiceForm() {
-    const title = 'Nueva Factura Manual';
-    const body = `
-        <p style="font-size: 0.9rem; margin-top: 0; color: #777;">
-            Crea una factura aunque no venga de una orden automatica.
-        </p>
-        <div style="text-align: left; margin-bottom: 1rem;">
-            <label style="font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 4px;">Nombre del Cliente: *</label>
-            <input type="text" id="newInvoiceClientName" placeholder="Ej: Ana Rodriguez"
-                style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); box-sizing:border-box;">
-        </div>
-        <div style="text-align: left; margin-bottom: 1rem;">
-            <label style="font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 4px;">Telefono del Cliente: *</label>
-            <input type="text" id="newInvoiceClientPhone" placeholder="Ej: 88887777"
-                style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); box-sizing:border-box;">
-        </div>
-        <div style="text-align: left; margin-bottom: 1rem;">
-            <label style="font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 4px;">Fecha Factura (opcional)</label>
-            <input type="datetime-local" id="newInvoiceDate"
-                style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); box-sizing:border-box;">
-        </div>
-        <div style="text-align: left; margin-bottom: 1rem;">
-            <label style="font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 4px;">Estado ID (opcional)</label>
-            <input type="number" id="newInvoiceStatusId" min="1" step="1" placeholder="1"
-                style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); box-sizing:border-box;">
-            <small style="color: #777;">Si lo dejas vacio se usa 1.</small>
-        </div>
-        <label style="display:flex; align-items:center; gap:8px; margin:0 0 8px; cursor:pointer;">
-            <input type="checkbox" id="newInvoicePaid" style="margin:0;"> Marcar como pagada
-        </label>
-        <div id="newInvoiceError" style="display:none; color:red; font-weight:bold; margin-top:0.8rem;"></div>
-    `;
+    const gridView = document.getElementById('adminGridView');
+    const newView = document.getElementById('adminFormNuevoView');
 
-    const footer = `
-        <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
-        <button class="btn btn-primary" onclick="saveNewInvoice()">Guardar Factura</button>
-    `;
+    if (gridView) gridView.style.display = 'none';
+    if (newView) newView.style.display = 'block';
 
-    openGenericModal(title, body, footer);
+    const nameEl = document.getElementById('newInvoiceClientName');
+    const phoneEl = document.getElementById('newInvoiceClientPhone');
+    const dateEl = document.getElementById('newInvoiceDate');
+    const statusEl = document.getElementById('newInvoiceStatusId');
+    const paidEl = document.getElementById('newInvoicePaid');
+    const errorEl = document.getElementById('newInvoiceError');
+
+    if (nameEl) nameEl.value = '';
+    if (phoneEl) phoneEl.value = '';
+    if (dateEl) dateEl.value = '';
+    if (statusEl) statusEl.value = '';
+    if (paidEl) paidEl.checked = false;
+    if (errorEl) {
+        errorEl.textContent = '';
+        errorEl.style.color = 'red';
+    }
 }
 
 async function saveNewInvoice() {
     const errorEl = document.getElementById('newInvoiceError');
-    const footerButtons = document.querySelectorAll('#genericModalFooter .btn');
+    const saveBtn = document.getElementById('btnGuardarNuevaFactura');
 
     const clientName = document.getElementById('newInvoiceClientName')?.value.trim() || '';
     const clientPhone = document.getElementById('newInvoiceClientPhone')?.value.trim() || '';
@@ -255,12 +266,15 @@ async function saveNewInvoice() {
 
     if (!clientName || !clientPhone) {
         errorEl.textContent = 'Nombre y telefono son obligatorios.';
-        errorEl.style.display = 'block';
+        errorEl.style.color = 'red';
         return;
     }
 
-    if (errorEl) errorEl.style.display = 'none';
-    footerButtons.forEach(btn => btn.disabled = true);
+    if (errorEl) {
+        errorEl.textContent = 'Guardando...';
+        errorEl.style.color = 'var(--brown-text)';
+    }
+    if (saveBtn) saveBtn.disabled = true;
 
     try {
         const session = getSession();
@@ -291,15 +305,135 @@ async function saveNewInvoice() {
             throw new Error(errorData.error || 'No se pudo crear la factura.');
         }
 
-        closeGenericModal();
+        if (errorEl) {
+            errorEl.textContent = '✅ Factura creada correctamente.';
+            errorEl.style.color = '#28a745';
+        }
+
         await loadAdminInvoices();
+        backToInvoicesGrid();
 
     } catch (error) {
         if (errorEl) {
             errorEl.textContent = `Error: ${error.message}`;
-            errorEl.style.display = 'block';
+            errorEl.style.color = 'red';
         }
-        footerButtons.forEach(btn => btn.disabled = false);
+    } finally {
+        if (saveBtn) saveBtn.disabled = false;
+    }
+}
+
+function openInvoiceEditForm(invoiceId) {
+    const factura = todasLasFacturas.find(f => Number(f.id) === Number(invoiceId));
+    if (!factura) return;
+
+    editingInvoiceId = Number(invoiceId);
+
+    const gridView = document.getElementById('adminGridView');
+    const editView = document.getElementById('adminFormEditView');
+
+    if (gridView) gridView.style.display = 'none';
+    if (editView) editView.style.display = 'block';
+
+    const nameEl = document.getElementById('editInvoiceClientName');
+    const phoneEl = document.getElementById('editInvoiceClientPhone');
+    const dateEl = document.getElementById('editInvoiceDate');
+    const statusEl = document.getElementById('editInvoiceStatusId');
+    const paidEl = document.getElementById('editInvoicePaid');
+    const errorEl = document.getElementById('editInvoiceError');
+
+    if (nameEl) nameEl.value = factura.client_name || '';
+    if (phoneEl) phoneEl.value = factura.client_phone || '';
+    if (dateEl) dateEl.value = toLocalDateTimeInputValue(factura.invoice_date);
+    if (statusEl) statusEl.value = factura.id_status || 1;
+    if (paidEl) paidEl.checked = Boolean(factura.paid);
+    if (errorEl) {
+        errorEl.textContent = '';
+        errorEl.style.color = 'red';
+    }
+}
+
+async function saveInvoiceEdit() {
+    const errorEl = document.getElementById('editInvoiceError');
+    const saveBtn = document.getElementById('btnGuardarEdicionFactura');
+
+    if (!editingInvoiceId) {
+        if (errorEl) {
+            errorEl.textContent = 'No hay factura seleccionada para editar.';
+            errorEl.style.color = 'red';
+        }
+        return;
+    }
+
+    const clientName = document.getElementById('editInvoiceClientName')?.value.trim() || '';
+    const clientPhone = document.getElementById('editInvoiceClientPhone')?.value.trim() || '';
+    const invoiceDate = document.getElementById('editInvoiceDate')?.value || '';
+    const statusIdRaw = document.getElementById('editInvoiceStatusId')?.value.trim() || '';
+    const paid = document.getElementById('editInvoicePaid')?.checked || false;
+
+    if (!clientName || !clientPhone) {
+        if (errorEl) {
+            errorEl.textContent = 'Nombre y telefono son obligatorios.';
+            errorEl.style.color = 'red';
+        }
+        return;
+    }
+
+    if (!/^\d{1,4}$/.test(clientPhone)) {
+        if (errorEl) {
+            errorEl.textContent = 'El telefono debe ser numerico y de maximo 4 digitos.';
+            errorEl.style.color = 'red';
+        }
+        return;
+    }
+
+    if (errorEl) {
+        errorEl.textContent = 'Guardando...';
+        errorEl.style.color = 'var(--brown-text)';
+    }
+    if (saveBtn) saveBtn.disabled = true;
+
+    try {
+        const session = getSession();
+        if (!session) throw new Error('Sesion expirada.');
+
+        const payload = {
+            id: editingInvoiceId,
+            client_name: clientName,
+            client_phone: clientPhone,
+            paid,
+            id_status: statusIdRaw ? parseInt(statusIdRaw, 10) : 1
+        };
+
+        if (invoiceDate) {
+            payload.invoice_date = new Date(invoiceDate).toISOString();
+        }
+
+        const response = await fetch('/.netlify/functions/invoices', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'x-admin-token': session.token },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'No se pudo actualizar la factura.');
+        }
+
+        if (errorEl) {
+            errorEl.textContent = '✅ Factura actualizada correctamente.';
+            errorEl.style.color = '#28a745';
+        }
+
+        await loadAdminInvoices();
+        backToInvoicesGrid();
+    } catch (error) {
+        if (errorEl) {
+            errorEl.textContent = `Error: ${error.message}`;
+            errorEl.style.color = 'red';
+        }
+    } finally {
+        if (saveBtn) saveBtn.disabled = false;
     }
 }
 
@@ -381,6 +515,32 @@ function updateInvoiceMultiSelectActions() {
     label.textContent = hasSelection ? `${selectedIds.length} Seleccionados` : 'Seleccionar Varios';
 }
 
+function confirmTogglePaid(invoiceId, checkbox) {
+    if (!checkbox.checked) {
+        // Desmarcando pagada — proceder directamente
+        togglePaidStatus(invoiceId, checkbox);
+        return;
+    }
+    // Marcando como pagada — revertir y pedir confirmación
+    checkbox.checked = false;
+    const body = `
+        <p>¿Está seguro que desea marcar la factura <strong>#${invoiceId}</strong> como <strong>Pagada</strong>?</p>
+        <p style="color:#c0392b; margin-top:8px;"><strong>⚠ Esta acción no puede revertirse.</strong><br>La factura dejará de estar disponible para modificaciones.</p>
+    `;
+    const footer = `
+        <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
+        <button class="btn btn-danger" onclick="closeGenericModal(); confirmPaidAction(${invoiceId})">Sí, Marcar como Pagada</button>
+    `;
+    openGenericModal('Confirmar Pago', body, footer);
+}
+
+async function confirmPaidAction(invoiceId) {
+    const cb = document.getElementById(`paid-cb-${invoiceId}`);
+    if (!cb) return;
+    cb.checked = true;
+    await togglePaidStatus(invoiceId, cb);
+}
+
 async function togglePaidStatus(invoiceId, checkbox) {
     const isChecked = checkbox.checked;
     const factura = todasLasFacturas.find(f => f.id === invoiceId);
@@ -453,10 +613,17 @@ async function confirmMultiDelete() {
         );
 
         const responses = await Promise.all(deletePromises);
-        const failed = responses.find(res => !res.ok);
-        if (failed) throw new Error('Al menos una factura no se pudo eliminar.');
+        const failedResponse = responses.find(res => !res.ok);
 
-        modalBody.innerHTML = `✅ Se eliminaron ${idsToDelete.length} facturas con éxito.`;
+        if (failedResponse) {
+            // Intentamos leer el cuerpo del error para un mensaje más específico.
+            const errorData = await failedResponse.json().catch(() => ({}));
+            // Usamos el mensaje del backend si existe, si no, uno genérico.
+            throw new Error(errorData.error || 'Al menos una factura no se pudo eliminar.');
+        }
+
+        const successfulDeletes = responses.filter(res => res.ok).length;
+        modalBody.innerHTML = `✅ Se eliminaron ${successfulDeletes} facturas con éxito.`;
         setTimeout(() => { closeGenericModal(); loadAdminInvoices(); }, 1500);
 
     } catch (error) {
@@ -472,8 +639,13 @@ function eliminarFactura(id) {
 }
 
 function initInvoicesAdminPage() {
+    backToInvoicesGrid();
+    editingInvoiceId = null;
     resetInvoicesViewState();
     loadAdminInvoices();
 }
 
 window.initInvoicesAdminPage = initInvoicesAdminPage;
+window.openInvoiceEditForm = openInvoiceEditForm;
+window.saveInvoiceEdit = saveInvoiceEdit;
+window.backToInvoicesGrid = backToInvoicesGrid;

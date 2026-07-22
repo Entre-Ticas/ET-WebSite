@@ -482,6 +482,17 @@ async function deleteInvoice(event) {
     const deleteUrl = `${supabaseUrl}/rest/v1/invoices?id=eq.${id}`;
     const response = await fetch(deleteUrl, { method: 'DELETE', headers: sbHeaders });
 
-    if (!response.ok) throw new Error(`Error eliminando factura: ${await response.text()}`);
+    if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        if (errorBody.code === '23503') {
+            return {
+                statusCode: 409, // 409 Conflict es más apropiado aquí.
+                body: JSON.stringify({ error: 'No se puede eliminar. La factura tiene órdenes o abonos (pagos) asignados.' })
+            };
+        }
+        // Para otros errores, mantenemos el comportamiento anterior.
+        throw new Error(`Error eliminando factura: ${JSON.stringify(errorBody)}`);
+    }
+
     return { statusCode: 204, body: '' };
 }

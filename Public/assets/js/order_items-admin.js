@@ -195,7 +195,7 @@ function renderOrders() {
                 <td>${o.size || ''}</td>
                 <td>${o.quantity || 0}</td>
                 <td>₡${(o.price || 0).toLocaleString('es-CR')}</td>
-                <td style="text-align: center;"><input type="checkbox" onchange="toggleReviewStatus(${o.id}, 'usa_reviewed', this)" ${o.usa_reviewed ? 'checked' : ''}></td>
+                <td style="text-align: center;"><input type="checkbox" id="revusa-cb-${o.id}" onclick="confirmToggleUSA(${o.id}, this)" ${o.usa_reviewed ? 'checked' : ''}></td>
                 <td class="col-invoice" style="display: none; text-align: center;">${o.invoice_id ?? '—'}</td>
                 <td class="admin-actions-cell col-actions">
                     <button class="admin-btn-action btn-edit" onclick="abrirFormEdicion(${o.id})" title="Editar Orden"><i class="fas fa-pencil-alt"></i></button>
@@ -742,6 +742,32 @@ async function guardarEdicion() {
         mensajeEl.textContent = `Error: ${error.message}`;
         botonGuardar.disabled = false;
     }
+}
+
+function confirmToggleUSA(orderId, checkbox) {
+    if (!checkbox.checked) {
+        // Desmarcando — proceder directamente
+        toggleReviewStatus(orderId, 'usa_reviewed', checkbox);
+        return;
+    }
+    // Marcando como revisado en USA — revertir y pedir confirmación
+    checkbox.checked = false;
+    const body = `
+        <p>¿Está seguro que desea marcar la orden <strong>#${orderId}</strong> como <strong>Revisada en USA</strong>?</p>
+        <p style="color:#c0392b; margin-top:8px;"><strong>⚠ Confirme antes de continuar.</strong></p>
+    `;
+    const footer = `
+        <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
+        <button class="btn btn-danger" onclick="closeGenericModal(); doToggleUSA(${orderId})">Sí, Confirmar</button>
+    `;
+    openGenericModal('Confirmar RevUSA', body, footer);
+}
+
+async function doToggleUSA(orderId) {
+    const cb = document.getElementById(`revusa-cb-${orderId}`);
+    if (!cb) return;
+    cb.checked = true;
+    await toggleReviewStatus(orderId, 'usa_reviewed', cb);
 }
 
 async function toggleReviewStatus(orderId, field, checkbox) {
