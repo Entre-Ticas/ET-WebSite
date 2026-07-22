@@ -393,7 +393,64 @@ function showInvoiceError(message) {
 }
 
 async function guardarNuevoAbono() {
-    alert('Función para guardar abono aún no implementada.');
+    const messageEl = document.getElementById('paymentMensaje');
+    const amountEl = document.getElementById('paymentAmount');
+    const methodEl = document.getElementById('paymentMethod');
+    const refEl = document.getElementById('paymentRef');
+    const saveBtn = document.getElementById('btnGuardarAbono');
+
+    if (!currentInvoiceId) {
+        if (messageEl) {
+            messageEl.textContent = '⚠️ No hay una factura activa para registrar el abono.';
+        }
+        return;
+    }
+
+    const amount = Number(amountEl?.value);
+    const paymentMethod = methodEl?.value.trim() || null;
+    const referenceCode = refEl?.value.trim() || null;
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+        if (messageEl) messageEl.textContent = '⚠️ El monto debe ser mayor a 0.';
+        return;
+    }
+
+    if (messageEl) messageEl.textContent = 'Guardando abono...';
+    if (saveBtn) saveBtn.disabled = true;
+
+    try {
+        const session = getSession();
+        if (!session) throw new Error('Sesión no válida.');
+
+        const response = await fetch('/.netlify/functions/invoices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-admin-token': session.token },
+            body: JSON.stringify({
+                invoice_id: Number(currentInvoiceId),
+                amount,
+                payment_method: paymentMethod,
+                reference_code: referenceCode
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'No se pudo guardar el abono.');
+        }
+
+        if (amountEl) amountEl.value = '';
+        if (methodEl) methodEl.value = '';
+        if (refEl) refEl.value = '';
+
+        if (messageEl) messageEl.textContent = '✅ Abono agregado correctamente.';
+
+        await loadInvoiceDetails(currentInvoiceId);
+        setPaymentSectionExpanded(false);
+    } catch (error) {
+        if (messageEl) messageEl.textContent = `⚠️ ${error.message}`;
+    } finally {
+        if (saveBtn) saveBtn.disabled = false;
+    }
 }
 
 function togglePaymentSection() {
@@ -420,3 +477,4 @@ function volverAlGrid() {
 
 window.togglePaymentSection = togglePaymentSection;
 window.initInvoiceAdminPage = initInvoiceAdminPage;
+window.guardarNuevoAbono = guardarNuevoAbono;

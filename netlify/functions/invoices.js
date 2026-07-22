@@ -362,6 +362,11 @@ async function updateInvoice(event) {
 
 async function createInvoice(event) {
     const body = JSON.parse(event.body || '{}');
+
+    if (body.invoice_id !== undefined || body.amount !== undefined) {
+        return await createPayment(body);
+    }
+
     const {
         client_name,
         client_phone,
@@ -399,6 +404,64 @@ async function createInvoice(event) {
 
     const [data] = await response.json();
     return { statusCode: 201, body: JSON.stringify(data) };
+}
+
+async function createPayment(body) {
+    const invoiceId = Number(body.invoice_id);
+    const amount = Number(body.amount);
+
+    if (!Number.isFinite(invoiceId) || invoiceId <= 0) {
+        return {
+            statusCode: 400,
+            body: JSON.stringify({ error: 'Se requiere un invoice_id válido para registrar el abono.' })
+        };
+    }
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+        return {
+            statusCode: 400,
+            body: JSON.stringify({ error: 'El monto del abono debe ser mayor a 0.' })
+        };
+    }
+
+    const existsRes = await fetch(`${supabaseUrl}/rest/v1/invoices?id=eq.${invoiceId}&select=id&limit=1`, {
+        headers: sbHeaders
+    });
+
+    if (!existsRes.ok) {
+        throw new Error(`Error validando factura para abono: ${await existsRes.text()}`);
+    }
+
+    const existing = await existsRes.json();
+    if (!existing.length) {
+        return {
+            statusCode: 404,
+            body: JSON.stringify({ error: `La factura ${invoiceId} no existe.` })
+        };
+    }
+
+    const paymentPayload = {
+        invoice_id: invoiceId,
+        amount,
+        payment_method: body.payment_method ? String(body.payment_method).trim() : null,
+        reference_code: body.reference_code ? String(body.reference_code).trim() : null,
+        notes: body.notes ? String(body.notes).trim() : null,
+        payment_date: body.payment_date || new Date().toISOString()
+    };
+
+    const createPaymentUrl = `${supabaseUrl}/rest/v1/payments`;
+    const paymentRes = await fetch(createPaymentUrl, {
+        method: 'POST',
+        headers: { ...sbHeaders, 'Prefer': 'return=representation' },
+        body: JSON.stringify(paymentPayload)
+    });
+
+    if (!paymentRes.ok) {
+        throw new Error(`Error creando abono: ${await paymentRes.text()}`);
+    }
+
+    const [payment] = await paymentRes.json();
+    return { statusCode: 201, body: JSON.stringify(payment) };
 }
 
 async function deleteInvoice(event) {
