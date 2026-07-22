@@ -8,8 +8,13 @@ let orderItemsSortColumn = null;
 let orderItemsSortDir = 'asc';   
 let orderItemsColumnFilters = { 
     client_name: '', client_phone: '', product_name: '', size: '', quantity: '',
-    price: '', status_name: '', usa_reviewed: ''
+    price: '', status_name: '', usa_reviewed: '', invoice_id: ''
 };
+
+function isEmptyInvoiceFilterValue(value) {
+    const normalized = String(value || '').trim().toLowerCase();
+    return ['-', '—', 'null', 'sin', 'sin factura', 's/f', 'sf', 'none', 'na', 'n/a'].includes(normalized);
+}
 
 function resetOrderItemsViewState() {
     orderItemsGlobalSearch = '';
@@ -19,7 +24,7 @@ function resetOrderItemsViewState() {
     orderItemsSortDir = 'asc';
     orderItemsColumnFilters = {
         client_name: '', client_phone: '', product_name: '', size: '', quantity: '',
-        price: '', status_name: '', usa_reviewed: ''
+        price: '', status_name: '', usa_reviewed: '', invoice_id: ''
     };
 
     const searchInput = document.getElementById('adminSearchInput');
@@ -129,7 +134,15 @@ function renderOrders() {
         (o.size || '').toLowerCase().includes(orderItemsColumnFilters.size) &&
         String(o.quantity || '').toLowerCase().includes(orderItemsColumnFilters.quantity) &&
         String(o.price || '').toLowerCase().includes(orderItemsColumnFilters.price) &&
-        (orderItemsColumnFilters.usa_reviewed === '' || String(o.usa_reviewed) === orderItemsColumnFilters.usa_reviewed)
+        (orderItemsColumnFilters.usa_reviewed === '' || String(o.usa_reviewed) === orderItemsColumnFilters.usa_reviewed) &&
+        (
+            orderItemsColumnFilters.invoice_id === '' ||
+            (
+                isEmptyInvoiceFilterValue(orderItemsColumnFilters.invoice_id)
+                    ? (o.invoice_id === null || o.invoice_id === undefined || o.invoice_id === '')
+                    : String(o.invoice_id ?? '').toLowerCase().includes(orderItemsColumnFilters.invoice_id)
+            )
+        )
     );
 
     // 3. Aplicar ordenamiento
@@ -183,7 +196,8 @@ function renderOrders() {
                 <td>${o.quantity || 0}</td>
                 <td>₡${(o.price || 0).toLocaleString('es-CR')}</td>
                 <td style="text-align: center;"><input type="checkbox" onchange="toggleReviewStatus(${o.id}, 'usa_reviewed', this)" ${o.usa_reviewed ? 'checked' : ''}></td>
-                <td class="admin-actions-cell">
+                <td class="col-invoice" style="display: none; text-align: center;">${o.invoice_id ?? '—'}</td>
+                <td class="admin-actions-cell col-actions">
                     <button class="admin-btn-action btn-edit" onclick="abrirFormEdicion(${o.id})" title="Editar Orden"><i class="fas fa-pencil-alt"></i></button>
                     <button class="admin-btn-action btn-invoice" onclick="verFactura(${o.invoice_id})" title="Ver Factura"><i class="fas fa-file-invoice-dollar"></i></button>
                     <button class="admin-btn-action btn-delete" onclick="eliminarOrden(${o.id})" title="Eliminar Orden"><i class="fas fa-trash-alt"></i></button>
@@ -289,11 +303,37 @@ function filtrarOrdenes() {
     renderOrders();
 }
 
+function toggleOrderActionsColumn(hideActions) {
+    const mainHeaderActions = document.querySelector('.admin-main-header .col-actions');
+    const filterHeaderActions = document.querySelector('.admin-filter-row .col-actions');
+    const actionCells = document.querySelectorAll('.col-actions');
+
+    const mainHeaderInvoice = document.querySelector('.admin-main-header .col-invoice');
+    const filterHeaderInvoice = document.querySelector('.admin-filter-row .col-invoice');
+    const invoiceCells = document.querySelectorAll('.col-invoice');
+
+    const displayValue = hideActions ? 'none' : '';
+    const invoiceDisplayValue = hideActions ? '' : 'none';
+
+    if (mainHeaderActions) mainHeaderActions.style.display = displayValue;
+    if (filterHeaderActions) filterHeaderActions.style.display = displayValue;
+    actionCells.forEach(cell => {
+        cell.style.display = displayValue;
+    });
+
+    if (mainHeaderInvoice) mainHeaderInvoice.style.display = invoiceDisplayValue;
+    if (filterHeaderInvoice) filterHeaderInvoice.style.display = invoiceDisplayValue;
+    invoiceCells.forEach(cell => {
+        cell.style.display = invoiceDisplayValue;
+    });
+}
+
 function toggleOrderMultiSelect(isMultiSelect) {
     const selectColumns = document.querySelectorAll('.col-select');
     selectColumns.forEach(col => {
         col.style.display = isMultiSelect ? '' : 'none';
     });
+    toggleOrderActionsColumn(isMultiSelect);
 
     // Si se desactiva la selección múltiple, limpiamos todo para evitar acciones accidentales.
     if (!isMultiSelect) {

@@ -42,7 +42,8 @@
                         <th class="sortable" onclick="sortOrdersBy('quantity')" data-col="quantity">Cant. <span class="sort-arrow">↕</span></th>
                         <th class="sortable" onclick="sortOrdersBy('price')" data-col="price">Precio <span class="sort-arrow">↕</span></th>
                         <th data-col="usa_reviewed">Rev. USA</th>
-                        <th>Acciones</th>
+                        <th class="col-invoice" style="display: none;">Factura ID</th>
+                        <th class="col-actions">Acciones</th>
                     </tr>
                     <tr class="admin-filter-row">
                         <td class="col-select" style="display: none;"></td>
@@ -58,7 +59,8 @@
                                 <option value="">Todos</option><option value="true">Sí</option><option value="false">No</option>
                             </select>
                         </td>
-                        <td></td>
+                        <td class="col-invoice" style="display: none;"><input type="text" placeholder="Filtrar... (o '-' sin factura)" oninput="setOrderColumnFilter('invoice_id', this.value)" /></td>
+                        <td class="col-actions"></td>
                     </tr>
                 </thead>
                 <tbody id="adminTbody"></tbody>
