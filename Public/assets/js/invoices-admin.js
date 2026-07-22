@@ -10,6 +10,33 @@ let invoicesColumnFilters = {
     id: '', client_name: '', client_phone: '', invoice_date: '', status_name: '', items_count: '', paid: ''
 };
 
+function resetInvoicesViewState() {
+    invoicesGlobalSearch = '';
+    invoicesCurrentPage = 1;
+    invoicesRowsPerPage = 10;
+    invoicesSortColumn = 'invoice_date';
+    invoicesSortDir = 'desc';
+    invoicesColumnFilters = {
+        id: '', client_name: '', client_phone: '', invoice_date: '', status_name: '', items_count: '', paid: ''
+    };
+
+    const searchInput = document.getElementById('adminSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    const rowsSelector = document.getElementById('rowsPerPageSelector');
+    if (rowsSelector) rowsSelector.value = '10';
+
+    const multiSelectToggle = document.getElementById('multiSelectToggle');
+    if (multiSelectToggle) multiSelectToggle.checked = false;
+
+    document.querySelectorAll('.admin-filter-row input').forEach(input => {
+        input.value = '';
+    });
+    document.querySelectorAll('.admin-filter-row select').forEach(select => {
+        select.value = '';
+    });
+}
+
 async function loadAdminInvoices() {
     const statusEl = document.getElementById('adminStatus');
     statusEl.style.display = 'flex';
@@ -105,7 +132,7 @@ function renderInvoices() {
     
     const rowsHtml = paginatedItems.map(f => `
             <tr>
-                <td class="col-select" style="display: none;"><input type="checkbox" class="row-selector" data-id="${f.id}" onchange="updateMultiSelectActions()"></td>
+                <td class="col-select" style="display: none;"><input type="checkbox" class="row-selector" data-id="${f.id}" onchange="updateInvoiceMultiSelectActions()"></td>
                 <td>${f.id}</td>
                 <td>${f.client_name || ''}</td>
                 <td>${f.client_phone || ''}</td>
@@ -114,19 +141,19 @@ function renderInvoices() {
                 <td style="text-align: center;">${parseInt(f.items_count, 10) || 0}</td>
                 <td style="text-align: center;"><input type="checkbox" onchange="togglePaidStatus(${f.id}, this)" ${f.paid ? 'checked' : ''}></td>
                 <td class="admin-actions-cell">
-                    <button class="admin-btn-action btn-invoice" onclick="verFactura(${f.id})" title="Ver Detalle de Factura"><i class="fas fa-eye"></i></button>
+                    <button class="admin-btn-action btn-invoice" onclick="viewInvoiceDetail(${f.id})" title="Ver Detalle de Factura"><i class="fas fa-eye"></i></button>
                     <button class="admin-btn-action btn-delete" onclick="eliminarFactura(${f.id})" title="Eliminar Factura"><i class="fas fa-trash-alt"></i></button>
                 </td>
             </tr>`
     ).join('');
 
     tbody.innerHTML = rowsHtml;
-    actualizarIconosOrden();
-    toggleMultiSelect(document.getElementById('multiSelectToggle')?.checked || false);
-    renderPagination(totalRows);
+    updateInvoiceSortIcons();
+    toggleInvoiceMultiSelect(document.getElementById('multiSelectToggle')?.checked || false);
+    renderInvoicePagination(totalRows);
 }
 
-function renderPagination(totalRows) {
+function renderInvoicePagination(totalRows) {
     const tfoot = document.getElementById('adminTableFooter');
     if (!tfoot) return;
 
@@ -165,17 +192,17 @@ function changeInvoicePage(newPage) {
     renderInvoices();
 }
 
-function changeRowsPerPage(value) {
+function changeInvoiceRowsPerPage(value) {
     invoicesRowsPerPage = parseInt(value, 10);
     invoicesCurrentPage = 1;
     renderInvoices();
 }
 
-function verFactura(invoiceId) {
+function viewInvoiceDetail(invoiceId) {
     if (typeof loadPage === 'function') loadPage('admin/invoice', invoiceId);
 }
 
-function sortBy(col) {
+function sortInvoicesBy(col) {
     if (invoicesSortColumn === col) {
         invoicesSortDir = invoicesSortDir === 'asc' ? 'desc' : 'asc';
     } else {
@@ -191,7 +218,7 @@ function setColumnFilter(col, value) {
     renderInvoices();
 }
 
-function actualizarIconosOrden() {
+function updateInvoiceSortIcons() {
     document.querySelectorAll('.admin-table th.sortable').forEach(th => {
         const col = th.dataset.col;
         const arrow = th.querySelector('.sort-arrow');
@@ -212,7 +239,7 @@ function filtrarFacturas() {
 
 // --- Lógica de Selección Múltiple (Copiada y Adaptada) ---
 
-function toggleMultiSelect(isMultiSelect) {
+function toggleInvoiceMultiSelect(isMultiSelect) {
     document.querySelectorAll('.col-select').forEach(col => {
         col.style.display = isMultiSelect ? '' : 'none';
     });
@@ -221,14 +248,14 @@ function toggleMultiSelect(isMultiSelect) {
         const selectAllCheckbox = document.querySelector('.admin-main-header .col-select input[type="checkbox"]');
         if (selectAllCheckbox) selectAllCheckbox.checked = false;
     }
-    updateMultiSelectActions();
+    updateInvoiceMultiSelectActions();
 }
 
-function toggleSelectAll(isChecked) {
+function toggleInvoiceSelectAll(isChecked) {
     document.querySelectorAll('.row-selector').forEach(chk => {
         chk.checked = isChecked;
     });
-    updateMultiSelectActions();
+    updateInvoiceMultiSelectActions();
 }
 
 function getSelectedInvoiceIds() {
@@ -236,7 +263,7 @@ function getSelectedInvoiceIds() {
                 .map(chk => Number(chk.dataset.id));
 }
 
-function updateMultiSelectActions() {
+function updateInvoiceMultiSelectActions() {
     const selectedIds = getSelectedInvoiceIds();
     const actionContainer = document.getElementById('multiActionContainer');
     const label = document.getElementById('multiSelectLabel');
@@ -344,6 +371,7 @@ function eliminarFactura(id) {
 }
 
 function initInvoicesAdminPage() {
+    resetInvoicesViewState();
     loadAdminInvoices();
 }
 

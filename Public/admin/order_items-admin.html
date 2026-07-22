@@ -15,7 +15,7 @@
         </div>
         <div class="admin-multi-select-toolbar">
             <label for="multiSelectToggle">
-                <input type="checkbox" id="multiSelectToggle" onchange="toggleMultiSelect(this.checked)">
+                <input type="checkbox" id="multiSelectToggle" onchange="toggleOrderMultiSelect(this.checked)">
                 <span id="multiSelectLabel">Seleccionar Varios</span>
             </label>
             <div id="multiActionContainer" style="display: none;">
@@ -33,14 +33,14 @@
             <table class="admin-table" style="display: none;">
                 <thead>
                     <tr class="admin-main-header">
-                        <th class="col-select" style="display: none;"><input type="checkbox" onchange="toggleSelectAll(this.checked)"></th>
+                        <th class="col-select" style="display: none;"><input type="checkbox" onchange="toggleOrderSelectAll(this.checked)"></th>
                         <th>Img</th>
-                        <th class="sortable" onclick="sortBy('client_name')" data-col="client_name">Cliente <span class="sort-arrow">↕</span></th>
-                        <th class="sortable" onclick="sortBy('client_phone')" data-col="client_phone">Teléfono <span class="sort-arrow">↕</span></th>
-                        <th class="sortable" onclick="sortBy('product_name')" data-col="product_name">Producto <span class="sort-arrow">↕</span></th>
-                        <th class="sortable" onclick="sortBy('size')" data-col="size">Talla <span class="sort-arrow">↕</span></th>
-                        <th class="sortable" onclick="sortBy('quantity')" data-col="quantity">Cant. <span class="sort-arrow">↕</span></th>
-                        <th class="sortable" onclick="sortBy('price')" data-col="price">Precio <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortOrdersBy('client_name')" data-col="client_name">Cliente <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortOrdersBy('client_phone')" data-col="client_phone">Teléfono <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortOrdersBy('product_name')" data-col="product_name">Producto <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortOrdersBy('size')" data-col="size">Talla <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortOrdersBy('quantity')" data-col="quantity">Cant. <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortOrdersBy('price')" data-col="price">Precio <span class="sort-arrow">↕</span></th>
                         <th data-col="usa_reviewed">Rev. USA</th>
                         <th>Acciones</th>
                     </tr>
@@ -72,7 +72,7 @@
                                 <div class="pagination-controls">
                                     <div class="pagination-rows-selector">
                                         <span>Filas:</span>
-                                        <select id="rowsPerPageSelector" onchange="changeRowsPerPage(this.value)">
+                                        <select id="rowsPerPageSelector" onchange="changeOrderRowsPerPage(this.value)">
                                             <option value="10">10</option>
                                             <option value="30">30</option>
                                             <option value="50">50</option>

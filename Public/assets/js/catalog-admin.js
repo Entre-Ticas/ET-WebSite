@@ -5,6 +5,17 @@ let catalogRowsPerPage = 10;
 // NOTA: El ordenamiento y filtro por columna no están implementados aún en esta vista.
 // Se deja preparado para el futuro.
 
+function resetCatalogViewState() {
+    catalogCurrentPage = 1;
+    catalogRowsPerPage = 10;
+
+    const searchInput = document.getElementById('adminSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    const rowsSelector = document.getElementById('rowsPerPageSelector');
+    if (rowsSelector) rowsSelector.value = '10';
+}
+
 async function loadAdminProducts() {
     const gridContainer = document.getElementById('adminGrid');
     if (!gridContainer) {
@@ -79,8 +90,8 @@ function displayAdminProducts(products) {
                 <td>₡${p.price ? p.price.toLocaleString('es-CR') : '0'}</td>
                 <td><span class="status-dot ${p.stock === 'entrega inmediata' ? 'available' : 'unavailable'}"></span> ${p.stock}</td>
                 <td>
-                    <button class="admin-btn-action btn-edit" onclick="abrirFormEdicionCompleta(${p.id})" title="Editar Producto"><i class="fas fa-pencil-alt"></i></button>
-                    <button class="admin-btn-action btn-update" onclick="abrirFormEstado(${p.id})" title="Actualizar Estado"><i class="fa fa-edit"></i></button>
+                    <button class="admin-btn-action btn-edit" onclick="catalogOpenEditForm(${p.id})" title="Editar Producto"><i class="fas fa-pencil-alt"></i></button>
+                    <button class="admin-btn-action btn-update" onclick="catalogOpenStatusForm(${p.id})" title="Actualizar Estado"><i class="fa fa-edit"></i></button>
                     <button class="admin-btn-action btn-delete" onclick="eliminarProducto(${p.id}, '${imageUrl}')" title="Eliminar Producto"><i class="fas fa-trash-alt"></i></button>
                 </td>
             </tr>
@@ -156,7 +167,7 @@ function filtrarProductos() {
     displayAdminProducts(filteredProducts);
 }
 
-function abrirFormNuevo() {
+function catalogOpenNewForm() {
     document.getElementById('adminGridView').style.display = 'none';
     document.getElementById('adminFormNuevoView').style.display = 'block';
     // Limpiar el formulario por si tenía datos previos
@@ -172,7 +183,7 @@ function abrirFormNuevo() {
 /**
  * Oculta los formularios y muestra la vista de grid principal.
  */
-function volverAlGrid() {
+function catalogBackToGrid() {
     document.getElementById('adminGridView').style.display = 'block';
     document.getElementById('adminFormNuevoView').style.display = 'none';
     document.getElementById('adminFormView').style.display = 'none';
@@ -234,7 +245,7 @@ async function guardarNuevoProducto() {
 
         setTimeout(() => {
             loadAdminProducts(); 
-            volverAlGrid();     
+            catalogBackToGrid();     
         }, 1500);
 
     } catch (error) {
@@ -313,8 +324,28 @@ async function cargarOpcionesDeEstado() {
 }
 
 function initCatalogAdminPage() {
+    resetCatalogViewState();
     // Simplemente llama a la función de carga, que ya no depende de un cliente de Supabase.
     loadAdminProducts();
+}
+
+// Evita colisiones globales con tracking/order/invoices.
+function catalogOpenStatusForm(productId) {
+    console.warn('catalogOpenStatusForm no está implementada.', productId);
+    alert('La actualización de estado para catálogo aún no está implementada en esta versión.');
+}
+
+function catalogSaveStatus() {
+    alert('Guardar estado de catálogo aún no está implementado.');
+}
+
+function catalogOpenEditForm(productId) {
+    console.warn('catalogOpenEditForm no está implementada.', productId);
+    alert('La edición completa de catálogo aún no está implementada en esta versión.');
+}
+
+function catalogSaveFullEdit() {
+    alert('Guardar edición de catálogo aún no está implementado.');
 }
 
 // Make initCatalogAdminPage globally accessible if this script is loaded directly

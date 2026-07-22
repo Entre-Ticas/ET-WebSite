@@ -11,6 +11,29 @@
     let trackingCurrentPage = 1;
     let trackingRowsPerPage = 10;
 
+    function resetTrackingViewState() {
+        trackingGlobalSearch = '';
+        trackingSortColumn = null;
+        trackingSortDir = 'asc';
+        trackingColumnFilters = { cliente: '', producto: '', guia: '', fecha: '', estado: '' };
+        trackingCurrentPage = 1;
+        trackingRowsPerPage = 10;
+        trackingAdminIdTracking = null;
+
+        const searchInput = document.getElementById('adminSearchInput');
+        if (searchInput) searchInput.value = '';
+
+        const rowsSelector = document.getElementById('rowsPerPageSelector');
+        if (rowsSelector) rowsSelector.value = '10';
+
+        document.querySelectorAll('.admin-filter-row input').forEach(input => {
+            input.value = '';
+        });
+        document.querySelectorAll('.admin-filter-row select').forEach(select => {
+            select.value = '';
+        });
+    }
+
     async function cargarEstados() {
         try {
             const res = await fetch('/.netlify/functions/tracking-status');
@@ -28,7 +51,7 @@
         }
     }
 
-    async function loadAdmin() {
+    async function loadTrackingAdmin() {
         const gridContainer = document.getElementById('adminGrid');
         if (!gridContainer) {
             console.error("El contenedor 'adminGrid' no existe en el HTML de la página.");
@@ -131,8 +154,8 @@
                     <td>${fecha}</td>
                     <td class="admin-td-estado">${t.ultimo_estado || 'Sin estado'}</td>
                     <td class="admin-actions-cell">
-                        <button class="admin-btn-action btn-edit" onclick="abrirFormEdicionCompleta(${t.id_tracking})" title="Editar Paquete"><i class="fas fa-pencil-alt"></i></button>
-                        <button class="admin-btn-action btn-update" onclick="abrirFormEstado(${t.id_tracking})" title="Actualizar Estado"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button class="admin-btn-action btn-edit" onclick="openTrackingEditForm(${t.id_tracking})" title="Editar Paquete"><i class="fas fa-pencil-alt"></i></button>
+                        <button class="admin-btn-action btn-update" onclick="openTrackingStatusForm(${t.id_tracking})" title="Actualizar Estado"><i class="fa-solid fa-pen-to-square"></i></button>
                         ${guia !== '—' ? `
                             <button class="admin-btn-action btn-track" onclick="irARastreo('${guia.replace(/'/g, "\\'")}')" title="Rastrear paquete"><i class="fa-solid fa-truck-fast"></i></button>
                         ` : ''}
@@ -226,7 +249,7 @@
 
     // ===== FORM: ACTUALIZAR ESTADO =====
 
-    function abrirFormEstado(idTracking) {
+    function openTrackingStatusForm(idTracking) {
         const tracking = todosLosTrackings.find(t => t.id_tracking === idTracking);
         if (!tracking) return;
 
@@ -248,14 +271,14 @@
         window.scrollTo(0, 0);
     }
 
-    function volverAlGrid() {
+    function backToTrackingGrid() {
         document.getElementById('adminFormView').style.display = 'none';
         document.getElementById('adminFormNuevoView').style.display = 'none';
         document.getElementById('adminFormEditView').style.display = 'none';
         document.getElementById('adminGridView').style.display = 'block';
     }
 
-    async function guardarEstado() {
+    async function saveTrackingStatus() {
         const idStatus = document.getElementById('adminSelectEstado').value;
         const detalle  = document.getElementById('adminDetalle').value.trim();
         const mensaje  = document.getElementById('adminMensaje');
@@ -291,7 +314,7 @@
             mensaje.innerHTML = '✅ Estado guardado correctamente.';
             setTimeout(() => {
                 renderTrackings();
-                volverAlGrid();
+                backToTrackingGrid();
             }, 1200);
 
         } catch (error) {
@@ -301,7 +324,7 @@
 
     // ===== FORM: EDITAR TRACKING EXISTENTE =====
 
-    function abrirFormEdicionCompleta(idTracking) {
+    function openTrackingEditForm(idTracking) {
         // Buscamos el tracking en la lista global
         const trackingId = Number(idTracking);
         const tracking = todosLosTrackings.find(t => t.id_tracking === trackingId);
@@ -368,7 +391,7 @@
         window.scrollTo(0, 0);
     }
 
-    async function guardarEdicionCompleta() {
+    async function saveTrackingFullEdit() {
         const getVal = (id) => document.getElementById(id)?.value?.trim() || '';
         
         const cliente     = getVal('editCliente');
@@ -410,9 +433,9 @@
             }
 
             // Actualizar el tracking en la lista local y refrescar la tabla
-            await loadAdmin(); // Recargar todos los trackings para asegurar la consistencia
+            await loadTrackingAdmin(); // Recargar todos los trackings para asegurar la consistencia
             mensaje.innerHTML = '✅ Cambios guardados correctamente.';
-            setTimeout(() => { volverAlGrid(); }, 1200);
+            setTimeout(() => { backToTrackingGrid(); }, 1200);
 
         } catch (error) {
             mensaje.innerHTML = `⚠️ Error: ${error.message}`;
@@ -420,7 +443,7 @@
     }
     // ===== FORM: NUEVO TRACKING =====
 
-    function abrirFormNuevo() {
+    function openTrackingNewForm() {
         ['nuevoCliente','nuevoProducto','nuevoGuiaExt','nuevoGuiaInt'].forEach(id => {
             document.getElementById(id).value = '';
         });
@@ -433,8 +456,8 @@
         window.scrollTo(0, 0);
     }
 
-    function cerrarFormNuevo() {
-        volverAlGrid();
+    function closeTrackingNewForm() {
+        backToTrackingGrid();
     }
 
     function irARastreo(guia) {
@@ -491,7 +514,7 @@
             mensaje.innerHTML = '✅ Paquete creado correctamente.';
             setTimeout(() => {
                 renderTrackings();
-                volverAlGrid();
+                backToTrackingGrid();
             }, 1200);
 
         } catch (error) {
@@ -500,4 +523,9 @@
     }
 
 // Hacemos la función de inicialización global para que main.js pueda llamarla.
-window.initTrackingAdminPage = loadAdmin;
+function initTrackingAdminPage() {
+    resetTrackingViewState();
+    loadTrackingAdmin();
+}
+
+window.initTrackingAdminPage = initTrackingAdminPage;

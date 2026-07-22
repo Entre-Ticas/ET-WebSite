@@ -11,7 +11,7 @@
 
         <div class="admin-search-bar">
             <input type="text" id="adminSearchInput" placeholder="🔍 Buscar por nombre, categoría..." oninput="filtrarProductos()" />
-            <button class="admin-btn-agregar" onclick="abrirFormNuevo()">+ Agregar Producto</button>
+            <button class="admin-btn-agregar" onclick="catalogOpenNewForm()">+ Agregar Producto</button>
         </div>
 
         <div id="adminStatus" class="catalog-status">
@@ -70,7 +70,7 @@
     <div id="adminFormNuevoView" style="display:none;">
         <div class="container">
             <div class="card" style="cursor:default;">
-                <button onclick="volverAlGrid()" class="admin-btn-back">← Volver</button>
+                <button onclick="catalogBackToGrid()" class="admin-btn-back">← Volver</button>
 
                 <i class="fas fa-plus-circle" style="font-size:2rem; color:var(--pink-accent); margin-top:0.5rem;"></i>
                 <h3 style="margin:0.5rem 0;">Nuevo Producto</h3>
@@ -118,7 +118,7 @@
     <div id="adminFormView" style="display:none;">
         <div class="container">
             <div class="card" style="cursor:default;">
-                <button onclick="volverAlGrid()" class="admin-btn-back">← Volver</button>
+                <button onclick="catalogBackToGrid()" class="admin-btn-back">← Volver</button>
 
                 <i class="fa fa-edit" style="font-size:2rem; color:var(--pink-accent); margin-top:0.5rem;"></i>
                 <h3 style="margin:0.5rem 0;">Actualizar Estado del Producto</h3>
@@ -137,7 +137,7 @@
                     <input type="text" id="adminDetalle" placeholder="Ej: Próximamente en stock..."
                         style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
 
-                    <button onclick="guardarEstado()"
+                    <button onclick="catalogSaveStatus()"
                         style="width:100%; padding:12px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
                         Guardar Estado
                     </button>
@@ -152,7 +152,7 @@
     <div id="adminFormEditView" style="display:none;">
         <div class="container">
             <div class="card" style="cursor:default;">
-                <button onclick="volverAlGrid()" class="admin-btn-back">← Volver</button>
+                <button onclick="catalogBackToGrid()" class="admin-btn-back">← Volver</button>
 
                 <i class="fas fa-pencil-alt" style="font-size:2rem; color:var(--pink-accent); margin-top:0.5rem;"></i>
                 <h3 style="margin:0.5rem 0;">Editar Producto</h3>
@@ -178,7 +178,7 @@
                     <input type="text" id="editImagen" placeholder="URL de la imagen del producto"
                         style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
 
-                    <button onclick="guardarEdicionCompleta()"
+                    <button onclick="catalogSaveFullEdit()"
                         style="width:100%; padding:12px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
                         Guardar Cambios
                     </button>

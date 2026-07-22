@@ -11,6 +11,34 @@ let orderItemsColumnFilters = {
     price: '', status_name: '', usa_reviewed: ''
 };
 
+function resetOrderItemsViewState() {
+    orderItemsGlobalSearch = '';
+    currentPage = 1;
+    rowsPerPage = 10;
+    orderItemsSortColumn = null;
+    orderItemsSortDir = 'asc';
+    orderItemsColumnFilters = {
+        client_name: '', client_phone: '', product_name: '', size: '', quantity: '',
+        price: '', status_name: '', usa_reviewed: ''
+    };
+
+    const searchInput = document.getElementById('adminSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    const rowsSelector = document.getElementById('rowsPerPageSelector');
+    if (rowsSelector) rowsSelector.value = '10';
+
+    const multiSelectToggle = document.getElementById('multiSelectToggle');
+    if (multiSelectToggle) multiSelectToggle.checked = false;
+
+    document.querySelectorAll('.admin-filter-row input').forEach(input => {
+        input.value = '';
+    });
+    document.querySelectorAll('.admin-filter-row select').forEach(select => {
+        select.value = '';
+    });
+}
+
 async function cargarEstadosOrdenes() {
     try {
         // Reutilizamos la función de estados de tracking que es genérica.
@@ -120,6 +148,12 @@ function renderOrders() {
 
     const totalRows = lista.length;
 
+    // Si la página actual queda fuera de rango después de un cambio/filtro,
+    // la ajustamos para evitar una tabla vacía falsa.
+    const totalPages = rowsPerPage === -1 ? 1 : Math.max(1, Math.ceil(totalRows / rowsPerPage));
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+
     // 4. Aplicar paginación
     const startIndex = (currentPage - 1) * rowsPerPage;
     const endIndex = rowsPerPage === -1 ? totalRows : startIndex + rowsPerPage;
@@ -140,7 +174,7 @@ function renderOrders() {
 
     const rowsHtml = paginatedItems.map(o => `
             <tr>
-                <td class="col-select" style="display: none;"><input type="checkbox" class="row-selector" data-id="${o.id}" onchange="updateMultiSelectActions()"></td>
+                <td class="col-select" style="display: none;"><input type="checkbox" class="row-selector" data-id="${o.id}" onchange="updateOrderMultiSelectActions()"></td>
                 <td><img src="${o.image_url || 'https://placehold.co/40x40/E19B9D/FFFFFF?text=?'}" class="admin-table-img" alt="Producto" onclick="openImageModal('${o.image_url || ''}')"></td>
                 <td>${o.client_name || ''}</td>
                 <td>${o.client_phone || ''}</td>
@@ -160,11 +194,11 @@ function renderOrders() {
     tbody.innerHTML = rowsHtml;
     actualizarIconosOrden();
     // Forzamos la re-evaluación de la visibilidad de la columna de selección
-    toggleMultiSelect(document.getElementById('multiSelectToggle')?.checked || false);
-    renderPagination(totalRows);
+    toggleOrderMultiSelect(document.getElementById('multiSelectToggle')?.checked || false);
+    renderOrderPagination(totalRows);
 }
 
-function renderPagination(totalRows) {
+function renderOrderPagination(totalRows) {
     const tfoot = document.getElementById('adminTableFooter');
     if (!tfoot) return;
 
@@ -198,19 +232,19 @@ function renderPagination(totalRows) {
     }
     if (navEl) {
         navEl.innerHTML = `
-            <button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
+            <button onclick="changeOrderPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
             <span>Página <strong>${currentPage}</strong> de ${totalPages}</span>
-            <button onclick="changePage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>
+            <button onclick="changeOrderPage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>
         `;
     }
 }
 
-function changePage(newPage) {
+function changeOrderPage(newPage) {
     currentPage = newPage;
     renderOrders();
 }
 
-function changeRowsPerPage(value) {
+function changeOrderRowsPerPage(value) {
     rowsPerPage = parseInt(value, 10);
     currentPage = 1; // Volver a la primera página
     renderOrders();
@@ -220,7 +254,7 @@ function verFactura(invoiceId) {
     if (typeof loadPage === 'function') loadPage('admin/invoice', invoiceId);
 }
 
-function sortBy(col) {
+function sortOrdersBy(col) {
     if (orderItemsSortColumn === col) {
         orderItemsSortDir = orderItemsSortDir === 'asc' ? 'desc' : 'asc';
     } else {
@@ -255,7 +289,7 @@ function filtrarOrdenes() {
     renderOrders();
 }
 
-function toggleMultiSelect(isMultiSelect) {
+function toggleOrderMultiSelect(isMultiSelect) {
     const selectColumns = document.querySelectorAll('.col-select');
     selectColumns.forEach(col => {
         col.style.display = isMultiSelect ? '' : 'none';
@@ -272,15 +306,15 @@ function toggleMultiSelect(isMultiSelect) {
             selectAllCheckbox.checked = false;
         }
     }
-    updateMultiSelectActions();
+    updateOrderMultiSelectActions();
 }
 
-function toggleSelectAll(isChecked) {
+function toggleOrderSelectAll(isChecked) {
     const rowCheckboxes = document.querySelectorAll('.row-selector');
     rowCheckboxes.forEach(chk => {
         chk.checked = isChecked;
     });
-    updateMultiSelectActions();
+    updateOrderMultiSelectActions();
 }
 
 function getSelectedOrderIds() {
@@ -288,7 +322,7 @@ function getSelectedOrderIds() {
                 .map(chk => Number(chk.dataset.id));
 }
 
-function updateMultiSelectActions() {
+function updateOrderMultiSelectActions() {
     const selectedIds = getSelectedOrderIds();
     const actionContainer = document.getElementById('multiActionContainer');
     const label = document.getElementById('multiSelectLabel');
@@ -805,7 +839,12 @@ function triggerCameraUpload(formType) {
 }
 
 
-window.initOrderItemsAdminPage = loadAdminOrders;
+function initOrderItemsAdminPage() {
+    resetOrderItemsViewState();
+    loadAdminOrders();
+}
+
+window.initOrderItemsAdminPage = initOrderItemsAdminPage;
 
 function updateQuantity(inputId, delta) {
     const input = document.getElementById(inputId);

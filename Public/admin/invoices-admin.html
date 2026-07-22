@@ -16,7 +16,7 @@
         </div>
         <div class="admin-multi-select-toolbar">
             <label for="multiSelectToggle">
-                <input type="checkbox" id="multiSelectToggle" onchange="toggleMultiSelect(this.checked)">
+                <input type="checkbox" id="multiSelectToggle" onchange="toggleInvoiceMultiSelect(this.checked)">
                 <span id="multiSelectLabel">Seleccionar Varios</span>
             </label>
             <div id="multiActionContainer" style="display: none;">
@@ -34,13 +34,13 @@
             <table class="admin-table" style="display: none;">
                 <thead>
                     <tr class="admin-main-header">
-                        <th class="col-select" style="display: none;"><input type="checkbox" onchange="toggleSelectAll(this.checked)"></th>
-                        <th class="sortable" onclick="sortBy('id')" data-col="id">ID Factura <span class="sort-arrow">↕</span></th>
-                        <th class="sortable" onclick="sortBy('client_name')" data-col="client_name">Cliente <span class="sort-arrow">↕</span></th>
-                        <th class="sortable" onclick="sortBy('client_phone')" data-col="client_phone">Teléfono <span class="sort-arrow">↕</span></th>
-                        <th class="sortable" onclick="sortBy('invoice_date')" data-col="invoice_date">Fecha <span class="sort-arrow">↕</span></th>
-                        <th class="sortable" onclick="sortBy('status_name')" data-col="status_name">Estado <span class="sort-arrow">↕</span></th>
-                        <th class="sortable" onclick="sortBy('items_count')" data-col="items_count">Items <span class="sort-arrow">↕</span></th>
+                        <th class="col-select" style="display: none;"><input type="checkbox" onchange="toggleInvoiceSelectAll(this.checked)"></th>
+                        <th class="sortable" onclick="sortInvoicesBy('id')" data-col="id">ID Factura <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortInvoicesBy('client_name')" data-col="client_name">Cliente <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortInvoicesBy('client_phone')" data-col="client_phone">Teléfono <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortInvoicesBy('invoice_date')" data-col="invoice_date">Fecha <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortInvoicesBy('status_name')" data-col="status_name">Estado <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortInvoicesBy('items_count')" data-col="items_count">Items <span class="sort-arrow">↕</span></th>
                         <th data-col="paid">Pagada</th>
                         <th>Acciones</th>
                     </tr>
@@ -71,7 +71,7 @@
                                 <div class="pagination-controls">
                                     <div class="pagination-rows-selector">
                                         <span>Filas:</span>
-                                        <select id="rowsPerPageSelector" onchange="changeRowsPerPage(this.value)">
+                                        <select id="rowsPerPageSelector" onchange="changeInvoiceRowsPerPage(this.value)">
                                             <option value="10">10</option>
                                             <option value="30">30</option>
                                             <option value="50">50</option>
