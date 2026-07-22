@@ -130,8 +130,7 @@ async function createOrderItem(event) {
         image_url: image_url,
         invoice_id: invoiceId, // ¡Aquí se asigna la factura!
         id_status: STATUS_ABIERTA, // El item también nace 'Activo'
-        usa_reviewed: false,
-        bank_reviewed: false
+        usa_reviewed: false
     };
 
 

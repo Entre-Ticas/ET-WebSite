@@ -415,10 +415,22 @@ function handleOrderMultiEdit() {
                    style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); box-sizing:border-box;">
             <small id="multiEditPhoneError" style="color: red; display: none; margin-top: 4px;">El teléfono debe ser numérico de 4 dígitos.</small>
         </div>
+        <div style="text-align: left; margin-top: 1rem;">
+            <label style="font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 4px;">Rev USA:</label>
+            <select id="multiEditUsaReviewed"
+                    style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); box-sizing:border-box;">
+                <option value=""> </option>
+                <option value="true">Marcar como revisado</option>
+                <option value="false">Desmarcar revisado</option>
+            </select>
+        </div>
         <div style="text-align: left;">
             <label style="font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 4px;">Asignar a Factura (ID):</label>
             <input type="number" id="multiEditInvoiceId" placeholder="ID de la factura"
                    style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); box-sizing:border-box;">
+        </div>
+        
+        <div style="text-align: left;">
             <div id="multiEditError" style="color: red; margin-top: 1rem; font-weight: bold; display: none;"></div>
              ${invoiceAlertHtml}
         </div>
@@ -437,6 +449,9 @@ async function confirmOrderMultiEdit() {
     const newName = document.getElementById('multiEditClientName').value.trim();
     const newPhone = document.getElementById('multiEditClientPhone').value.trim();
     const newInvoiceId = document.getElementById('multiEditInvoiceId').value.trim();
+    const newUsaReviewedRaw = document.getElementById('multiEditUsaReviewed')?.value || '';
+    const hasUsaReviewedChange = newUsaReviewedRaw !== '';
+    const newUsaReviewed = newUsaReviewedRaw === 'true';
     const generalErrorEl = document.getElementById('multiEditError');
     const phoneErrorEl = document.getElementById('multiEditPhoneError');
 
@@ -448,7 +463,7 @@ async function confirmOrderMultiEdit() {
     phoneErrorEl.style.display = 'none';
     generalErrorEl.style.display = 'none';
 
-    if (idsToUpdate.length === 0 || (!newName && !newPhone && !newInvoiceId)) {
+    if (idsToUpdate.length === 0 || (!newName && !newPhone && !newInvoiceId && !hasUsaReviewedChange)) {
         closeGenericModal();
         return;
     }
@@ -478,6 +493,10 @@ async function confirmOrderMultiEdit() {
                 client_phone: newPhone || orden.client_phone,
                 invoice_id: newInvoiceId ? parseInt(newInvoiceId) : orden.invoice_id
             };
+
+            if (hasUsaReviewedChange) {
+                payload.usa_reviewed = newUsaReviewed;
+            }
             
             // Devolvemos la promesa del fetch para poder manejarla después.
             return fetch('/.netlify/functions/order-items', {
@@ -557,6 +576,61 @@ async function confirmOrderMultiDelete() {
 
     } catch (error) {
         modalBody.innerHTML = `⚠️ Error al eliminar: ${error.message}`;
+    }
+}
+
+function handleOrderMultiBulkUSA() {
+    const selectedIds = getSelectedOrderIds();
+    if (selectedIds.length === 0) return;
+
+    const selectedOrders = todasLasOrdenes.filter(o => selectedIds.includes(o.id));
+    const yaRevisadas = selectedOrders.filter(o => o.usa_reviewed).length;
+    const sinRevisar = selectedOrders.length - yaRevisadas;
+
+    const body = `
+        <p>¿Está seguro que desea marcar <strong>${selectedIds.length} orden(es)</strong> como <strong>Revisadas en USA</strong>?</p>
+        ${yaRevisadas > 0 ? `<p style="color:#c0392b; margin-top:6px;"><strong>⚠ ${yaRevisadas} ya están revisadas</strong> y serán sobrescritas.</p>` : ''}
+        <p style="margin-top:6px; color:#666;">Se actualizarán ${sinRevisar} orden(es) nuevas.</p>
+    `;
+    const footer = `
+        <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
+        <button class="btn btn-danger" onclick="closeGenericModal(); confirmBulkUSA()">Sí, Marcar Rev USA</button>
+    `;
+    openGenericModal('Confirmar Rev USA masivo', body, footer);
+}
+
+async function confirmBulkUSA() {
+    const idsToUpdate = getSelectedOrderIds();
+    if (idsToUpdate.length === 0) return;
+
+    openGenericModal('Rev USA masivo', '<p>Actualizando...</p>', '');
+
+    try {
+        const session = getSession();
+        if (!session) throw new Error('Sesión expirada.');
+
+        const updatePromises = idsToUpdate.map(id => {
+            const orden = todasLasOrdenes.find(o => o.id === id);
+            if (!orden) return Promise.resolve();
+            return fetch('/.netlify/functions/order-items', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'x-admin-token': session.token },
+                body: JSON.stringify({
+                    id,
+                    usa_reviewed: true,
+                    client_phone: orden.client_phone,
+                    created_at: orden.created_at
+                })
+            });
+        });
+
+        await Promise.all(updatePromises);
+
+        document.getElementById('genericModalBody').innerHTML = `✅ Se marcaron ${idsToUpdate.length} órdenes como Rev USA.`;
+        setTimeout(() => { closeGenericModal(); loadAdminOrders(); }, 1500);
+
+    } catch (error) {
+        document.getElementById('genericModalBody').innerHTML = `⚠️ Error: ${error.message}`;
     }
 }
 
@@ -665,7 +739,6 @@ function abrirFormEdicion(id) {
     // Rellenar checkboxes
     const setChecked = (elId, val) => { const el = document.getElementById(elId); if (el) el.checked = val || false; };
     setChecked('editUsaReviewed', orden.usa_reviewed);
-    setChecked('editBankReviewed', orden.bank_reviewed);
 
     // Manejo del campo de imagen
     setVal('editImageUrl', orden.image_url); // Campo oculto
@@ -719,8 +792,7 @@ async function guardarEdicion() {
                 image_url: document.getElementById('editImageUrl').value || null, // Obtener URL del campo oculto
                 id_status: todasLasOrdenes.find(o => Number(o.id) === Number(ordenIdActual))?.id_status || 1, // Mantenemos el estado que ya existía, ya que el campo no está en el form.
                 created_at: todasLasOrdenes.find(o => Number(o.id) === Number(ordenIdActual))?.created_at, // Enviamos la fecha de creación original
-                usa_reviewed: document.getElementById('editUsaReviewed').checked,
-                bank_reviewed: document.getElementById('editBankReviewed').checked
+                usa_reviewed: document.getElementById('editUsaReviewed').checked
             })
         });
 
@@ -745,28 +817,25 @@ async function guardarEdicion() {
 }
 
 function confirmToggleUSA(orderId, checkbox) {
-    if (!checkbox.checked) {
-        // Desmarcando — proceder directamente
-        toggleReviewStatus(orderId, 'usa_reviewed', checkbox);
-        return;
-    }
-    // Marcando como revisado en USA — revertir y pedir confirmación
-    checkbox.checked = false;
-    const body = `
-        <p>¿Está seguro que desea marcar la orden <strong>#${orderId}</strong> como <strong>Revisada en USA</strong>?</p>
-        <p style="color:#c0392b; margin-top:8px;"><strong>⚠ Confirme antes de continuar.</strong></p>
-    `;
+    const marking = checkbox.checked;
+    // Revertir visualmente — el modal decide si proceder
+    checkbox.checked = !marking;
+    const body = marking
+        ? `<p>¿Está seguro que desea marcar la orden <strong>#${orderId}</strong> como <strong>Revisada en USA</strong>?</p>
+           <p style="color:#c0392b; margin-top:8px;"><strong>⚠ Confirme antes de continuar.</strong></p>`
+        : `<p>¿Está seguro que desea <strong>desmarcar</strong> la orden <strong>#${orderId}</strong> como Revisada en USA?</p>`;
+    const label = marking ? 'Sí, Confirmar' : 'Sí, Desmarcar';
     const footer = `
         <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
-        <button class="btn btn-danger" onclick="closeGenericModal(); doToggleUSA(${orderId})">Sí, Confirmar</button>
+        <button class="btn btn-danger" onclick="closeGenericModal(); doToggleUSA(${orderId}, ${marking})">${label}</button>
     `;
     openGenericModal('Confirmar RevUSA', body, footer);
 }
 
-async function doToggleUSA(orderId) {
+async function doToggleUSA(orderId, marking) {
     const cb = document.getElementById(`revusa-cb-${orderId}`);
     if (!cb) return;
-    cb.checked = true;
+    cb.checked = marking;
     await toggleReviewStatus(orderId, 'usa_reviewed', cb);
 }
 

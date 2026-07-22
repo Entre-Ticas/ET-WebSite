@@ -472,7 +472,6 @@ function filtrarFacturas() {
     renderInvoices();
 }
 
-// --- Lógica de Selección Múltiple (Copiada y Adaptada) ---
 
 function toggleInvoiceMultiSelect(isMultiSelect) {
     document.querySelectorAll('.col-select').forEach(col => {
@@ -516,28 +515,24 @@ function updateInvoiceMultiSelectActions() {
 }
 
 function confirmTogglePaid(invoiceId, checkbox) {
-    if (!checkbox.checked) {
-        // Desmarcando pagada — proceder directamente
-        togglePaidStatus(invoiceId, checkbox);
-        return;
-    }
-    // Marcando como pagada — revertir y pedir confirmación
-    checkbox.checked = false;
-    const body = `
-        <p>¿Está seguro que desea marcar la factura <strong>#${invoiceId}</strong> como <strong>Pagada</strong>?</p>
-        <p style="color:#c0392b; margin-top:8px;"><strong>⚠ Esta acción no puede revertirse.</strong><br>La factura dejará de estar disponible para modificaciones.</p>
-    `;
+    const marking = checkbox.checked;
+    checkbox.checked = !marking;
+    const body = marking
+        ? `<p>¿Está seguro que desea marcar la factura <strong>#${invoiceId}</strong> como <strong>Pagada</strong>?</p>
+           <p style="color:#c0392b; margin-top:8px;"><strong>⚠ Esta acción no puede revertirse.</strong><br>La factura dejará de estar disponible para modificaciones.</p>`
+        : `<p>¿Está seguro que desea <strong>desmarcar</strong> la factura <strong>#${invoiceId}</strong> como Pagada?</p>`;
+    const label = marking ? 'Sí, Marcar como Pagada' : 'Sí, Desmarcar';
     const footer = `
         <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
-        <button class="btn btn-danger" onclick="closeGenericModal(); confirmPaidAction(${invoiceId})">Sí, Marcar como Pagada</button>
+        <button class="btn btn-danger" onclick="closeGenericModal(); confirmPaidAction(${invoiceId}, ${marking})">${label}</button>
     `;
-    openGenericModal('Confirmar Pago', body, footer);
+    openGenericModal('Confirmar cambio de estado', body, footer);
 }
 
-async function confirmPaidAction(invoiceId) {
+async function confirmPaidAction(invoiceId, marking) {
     const cb = document.getElementById(`paid-cb-${invoiceId}`);
     if (!cb) return;
-    cb.checked = true;
+    cb.checked = marking;
     await togglePaidStatus(invoiceId, cb);
 }
 

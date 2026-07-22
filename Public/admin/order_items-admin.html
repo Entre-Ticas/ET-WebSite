@@ -19,8 +19,9 @@
                 <span id="multiSelectLabel">Seleccionar Varios</span>
             </label>
             <div id="multiActionContainer" style="display: none;">
-                <button id="orderMultiEditBtn" class="admin-btn-action btn-edit" onclick="handleOrderMultiEdit()" title="Editar Seleccionados"><i class="fas fa-pencil-alt"></i></button>
-                <button id="orderMultiDeleteBtn" class="admin-btn-action btn-delete" onclick="handleOrderMultiDelete()" title="Eliminar Seleccionados"><i class="fas fa-trash-alt"></i></button>
+                 <button id="orderMultiEditBtn" class="admin-btn-action btn-edit" onclick="handleOrderMultiEdit()" title="Editar Seleccionados"><i class="fas fa-pencil-alt"></i></button>
+                 <button id="orderMultiRevUsaBtn" class="admin-btn-action btn-invoice" onclick="handleOrderMultiBulkUSA()" title="Marcar Rev USA"><i class="fas fa-check-double"></i> Rev USA</button>
+                 <button id="orderMultiDeleteBtn" class="admin-btn-action btn-delete" onclick="handleOrderMultiDelete()" title="Eliminar Seleccionados"><i class="fas fa-trash-alt"></i></button>
             </div>
         </div>
 
@@ -220,11 +221,6 @@
                     <label class="custom-checkbox-container">
                         <input type="checkbox" id="editUsaReviewed">
                         <span class="checkbox-label">Revisado en USA</span>
-                    </label>
-
-                    <label class="custom-checkbox-container">
-                        <input type="checkbox" id="editBankReviewed">
-                        <span class="checkbox-label">Revisado por Banco</span>
                     </label>
                     
                     <button id="btnGuardarEdicion" onclick="guardarEdicionCompleta()"
