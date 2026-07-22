@@ -202,6 +202,107 @@ function viewInvoiceDetail(invoiceId) {
     if (typeof loadPage === 'function') loadPage('admin/invoice', invoiceId);
 }
 
+function openNewInvoiceForm() {
+    const title = 'Nueva Factura Manual';
+    const body = `
+        <p style="font-size: 0.9rem; margin-top: 0; color: #777;">
+            Crea una factura aunque no venga de una orden automatica.
+        </p>
+        <div style="text-align: left; margin-bottom: 1rem;">
+            <label style="font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 4px;">Nombre del Cliente: *</label>
+            <input type="text" id="newInvoiceClientName" placeholder="Ej: Ana Rodriguez"
+                style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); box-sizing:border-box;">
+        </div>
+        <div style="text-align: left; margin-bottom: 1rem;">
+            <label style="font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 4px;">Telefono del Cliente: *</label>
+            <input type="text" id="newInvoiceClientPhone" placeholder="Ej: 88887777"
+                style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); box-sizing:border-box;">
+        </div>
+        <div style="text-align: left; margin-bottom: 1rem;">
+            <label style="font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 4px;">Fecha Factura (opcional)</label>
+            <input type="datetime-local" id="newInvoiceDate"
+                style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); box-sizing:border-box;">
+        </div>
+        <div style="text-align: left; margin-bottom: 1rem;">
+            <label style="font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 4px;">Estado ID (opcional)</label>
+            <input type="number" id="newInvoiceStatusId" min="1" step="1" placeholder="1"
+                style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); box-sizing:border-box;">
+            <small style="color: #777;">Si lo dejas vacio se usa 1.</small>
+        </div>
+        <label style="display:flex; align-items:center; gap:8px; margin:0 0 8px; cursor:pointer;">
+            <input type="checkbox" id="newInvoicePaid" style="margin:0;"> Marcar como pagada
+        </label>
+        <div id="newInvoiceError" style="display:none; color:red; font-weight:bold; margin-top:0.8rem;"></div>
+    `;
+
+    const footer = `
+        <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveNewInvoice()">Guardar Factura</button>
+    `;
+
+    openGenericModal(title, body, footer);
+}
+
+async function saveNewInvoice() {
+    const errorEl = document.getElementById('newInvoiceError');
+    const footerButtons = document.querySelectorAll('#genericModalFooter .btn');
+
+    const clientName = document.getElementById('newInvoiceClientName')?.value.trim() || '';
+    const clientPhone = document.getElementById('newInvoiceClientPhone')?.value.trim() || '';
+    const invoiceDate = document.getElementById('newInvoiceDate')?.value || '';
+    const statusIdRaw = document.getElementById('newInvoiceStatusId')?.value.trim() || '';
+    const paid = document.getElementById('newInvoicePaid')?.checked || false;
+
+    if (!clientName || !clientPhone) {
+        errorEl.textContent = 'Nombre y telefono son obligatorios.';
+        errorEl.style.display = 'block';
+        return;
+    }
+
+    if (errorEl) errorEl.style.display = 'none';
+    footerButtons.forEach(btn => btn.disabled = true);
+
+    try {
+        const session = getSession();
+        if (!session) throw new Error('Sesion expirada.');
+
+        const payload = {
+            client_name: clientName,
+            client_phone: clientPhone,
+            paid
+        };
+
+        if (invoiceDate) {
+            payload.invoice_date = new Date(invoiceDate).toISOString();
+        }
+
+        if (statusIdRaw) {
+            payload.id_status = parseInt(statusIdRaw, 10);
+        }
+
+        const response = await fetch('/.netlify/functions/invoices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-admin-token': session.token },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'No se pudo crear la factura.');
+        }
+
+        closeGenericModal();
+        await loadAdminInvoices();
+
+    } catch (error) {
+        if (errorEl) {
+            errorEl.textContent = `Error: ${error.message}`;
+            errorEl.style.display = 'block';
+        }
+        footerButtons.forEach(btn => btn.disabled = false);
+    }
+}
+
 function sortInvoicesBy(col) {
     if (invoicesSortColumn === col) {
         invoicesSortDir = invoicesSortDir === 'asc' ? 'desc' : 'asc';

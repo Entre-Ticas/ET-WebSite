@@ -29,6 +29,8 @@ exports.handler = async (event, context) => {
         switch (event.httpMethod) {
             case 'GET':
                 return await getInvoices(event);
+            case 'POST':
+                return await createInvoice(event);
             case 'PUT':
                 return await updateInvoice(event);
             case 'DELETE':
@@ -356,6 +358,47 @@ async function updateInvoice(event) {
 
     const [data] = await response.json();
     return { statusCode: 200, body: JSON.stringify(data) };
+}
+
+async function createInvoice(event) {
+    const body = JSON.parse(event.body || '{}');
+    const {
+        client_name,
+        client_phone,
+        id_status,
+        paid,
+        invoice_date
+    } = body;
+
+    if (!client_name || !client_phone) {
+        return {
+            statusCode: 400,
+            body: JSON.stringify({ error: 'Se requieren client_name y client_phone.' })
+        };
+    }
+
+    const payload = {
+        client_name: String(client_name).trim(),
+        client_phone: String(client_phone).trim(),
+        id_status: Number.isFinite(Number(id_status)) ? Number(id_status) : 1,
+        paid: typeof paid === 'boolean' ? paid : false
+    };
+
+    if (invoice_date) {
+        payload.invoice_date = invoice_date;
+    }
+
+    const createUrl = `${supabaseUrl}/rest/v1/invoices`;
+    const response = await fetch(createUrl, {
+        method: 'POST',
+        headers: { ...sbHeaders, 'Prefer': 'return=representation' },
+        body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) throw new Error(`Error creando factura: ${await response.text()}`);
+
+    const [data] = await response.json();
+    return { statusCode: 201, body: JSON.stringify(data) };
 }
 
 async function deleteInvoice(event) {
