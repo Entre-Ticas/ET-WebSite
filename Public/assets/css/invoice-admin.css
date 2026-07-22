@@ -27,6 +27,25 @@
     line-height: 1.6;
 }
 
+.invoice-status-badge {
+    display: inline-block;
+    padding: 0.2rem 0.9rem;
+    border-radius: 999px;
+    background: #f8d7da;
+    color: #8a2d3b;
+    font-weight: 700;
+}
+
+.invoice-status-badge.is-paid {
+    background: #d8f3dc;
+    color: #1b6b45;
+}
+
+.invoice-status-badge.is-pending {
+    background: #fff1cc;
+    color: #8a5a00;
+}
+
 .summary-card .balance-due {
     font-weight: bold;
     font-size: 1.1rem;
@@ -71,18 +90,82 @@
     box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
-.details-table {
+.details-card h4 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: var(--pink-accent);
+}
+
+.invoice-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1.5px solid #e8b8c4;
+    box-shadow: 0 2px 12px rgba(225, 155, 157, 0.18);
+}
+
+.invoice-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.9rem;
+    text-align: left;
 }
 
-.details-table th, .details-table td {
+.invoice-table thead tr {
+    background: var(--pink-accent);
+    color: white;
+}
+
+.invoice-table th,
+.invoice-table td {
     text-align: left;
     padding: 0.8rem;
     border-bottom: 1px solid var(--pink-light);
 }
 
-.details-table th {
-    color: var(--pink-accent);
+.invoice-table tbody tr:hover {
+    background: #fff5f8;
+}
+
+.invoice-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.invoice-row-note {
+    display: inline-block;
+    margin-top: 0.25rem;
+    font-size: 0.78rem;
+    color: #7a7a7a;
+    font-style: italic;
+}
+
+.invoice-empty-row td {
+    text-align: center;
+    color: #7a7a7a;
+    background: #fffafb;
+}
+
+@media (max-width: 900px) {
+    .invoice-details-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .payment-form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .summary-card,
+    .details-card {
+        padding: 1rem;
+    }
+
+    .invoice-table th,
+    .invoice-table td {
+        padding: 0.7rem;
+        font-size: 0.84rem;
+    }
 }

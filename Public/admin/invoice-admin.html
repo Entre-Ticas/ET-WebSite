@@ -31,7 +31,7 @@
                     <h4>Información</h4>
                     <p><strong>Factura #:</strong> <span id="inv-id">--</span></p>
                     <p><strong>Fecha:</strong> <span id="inv-date">--</span></p>
-                    <p><strong>Estado:</strong> <span id="inv-status">--</span></p>
+                    <p><strong>Estado:</strong> <span id="inv-status" class="invoice-status-badge">--</span></p>
                 </div>
             </div>
 
@@ -51,17 +51,21 @@
             <div class="invoice-details-grid">
                 <div class="details-card">
                     <h4>Artículos de la Orden</h4>
-                    <table class="details-table" id="invoiceItemsTable">
-                        <thead><tr><th>Producto</th><th>Cant.</th><th>Precio Unit.</th><th>Subtotal</th></tr></thead>
-                        <tbody><!-- Filas de artículos se insertarán aquí --></tbody>
-                    </table>
+                    <div class="invoice-table-wrapper">
+                        <table class="invoice-table" id="invoiceItemsTable">
+                            <thead><tr><th>Producto</th><th>Cant.</th><th>Precio Unit.</th><th>Subtotal</th></tr></thead>
+                            <tbody><!-- Filas de artículos se insertarán aquí --></tbody>
+                        </table>
+                    </div>
                 </div>
                 <div class="details-card">
                     <h4>Historial de Abonos</h4>
-                    <table class="details-table" id="invoicePaymentsTable">
-                        <thead><tr><th>Fecha</th><th>Monto</th><th>Método</th><th>Referencia</th></tr></thead>
-                        <tbody><!-- Filas de abonos se insertarán aquí --></tbody>
-                    </table>
+                    <div class="invoice-table-wrapper">
+                        <table class="invoice-table" id="invoicePaymentsTable">
+                            <thead><tr><th>Fecha</th><th>Monto</th><th>Método</th><th>Referencia</th></tr></thead>
+                            <tbody><!-- Filas de abonos se insertarán aquí --></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -71,3 +75,21 @@
         </div>
     </div>
 </div>
+
+<template id="invoiceItemRowTemplate">
+    <tr>
+        <td data-field="productName"></td>
+        <td data-field="quantity"></td>
+        <td data-field="unitPrice"></td>
+        <td data-field="subtotal"></td>
+    </tr>
+</template>
+
+<template id="invoicePaymentRowTemplate">
+    <tr>
+        <td data-field="paymentDate"></td>
+        <td data-field="amount"></td>
+        <td data-field="method"></td>
+        <td data-field="reference"></td>
+    </tr>
+</template>

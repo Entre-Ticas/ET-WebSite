@@ -49,21 +49,13 @@ async function getInvoices(event) {
     const invoiceId = event.queryStringParameters.id;
 
     if (invoiceId) {
-        // --- Obtener una factura específica con sus items y abonos ---
-        const [invoiceRes, itemsRes, paymentsRes] = await Promise.all([
-            fetch(`${supabaseUrl}/rest/v1/invoices?id=eq.${invoiceId}&select=*`, { headers: sbHeaders }),
-            fetch(`${supabaseUrl}/rest/v1/order_items?invoice_id=eq.${invoiceId}&select=*`, { headers: sbHeaders }),
-            fetch(`${supabaseUrl}/rest/v1/payments?invoice_id=eq.${invoiceId}&select=*`, { headers: sbHeaders })
-        ]);
+        const summaryPayload = await getInvoiceSummary(invoiceId);
 
-        if (!invoiceRes.ok) throw new Error('Error obteniendo la factura.');
-        const invoices = await invoiceRes.json();
-        if (invoices.length === 0) return { statusCode: 404, body: JSON.stringify({ error: 'Factura no encontrada' }) };
+        if (!summaryPayload) {
+            return { statusCode: 404, body: JSON.stringify({ error: 'Factura no encontrada' }) };
+        }
 
-        const items = await itemsRes.json();
-        const payments = await paymentsRes.json();
-
-        return { statusCode: 200, body: JSON.stringify({ invoice: invoices[0], items, payments }) };
+        return { statusCode: 200, body: JSON.stringify(summaryPayload) };
 
     } else {
         const rpcUrl = `${supabaseUrl}/rest/v1/rpc/get_admin_invoices`;
@@ -77,6 +69,272 @@ async function getInvoices(event) {
         const data = await response.json();
         return { statusCode: 200, body: JSON.stringify(data) };
     }
+}
+
+async function getInvoiceSummary(invoiceId) {
+    const invoiceHeader = await getInvoiceHeader(invoiceId);
+    if (!invoiceHeader) {
+        return null;
+    }
+
+    const rpcUrl = `${supabaseUrl}/rest/v1/rpc/get_invoice_summary`;
+    const rpcResponse = await fetch(rpcUrl, {
+        method: 'POST',
+        headers: sbHeaders,
+        body: JSON.stringify({ p_invoice_id: Number(invoiceId) })
+    });
+
+    if (rpcResponse.ok) {
+        const rpcData = await rpcResponse.json();
+        const normalized = normalizeInvoiceSummaryResponse(rpcData, invoiceHeader);
+
+        if (normalized) {
+            return normalized;
+        }
+    } else {
+        console.warn(`get_invoice_summary falló para factura ${invoiceId}: ${await rpcResponse.text()}`);
+    }
+
+    return await getInvoiceSummaryFallback(invoiceId, invoiceHeader);
+}
+
+async function getInvoiceHeader(invoiceId) {
+    const invoiceRes = await fetch(`${supabaseUrl}/rest/v1/invoices?id=eq.${invoiceId}&select=*`, { headers: sbHeaders });
+
+    if (!invoiceRes.ok) throw new Error('Error obteniendo la factura.');
+
+    const invoices = await invoiceRes.json();
+    if (invoices.length === 0) return null;
+
+    const invoice = invoices[0];
+    invoice.status_name = await getInvoiceStatusName(invoice.id_status);
+    return invoice;
+}
+
+async function getInvoiceStatusName(statusId) {
+    if (!statusId) return null;
+
+    const statusRes = await fetch(`${supabaseUrl}/rest/v1/status?id_status=eq.${statusId}&select=status_name`, { headers: sbHeaders });
+    if (!statusRes.ok) return null;
+
+    const statuses = await statusRes.json();
+    return statuses[0]?.status_name || null;
+}
+
+async function getInvoiceSummaryFallback(invoiceId, invoiceHeader) {
+    const [itemsRes, paymentsRes] = await Promise.all([
+        fetch(`${supabaseUrl}/rest/v1/order_items?invoice_id=eq.${invoiceId}&select=*`, { headers: sbHeaders }),
+        fetch(`${supabaseUrl}/rest/v1/payments?invoice_id=eq.${invoiceId}&select=*`, { headers: sbHeaders })
+    ]);
+
+    const items = itemsRes.ok ? await itemsRes.json() : [];
+    const payments = paymentsRes.ok ? await paymentsRes.json() : [];
+
+    return { invoice: invoiceHeader, items, payments };
+}
+
+function normalizeInvoiceSummaryResponse(payload, invoiceHeader) {
+    if (payload == null) {
+        return null;
+    }
+
+    if (Array.isArray(payload) && payload.length === 0) {
+        return { invoice: invoiceHeader, items: [], payments: [] };
+    }
+
+    if (hasStructuredInvoicePayload(payload)) {
+        return {
+            invoice: { ...invoiceHeader, ...payload.invoice },
+            items: payload.items,
+            payments: payload.payments
+        };
+    }
+
+    if (Array.isArray(payload)) {
+        return normalizeInvoiceSummaryRows(payload, invoiceHeader);
+    }
+
+    if (typeof payload === 'object') {
+        return normalizeStructuredInvoiceObject(payload, invoiceHeader);
+    }
+
+    return null;
+}
+
+function hasStructuredInvoicePayload(payload) {
+    return Boolean(
+        payload &&
+        typeof payload === 'object' &&
+        payload.invoice &&
+        Array.isArray(payload.items) &&
+        Array.isArray(payload.payments)
+    );
+}
+
+function normalizeStructuredInvoiceObject(payload, invoiceHeader) {
+    const invoiceSource = payload.invoice || payload.factura || payload.summary || payload;
+    const itemsSource = payload.items || payload.order_items || payload.invoice_items || payload.articulos || payload.detalles || [];
+    const paymentsSource = payload.payments || payload.abonos || payload.payment_history || payload.historial_abonos || [];
+
+    const invoice = { ...invoiceHeader, ...extractInvoiceFields(invoiceSource, invoiceHeader.id) };
+    const items = toArray(itemsSource).map(extractItemFields).filter(hasMeaningfulItem);
+    const payments = toArray(paymentsSource).map(extractPaymentFields).filter(hasMeaningfulPayment);
+
+    if (!invoice.id && !items.length && !payments.length) {
+        return null;
+    }
+
+    return { invoice, items, payments };
+}
+
+function normalizeInvoiceSummaryRows(rows, invoiceHeader) {
+    const itemsMap = new Map();
+    const paymentsMap = new Map();
+
+    rows.forEach((row, index) => {
+        const item = extractSummaryItemRow(row);
+        const payment = extractSummaryPaymentRow(row);
+
+        if (hasMeaningfulItem(item)) {
+            const itemKey = item.id || `${item.product_name || 'item'}-${index}`;
+            if (!itemsMap.has(itemKey)) itemsMap.set(itemKey, item);
+        }
+
+        if (hasMeaningfulPayment(payment)) {
+            const paymentKey = payment.id || `${payment.reference_code || 'payment'}-${index}`;
+            if (!paymentsMap.has(paymentKey)) paymentsMap.set(paymentKey, payment);
+        }
+    });
+
+    if (!invoiceHeader.id && !itemsMap.size && !paymentsMap.size) {
+        return null;
+    }
+
+    return {
+        invoice: invoiceHeader,
+        items: Array.from(itemsMap.values()),
+        payments: Array.from(paymentsMap.values())
+    };
+}
+
+function extractSummaryItemRow(source) {
+    if (source?.tipo_registro !== 'ITEM') {
+        return {};
+    }
+
+    return {
+        product_name: source.descripcion_o_producto,
+        quantity: toNullableNumber(source.cantidad),
+        price: toNullableNumber(source.precio_unitario),
+        image_url: source.foto,
+        subtotal: toNullableNumber(source.monto_total),
+        created_at: source.fecha
+    };
+}
+
+function extractSummaryPaymentRow(source) {
+    if (source?.tipo_registro !== 'PAYMENT') {
+        return {};
+    }
+
+    const parsed = parsePaymentDescription(source.descripcion_o_producto);
+
+    return {
+        payment_date: source.fecha,
+        amount: toNullableNumber(source.monto_total ?? source.precio_unitario),
+        payment_method: parsed.payment_method,
+        reference_code: parsed.reference_code
+    };
+}
+
+function parsePaymentDescription(description) {
+    if (!description) {
+        return { payment_method: null, reference_code: null };
+    }
+
+    const match = String(description).match(/^(.*?)(?:\s*\(Ref:\s*(.*)\))?$/);
+    if (!match) {
+        return { payment_method: description, reference_code: null };
+    }
+
+    return {
+        payment_method: match[1]?.trim() || null,
+        reference_code: match[2]?.trim() || null
+    };
+}
+
+function extractInvoiceFields(source, invoiceId) {
+    return {
+        id: pickFirst(source, ['invoice_id', 'id']) || Number(invoiceId),
+        client_name: pickFirst(source, ['client_name', 'cliente']),
+        client_phone: pickFirst(source, ['client_phone', 'telefono']),
+        invoice_date: pickFirst(source, ['invoice_date', 'fecha_factura', 'created_at']),
+        paid: toBoolean(pickFirst(source, ['paid', 'is_paid', 'pagada'])),
+        status_name: pickFirst(source, ['status_name', 'estado', 'invoice_status']),
+        total_amount: toNullableNumber(pickFirst(source, ['total_amount', 'invoice_total', 'items_total'])),
+        total_paid: toNullableNumber(pickFirst(source, ['total_paid', 'payments_total', 'paid_amount'])),
+        balance_due: toNullableNumber(pickFirst(source, ['balance_due', 'pending_balance', 'saldo_pendiente']))
+    };
+}
+
+function extractItemFields(source) {
+    return {
+        id: pickFirst(source, ['order_item_id', 'item_id', 'id']),
+        product_name: pickFirst(source, ['product_name', 'producto']),
+        quantity: toNullableNumber(pickFirst(source, ['quantity', 'cantidad'])),
+        price: toNullableNumber(pickFirst(source, ['price', 'precio'])),
+        size: pickFirst(source, ['size', 'talla'])
+    };
+}
+
+function extractPaymentFields(source) {
+    return {
+        id: pickFirst(source, ['payment_id', 'id']),
+        payment_date: pickFirst(source, ['payment_date', 'fecha_abono', 'created_at']),
+        amount: toNullableNumber(pickFirst(source, ['amount', 'monto'])),
+        payment_method: pickFirst(source, ['payment_method', 'metodo_pago']),
+        reference_code: pickFirst(source, ['reference_code', 'referencia']),
+        notes: pickFirst(source, ['notes', 'nota'])
+    };
+}
+
+function hasMeaningfulItem(item) {
+    return Boolean(item.product_name || item.quantity !== null || item.price !== null);
+}
+
+function hasMeaningfulPayment(payment) {
+    return Boolean(payment.payment_date || payment.amount !== null || payment.reference_code || payment.payment_method);
+}
+
+function toArray(value) {
+    if (Array.isArray(value)) return value;
+    if (value == null) return [];
+    return [value];
+}
+
+function pickFirst(source, keys) {
+    if (!source || typeof source !== 'object') return null;
+
+    for (const key of keys) {
+        if (source[key] !== undefined && source[key] !== null) {
+            return source[key];
+        }
+    }
+
+    return null;
+}
+
+function toBoolean(value) {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'string') return value.toLowerCase() === 'true';
+    if (typeof value === 'number') return value === 1;
+    return false;
+}
+
+function toNullableNumber(value) {
+    if (value === undefined || value === null || value === '') return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
 }
 
 async function updateInvoice(event) {
