@@ -470,13 +470,34 @@ async function deleteInvoice(event) {
         return { statusCode: 400, body: JSON.stringify({ error: 'Se requiere el parámetro "id" para eliminar.' }) };
     }
 
-    // Por seguridad, primero desvinculamos los order_items
-    const unlinkUrl = `${supabaseUrl}/rest/v1/order_items?invoice_id=eq.${id}`;
-    await fetch(unlinkUrl, {
-        method: 'PATCH',
-        headers: sbHeaders,
-        body: JSON.stringify({ invoice_id: null })
-    });
+    // Regla de negocio: NO permitir borrar facturas con órdenes o pagos asociados.
+    const [orderItemsRes, paymentsRes] = await Promise.all([
+        fetch(`${supabaseUrl}/rest/v1/order_items?invoice_id=eq.${id}&select=id&limit=1`, { headers: sbHeaders }),
+        fetch(`${supabaseUrl}/rest/v1/payments?invoice_id=eq.${id}&select=id&limit=1`, { headers: sbHeaders })
+    ]);
+
+    if (!orderItemsRes.ok) {
+        throw new Error(`Error verificando órdenes asociadas: ${await orderItemsRes.text()}`);
+    }
+    if (!paymentsRes.ok) {
+        throw new Error(`Error verificando pagos asociados: ${await paymentsRes.text()}`);
+    }
+
+    const orderItems = await orderItemsRes.json();
+    const payments = await paymentsRes.json();
+
+    if (orderItems.length > 0 || payments.length > 0) {
+        const reasons = [];
+        if (orderItems.length > 0) reasons.push('órdenes');
+        if (payments.length > 0) reasons.push('abonos');
+
+        return {
+            statusCode: 409,
+            body: JSON.stringify({
+                error: `No se puede eliminar. La factura tiene ${reasons.join(' y ')} asignados.`
+            })
+        };
+    }
 
     // Ahora eliminamos la factura
     const deleteUrl = `${supabaseUrl}/rest/v1/invoices?id=eq.${id}`;
