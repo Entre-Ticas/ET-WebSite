@@ -31,10 +31,13 @@
         <a onclick="loadPage('calc')">Calculadora</a>
         <a onclick="loadPage('tracking')">Rastreo</a>
         <a onclick="loadPage('info')">Info</a>
-        <a id="navAdmin" onclick="loadPage('admin')" style="display:none;">Gestión</a>
+        <a class="navAdminLink" onclick="loadPage('admin/tracking')" style="display:none;">Tracking-Admin</a>
+        <a class="navAdminLink" onclick="loadPage('admin/catalog')" style="display:none;">Catalog-Admin</a>
+        <a class="navAdminLink" onclick="loadPage('admin/order')" style="display: none;">Órdenes</a>
+        <a class="navAdminLink" onclick="loadPage('admin/invoices')" style="display: none;">Facturas</a>
+        <a class="navAdminLink" onclick="loadPage('admin/payments')" style="display: none;">Abonos</a>
     </nav>
 
-    <!-- Botón flotante de login, discreto en esquina superior derecha -->
     <button id="floatingLoginBtn" onclick="abrirLoginModal()" title="Iniciar sesión"
         style="position:fixed; top:4px; right:4px; z-index:8000; background:transparent; border:none; cursor:pointer; opacity:0.12; transition:opacity 0.3s;"
         onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.12'">
@@ -119,15 +122,43 @@
         </p>
     </footer>
 
+    <!-- Modal global para visualizar imágenes -->
+    <div id="imgModal" class="img-modal-overlay" onclick="closeModal()">
+        <button class="close-btn" onclick="closeModal()">&times;</button>
+        <img id="modalImg" src="">
+    </div>
+
+    <!-- Modal Genérico para Confirmaciones y Formularios -->
+    <div id="genericModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 id="genericModalTitle" class="modal-title"></h5>
+                <button onclick="closeGenericModal()" class="close-btn">&times;</button>
+            </div>
+            <div id="genericModalBody" class="modal-body">
+                <!-- El contenido se inyectará aquí con JavaScript -->
+            </div>
+            <div id="genericModalFooter" class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="closeGenericModal()">OK</button>
+            </div>
+        </div>
+    </div>
     
     <script src="assets/js/setup.js"></script>
     <script src="assets/js/script.js"></script>
     <script src="assets/js/catalog.js"></script>
     <script src="assets/js/tracking.js"></script>
     <script src="assets/js/auth.js"></script>
-    <script src="assets/js/tracking-admin.js"></script>
     <script src="assets/js/main.js"></script>
-     <script src="assets/js/infoImg.js"></script>
+    <script src="assets/js/infoImg.js"></script>
+    
+    <script src="assets/js/tracking-admin.js"></script>
+    <script src="assets/js/catalog-admin.js"></script>
+    <script src="assets/js/order_items-admin.js"></script>
+    <script src="assets/js/invoices-admin.js"></script>
+    <script src="assets/js/invoice-admin.js"></script>
+    <script src="assets/js/payments-admin.js"></script>
     
 </body>
 </html>

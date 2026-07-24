@@ -1,82 +1,114 @@
 // Lógica de Rastreo de Paquetes
 
+function setStatusMessage(message, isError = false) {
+    const infoDetalle = document.getElementById('infoDetalle');
+    infoDetalle.innerHTML = `<p>${message}</p>`;
+    infoDetalle.style.display = message ? 'block' : 'none';
+    if (isError) {
+        infoDetalle.querySelector('p').style.color = 'red';
+    }
+}
+
+function resetTrackingView() {
+    const resBox = document.getElementById('resultadoRastreo');
+    const template = document.getElementById('trackingTemplate');
+    
+    resBox.style.display = 'none';
+    setStatusMessage(''); // Oculta y limpia el mensaje de estado
+    if (template) {
+        template.style.display = 'none'; // Oculta la plantilla de resultados
+    }
+}
+
 async function buscarTracking() {
     const num = document.getElementById('trackingNum').value.trim();
     const resBox = document.getElementById('resultadoRastreo');
-    const infoDetalle = document.getElementById('infoDetalle');
+    const trackingTemplate = document.getElementById('trackingTemplate');
 
     if (!num) return alert('Por favor ingresa un número de guía.');
 
-    infoDetalle.innerHTML = '<p>Buscando...</p>';
+    resetTrackingView();
     resBox.style.display = 'block';
+    setStatusMessage('Buscando...');
 
     try {
         const response = await fetch(`/.netlify/functions/tracking?num=${encodeURIComponent(num)}`);
 
         if (response.status === 404) {
-            infoDetalle.innerHTML = '<p>❌ No se encontró el número de guía.</p>';
+            setStatusMessage('❌ No se encontró el número de guía.', true);
             return;
         }
         if (!response.ok) throw new Error('Error en el servidor.');
 
         const { info, historial } = await response.json();
 
+        // Ocultar mensaje "Buscando..."
+        setStatusMessage('');
+
+        // Mostrar la plantilla de resultados
+        trackingTemplate.style.display = 'block';
+
+        // --- Poblar la plantilla con datos ---
+
         const ultimoEstado = historial.length > 0
             ? historial[historial.length - 1].detalle_estado
             : info.tracking_status || '—';
 
+        // 1. Rellenar campos principales
+        trackingTemplate.querySelector('[data-field="ultimoEstado"]').textContent = ultimoEstado;
+
         const waMsg = `Consulta Tracking: ${num}\nÚltimo estado: ${ultimoEstado}`;
         const waLink = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(waMsg)}`;
+        trackingTemplate.querySelector('[data-field="whatsappLink"]').href = waLink;
 
         const formatFecha = (f) => f ? new Date(f).toLocaleDateString('es-CR', {
             day: '2-digit', month: '2-digit', year: 'numeric'
         }) : '—';
 
+        // 2. Crear y añadir las filas de información
         const infoItems = [
-            { label: 'Estado',              value: ultimoEstado },
             { label: 'Cliente',             value: info.cliente },
             { label: 'Producto',            value: info.producto },
             { label: 'Tienda',              value: info.nombre_tienda },
             { label: 'Fecha de Compra',     value: formatFecha(info.fecha_compra) },
             { label: 'Fecha Entrega Miami', value: formatFecha(info.fecha_entrega_miami) },
         ].filter(i => i.value && i.value !== '—');
+        
+        const infoRowsContainer = trackingTemplate.querySelector('.tracking-info-rows');
+        infoRowsContainer.innerHTML = ''; // Limpiar contenido previo
+        infoItems.forEach(item => {
+            const row = document.createElement('div');
+            row.className = 'tracking-info-row';
+            row.innerHTML = `<span class="tracking-info-label">${item.label}:</span> ${item.value}`;
+            infoRowsContainer.appendChild(row);
+        });
 
-        const infoHTML = `<div class="tracking-info-estado-wrap">
-                <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px;">
-                    <span class="tracking-estado-badge" style="margin: 0;">${ultimoEstado}</span>
-                    <button class="btn-copy-link-public" onclick="copiarGuia(this, '${num}')" title="Copiar enlace directo"><i class="fas fa-link"></i></button>
-                </div>
-            </div>` +
-            infoItems.slice(1).map(i =>
-                `<div class="tracking-info-row"><span class="tracking-info-label">${i.label}:</span> ${i.value}</div>`
-            ).join('');
+        // 3. Rellenar la tabla de historial
+        const historialTableWrapper = trackingTemplate.querySelector('.tracking-table-wrapper');
+        const historialTbody = historialTableWrapper.querySelector('tbody');
+        const rowTemplate = document.getElementById('historialRowTemplate');
+        
+        historialTbody.innerHTML = ''; // Limpiar contenido previo
 
-        const filasHistorial = historial.map(r => {
-            const fecha = new Date(r.fecha_hora).toLocaleString('es-CR', {
-                day: '2-digit', month: '2-digit', year: 'numeric',
-                hour: '2-digit', minute: '2-digit'
+        if (historial.length > 0 && rowTemplate) {
+            historialTableWrapper.style.display = 'block';
+            historial.forEach(r => {
+                const clone = rowTemplate.content.cloneNode(true); // Clonamos la plantilla de fila
+                const notaHTML = r.nota ? `<br><span class="tracking-nota">${r.nota}</span>` : '';
+                
+                clone.querySelector('[data-field="detalleEstado"]').innerHTML = r.detalle_estado + notaHTML;
+                clone.querySelector('[data-field="fecha"]').textContent = new Date(r.fecha_hora).toLocaleString('es-CR', {
+                    day: '2-digit', month: '2-digit', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
+                });
+                historialTbody.appendChild(clone);
             });
-            const nota = r.nota ? `<br><span class="tracking-nota">${r.nota}</span>` : '';
-            return `<tr><td>${r.detalle_estado}${nota}</td><td>${fecha}</td></tr>`;
-        }).join('');
-
-        const historialHTML = historial.length > 0 ? `
-            <div class="tracking-table-wrapper">
-                <table class="tracking-table">
-                    <thead><tr><th>Estado</th><th>Fecha</th></tr></thead>
-                    <tbody>${filasHistorial}</tbody>
-                </table>
-            </div>` : '';
-
-        infoDetalle.innerHTML = `
-            <div class="tracking-info-box">${infoHTML}</div>
-            ${historialHTML}
-            <a href="${waLink}" target="_blank" class="btn-whatsapp-track">
-                <i class="fab fa-whatsapp"></i> Consultar por WhatsApp
-            </a>`;
+        } else {
+            historialTableWrapper.style.display = 'none';
+        }
 
     } catch (error) {
         console.error(error);
-        infoDetalle.innerHTML = `<p>⚠️ Error: ${error.message}</p>`;
+        setStatusMessage(`⚠️ Error: ${error.message}`, true);
     }
 }

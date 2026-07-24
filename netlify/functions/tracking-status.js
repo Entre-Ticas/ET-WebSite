@@ -9,7 +9,7 @@ exports.handler = async (event) => {
         }
         try {
             const res = await fetch(`${SUPABASE_URL}/rest/v1/status_tracking?select=id_status_tracking,status_name&order=id_status_tracking.asc`, {
-                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+                headers: { 'apikey': SUPABASE_KEY }
             });
             if (!res.ok) throw new Error(`Supabase ${res.status}`);
             const data = await res.json();
@@ -31,7 +31,7 @@ exports.handler = async (event) => {
     try {
         const decoded = Buffer.from(token, 'base64').toString('utf8');
         const [secret, , expiry] = decoded.split(':');
-        if (secret !== ADMIN_SECRET || Date.now() > parseInt(expiry)) {
+        if (secret !== ADMIN_SECRET || !expiry || Date.now() > parseInt(expiry)) {
             return { statusCode: 401, body: JSON.stringify({ error: 'Sesión inválida o expirada.' }) };
         }
     } catch {
@@ -53,7 +53,6 @@ exports.handler = async (event) => {
             method: 'POST',
             headers: {
                 'apikey': SUPABASE_KEY,
-                'Authorization': `Bearer ${SUPABASE_KEY}`,
                 'Content-Type': 'application/json',
                 'Prefer': 'return=minimal'
             },

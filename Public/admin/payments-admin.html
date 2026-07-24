@@ -1,0 +1,164 @@
+<link rel="stylesheet" href="../assets/css/order_items-admin.css">
+
+<div class="admin-wrapper">
+
+    <div id="paymentsGridView">
+        <div class="admin-header">
+            <h2>💳 Gestión de Abonos</h2>
+            <p>Administra los abonos asociados a facturas.</p>
+        </div>
+
+        <div class="admin-search-bar">
+            <input type="text" id="paymentsSearchInput" placeholder="🔍 Buscar por ID, factura, cliente, método o referencia..." oninput="filterPayments()" />
+            <button class="admin-btn-agregar" onclick="openNewPaymentForm()">+ Agregar Abono</button>
+        </div>
+
+        <div id="paymentsStatus" class="catalog-status">
+            <div class="spinner"></div>
+            <p>Cargando abonos...</p>
+        </div>
+
+        <div id="paymentsGrid" class="admin-grid">
+            <table class="admin-table" style="display: none;">
+                <thead>
+                    <tr class="admin-main-header">
+                        <th class="sortable" onclick="sortPaymentsBy('id')" data-col="id">ID <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortPaymentsBy('invoice_id')" data-col="invoice_id">Factura <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortPaymentsBy('client_name')" data-col="client_name">Cliente <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortPaymentsBy('client_phone')" data-col="client_phone">Teléfono <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortPaymentsBy('amount')" data-col="amount">Monto <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortPaymentsBy('payment_method')" data-col="payment_method">Método <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortPaymentsBy('reference_code')" data-col="reference_code">Referencia <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortPaymentsBy('payment_date')" data-col="payment_date">Fecha <span class="sort-arrow">↕</span></th>
+                        <th>Acciones</th>
+                    </tr>
+                    <tr class="admin-filter-row">
+                        <td><input type="text" placeholder="Filtrar..." oninput="setPaymentColumnFilter('id', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setPaymentColumnFilter('invoice_id', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setPaymentColumnFilter('client_name', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setPaymentColumnFilter('client_phone', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setPaymentColumnFilter('amount', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setPaymentColumnFilter('payment_method', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setPaymentColumnFilter('reference_code', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setPaymentColumnFilter('payment_date', this.value)" /></td>
+                        <td></td>
+                    </tr>
+                </thead>
+                <tbody id="paymentsTbody"></tbody>
+                <tfoot id="paymentsTableFooter" style="display: none;">
+                    <tr>
+                        <td id="paymentsFooterColspan">
+                            <div class="admin-pagination-container" style="margin-top: 0;">
+                                <div class="pagination-info" id="paymentsPaginationInfo"></div>
+                                <div class="pagination-controls">
+                                    <div class="pagination-rows-selector">
+                                        <span>Filas:</span>
+                                        <select id="paymentsRowsPerPageSelector" onchange="changePaymentsRowsPerPage(this.value)">
+                                            <option value="10">10</option>
+                                            <option value="30">30</option>
+                                            <option value="50">50</option>
+                                            <option value="100">100</option>
+                                            <option value="-1">Todos</option>
+                                        </select>
+                                    </div>
+                                    <div class="pagination-nav" id="paymentsPaginationNav"></div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <div class="no-results" id="paymentsNoResults">
+            😔 No se encontraron abonos.
+        </div>
+    </div>
+
+    <div id="paymentsNewView" style="display:none;">
+        <div class="container">
+            <div class="card" style="cursor:default;">
+                <button onclick="backToPaymentsGrid()" class="admin-btn-back">← Volver</button>
+                <i class="fas fa-plus-circle" style="font-size:2rem; color:var(--pink-accent); margin-top:0.5rem;"></i>
+                <h3 style="margin:0.5rem 0;">Nuevo Abono</h3>
+
+                <div style="text-align:left;">
+                    <label style="font-weight:bold; font-size:0.9rem;">Factura ID: *</label>
+                    <input type="number" id="newPaymentInvoiceId" min="1" step="1" placeholder="ID factura"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Monto: *</label>
+                    <input type="number" id="newPaymentAmount" min="0.01" step="0.01" placeholder="Ej: 12500"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Método:</label>
+                    <input type="text" id="newPaymentMethod" placeholder="SINPE / Transferencia / Efectivo"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Referencia:</label>
+                    <input type="text" id="newPaymentRef" placeholder="Comprobante"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Fecha Abono:</label>
+                    <input type="datetime-local" id="newPaymentDate"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Notas:</label>
+                    <textarea id="newPaymentNotes" rows="3" placeholder="Notas opcionales"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:1rem; box-sizing:border-box;"></textarea>
+
+                    <button id="btnSaveNewPayment" onclick="saveNewPayment()"
+                        style="width:100%; padding:12px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
+                        Guardar Abono
+                    </button>
+
+                    <div id="newPaymentError" style="margin-top:0.8rem; font-weight:bold; text-align:center;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="paymentsEditView" style="display:none;">
+        <div class="container">
+            <div class="card" style="cursor:default;">
+                <button onclick="backToPaymentsGrid()" class="admin-btn-back">← Volver</button>
+                <i class="fas fa-pencil-alt" style="font-size:2rem; color:var(--pink-accent); margin-top:0.5rem;"></i>
+                <h3 style="margin:0.5rem 0;">Editar Abono</h3>
+
+                <div style="text-align:left;">
+                    <label style="font-weight:bold; font-size:0.9rem;">Factura ID: *</label>
+                    <input type="number" id="editPaymentInvoiceId" min="1" step="1"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Monto: *</label>
+                    <input type="number" id="editPaymentAmount" min="0.01" step="0.01"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Método:</label>
+                    <input type="text" id="editPaymentMethod"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Referencia:</label>
+                    <input type="text" id="editPaymentRef"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Fecha Abono:</label>
+                    <input type="datetime-local" id="editPaymentDate"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Notas:</label>
+                    <textarea id="editPaymentNotes" rows="3"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:1rem; box-sizing:border-box;"></textarea>
+
+                    <button id="btnSavePaymentEdit" onclick="savePaymentEdit()"
+                        style="width:100%; padding:12px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
+                        Guardar Cambios
+                    </button>
+
+                    <div id="editPaymentError" style="margin-top:0.8rem; font-weight:bold; text-align:center;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>

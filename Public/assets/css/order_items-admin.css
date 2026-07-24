@@ -1,0 +1,207 @@
+.admin-card {
+    background-color: #fff;
+    border-radius: 15px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    display: flex;
+    padding: 1rem;
+    gap: 1rem;
+    align-items: center;
+}
+.admin-card-img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 10px;
+}
+.admin-card-info {
+    flex-grow: 1;
+}
+.admin-card-title {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+}
+.admin-card-details {
+    margin: 0.2rem 0;
+    font-size: 0.9rem;
+    color: #555;
+}
+.admin-card-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+}
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+.status-dot.available { background-color: #28a745; }
+.status-dot.unavailable { background-color: #dc3545; }
+
+.admin-card-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.admin-btn-icon {
+    background: var(--pink-light);
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    color: var(--pink-accent);
+    font-size: 1rem;
+}
+.admin-btn-icon.btn-delete:hover {
+    background-color: #dc3545; 
+    color: white;
+}
+
+.admin-table .admin-table-img {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+ .image-upload-container {
+        margin-bottom: 1rem;
+    }
+    .image-upload-container label {
+        font-weight: bold;
+        font-size: 0.9rem;
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+    .image-upload-input {
+        width: 100%;
+        margin-bottom: 0.8rem;
+        display: none;
+    }
+    .image-upload-content {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 0.8rem;
+    }
+    .image-upload-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+    }
+    .image-preview {
+        width: 100px;
+        height: 100px;
+        border: 2px dashed var(--pink-light);
+        border-radius: 10px;
+        overflow: hidden;
+        flex-shrink: 0; /* Evita que la imagen se encoja */
+    }
+    .image-preview img { width: 100%; height: 100%; object-fit: cover; }
+    .image-upload-status { font-size: 0.8rem; }
+
+    .admin-filter-select {
+        width: 100%;
+        padding: 4px 6px;
+        border: 1px solid var(--pink-light);
+        border-radius: 8px;
+        background-color: #fff;
+        color: var(--brown-text);
+        font-family: inherit;
+        font-size: 0.75rem;
+        box-sizing: border-box;
+    }
+
+    .custom-checkbox-container {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+        cursor: pointer;
+    }
+    .custom-checkbox-container input[type="checkbox"] {
+        display: none; 
+    }
+    .custom-checkbox-container .checkbox-label {
+        font-weight: bold;
+        font-size: 0.9rem;
+        position: relative;
+        padding-left: 30px; 
+        user-select: none;
+    }
+    .custom-checkbox-container .checkbox-label::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 20px;
+        height: 20px;
+        border: 2px solid var(--pink-accent);
+        border-radius: 5px;
+        background-color: white;
+        transition: all 0.2s;
+    }
+    .custom-checkbox-container input[type="checkbox"]:checked + .checkbox-label::before {
+        background-color: var(--pink-accent);
+        border-color: var(--pink-accent);
+    }
+    .custom-checkbox-container .checkbox-label::after {
+        content: '';
+        position: absolute;
+        left: 7px; 
+        top: 3px; 
+        width: 5px;
+        height: 10px;
+        border: solid white;
+        border-width: 0 3px 3px 0;
+        transform: rotate(45deg);
+        opacity: 0; /* Oculto por defecto */
+        transition: opacity 0.2s;
+    }
+    .custom-checkbox-container input[type="checkbox"]:checked + .checkbox-label::after {
+        opacity: 1; 
+    }
+
+    /* Estilos para el stepper de cantidad */
+    .quantity-stepper {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.8rem;
+    }
+    .stepper-btn {
+        background-color: var(--pink-light);
+        border: 1px solid var(--pink-accent);
+        color: var(--pink-accent);
+        cursor: pointer;
+        font-size: 1.2rem;
+        font-weight: bold;
+        width: 40px;
+        height: 40px;
+        transition: background-color 0.2s;
+    }
+    .stepper-btn:first-child { border-radius: 10px 0 0 10px; }
+    .stepper-btn:last-child { border-radius: 0 10px 10px 0; }
+    .stepper-btn:hover { background-color: var(--pink-accent); color: white; }
+
+    .quantity-stepper input[type="number"] {
+        width: 60px;
+        height: 40px;
+        text-align: center;
+        border: 1px solid var(--pink-accent);
+        border-left: none;
+        border-right: none;
+        font-size: 1rem;
+        font-weight: bold;
+        border-radius: 0;
+        margin-bottom: 0; /* Anular margen global */
+        box-sizing: border-box;
+        -moz-appearance: textfield; /* Firefox */
+    }
+    .quantity-stepper input[type="number"]::-webkit-outer-spin-button,
+    .quantity-stepper input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }

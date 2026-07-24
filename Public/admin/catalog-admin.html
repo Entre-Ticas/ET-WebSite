@@ -1,0 +1,192 @@
+<link rel="stylesheet" href="../assets/css/catalog-admin.css">
+
+<div class="admin-wrapper">
+
+    <!-- ===== VISTA: GRID DE PRODUCTOS ===== -->
+    <div id="adminGridView">
+        <div class="admin-header">
+            <h2>🛍️ Gestión de Catálogo</h2>
+            <p>Busca, agrega y actualiza los productos del catálogo.</p>
+        </div>
+
+        <div class="admin-search-bar">
+            <input type="text" id="adminSearchInput" placeholder="🔍 Buscar por nombre, categoría..." oninput="filtrarProductos()" />
+            <button class="admin-btn-agregar" onclick="catalogOpenNewForm()">+ Agregar Producto</button>
+        </div>
+
+        <div id="adminStatus" class="catalog-status">
+            <div class="spinner"></div>
+            <p>Cargando productos...</p>
+        </div>
+
+        <div id="adminGrid" class="admin-grid">
+            <table class="admin-table" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Imagen</th>
+                        <th>Nombre</th>
+                        <th>Categoría</th>
+                        <th>Precio</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="adminTbody"></tbody>
+                <tfoot id="adminTableFooter" style="display: none;">
+                    <tr>
+                        <td id="footerColspan">
+                            <div class="admin-pagination-container" style="margin-top: 0;">
+                                <div class="pagination-info" id="paginationInfo">
+                                    <!-- Se rellena con JS -->
+                                </div>
+                                <div class="pagination-controls">
+                                    <div class="pagination-rows-selector">
+                                        <span>Filas:</span>
+                                        <select id="rowsPerPageSelector" onchange="changeCatalogRowsPerPage(this.value)">
+                                            <option value="10">10</option>
+                                            <option value="30">30</option>
+                                            <option value="50">50</option>
+                                            <option value="100">100</option>
+                                            <option value="-1">Todos</option>
+                                        </select>
+                                    </div>
+                                    <div class="pagination-nav" id="paginationNav">
+                                        <!-- Se rellena con JS -->
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <div class="no-results" id="adminNoResults">
+            😔 No se encontraron productos con esa búsqueda.
+        </div>
+    </div>
+
+    <!-- ===== VISTA: NUEVO PRODUCTO ===== -->
+    <div id="adminFormNuevoView" style="display:none;">
+        <div class="container">
+            <div class="card" style="cursor:default;">
+                <button onclick="catalogBackToGrid()" class="admin-btn-back">← Volver</button>
+
+                <i class="fas fa-plus-circle" style="font-size:2rem; color:var(--pink-accent); margin-top:0.5rem;"></i>
+                <h3 style="margin:0.5rem 0;">Nuevo Producto</h3>
+
+                <div style="text-align:left;">
+                    <label style="font-weight:bold; font-size:0.9rem;">Nombre del Producto: *</label>
+                    <input type="text" id="nuevoNombre" placeholder="Ej: Camiseta Estampada"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Categoría: *</label>
+                    <input type="text" id="nuevaCategoria" placeholder="Ej: Ropa"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Talla:</label>
+                    <input type="text" id="nuevaTalla" placeholder="Ej: M, L, XL"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Precio: *</label>
+                    <input type="number" id="nuevoPrecio" placeholder="Ej: 25.50"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">URL de la Imagen: *</label>
+                    <input type="text" id="nuevaImagen" placeholder="https://ejemplo.com/imagen.jpg"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Estado Inicial: *</label>
+                    <select id="nuevoEstado"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:1rem; box-sizing:border-box;">
+                        <option value="">-- Selecciona --</option>
+                        <!-- Opciones de estado se cargarán aquí, ej: Disponible, Agotado -->
+                    </select>
+
+                    <button onclick="guardarNuevoProducto()"
+                        style="width:100%; padding:12px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
+                        Guardar Producto
+                    </button>
+
+                    <div id="nuevoMensaje" style="margin-top:0.8rem; font-weight:bold; text-align:center;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== VISTA: ACTUALIZAR ESTADO ===== -->
+    <div id="adminFormView" style="display:none;">
+        <div class="container">
+            <div class="card" style="cursor:default;">
+                <button onclick="catalogBackToGrid()" class="admin-btn-back">← Volver</button>
+
+                <i class="fa fa-edit" style="font-size:2rem; color:var(--pink-accent); margin-top:0.5rem;"></i>
+                <h3 style="margin:0.5rem 0;">Actualizar Estado del Producto</h3>
+
+                <div id="adminFormProductoInfo" style="text-align:left; background:var(--pink-light); border-radius:10px; padding:12px 16px; margin-bottom:1.2rem; font-size:0.9rem;"></div>
+
+                <div style="text-align:left;">
+                    <label style="font-weight:bold; font-size:0.9rem;">Nuevo Estado:</label>
+                    <select id="adminSelectEstado"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+                        <option value="">-- Selecciona --</option>
+                         <!-- Opciones de estado se cargarán aquí -->
+                    </select>
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Nota (opcional):</label>
+                    <input type="text" id="adminDetalle" placeholder="Ej: Próximamente en stock..."
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <button onclick="catalogSaveStatus()"
+                        style="width:100%; padding:12px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
+                        Guardar Estado
+                    </button>
+
+                    <div id="adminMensaje" style="margin-top:0.8rem; font-weight:bold; text-align:center;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== VISTA: EDITAR PRODUCTO EXISTENTE ===== -->
+    <div id="adminFormEditView" style="display:none;">
+        <div class="container">
+            <div class="card" style="cursor:default;">
+                <button onclick="catalogBackToGrid()" class="admin-btn-back">← Volver</button>
+
+                <i class="fas fa-pencil-alt" style="font-size:2rem; color:var(--pink-accent); margin-top:0.5rem;"></i>
+                <h3 style="margin:0.5rem 0;">Editar Producto</h3>
+
+                <div style="text-align:left;">
+                    <label style="font-weight:bold; font-size:0.9rem;">Nombre del Producto: *</label>
+                    <input type="text" id="editNombre" placeholder="Nombre del producto"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Categoría: *</label>
+                    <input type="text" id="editCategoria" placeholder="Categoría del producto"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Talla:</label>
+                    <input type="text" id="editTalla" placeholder="Talla del producto"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Precio: *</label>
+                    <input type="number" id="editPrecio" placeholder="Precio del producto"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">URL de la Imagen: *</label>
+                    <input type="text" id="editImagen" placeholder="URL de la imagen del producto"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <button onclick="catalogSaveFullEdit()"
+                        style="width:100%; padding:12px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
+                        Guardar Cambios
+                    </button>
+
+                    <div id="editMensaje" style="margin-top:0.8rem; font-weight:bold; text-align:center;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>

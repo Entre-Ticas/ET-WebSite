@@ -1,0 +1,237 @@
+<link rel="stylesheet" href="../assets/css/order_items-admin.css">
+
+<div class="admin-wrapper">
+
+    <!-- ===== VISTA: GRID DE PRODUCTOS ===== -->
+    <div id="adminGridView">
+        <div class="admin-header">
+            <h2>🛍️ Gestión de Órdenes</h2>
+            <p>Busca, agrega y actualiza las órdenes de Personal Shopper.</p>
+        </div>
+
+        <div class="admin-search-bar">
+            <input type="text" id="adminSearchInput" placeholder="🔍 Buscar por cliente, producto..." oninput="filtrarOrdenes()" />
+            <button class="admin-btn-agregar" onclick="abrirFormNuevo()">+ Agregar Orden</button>
+        </div>
+        <div class="admin-multi-select-toolbar">
+            <label for="multiSelectToggle">
+                <input type="checkbox" id="multiSelectToggle" onchange="toggleOrderMultiSelect(this.checked)">
+                <span id="multiSelectLabel">Seleccionar Varios</span>
+            </label>
+            <div id="multiActionContainer" style="display: none;">
+                 <button id="orderMultiEditBtn" class="admin-btn-action btn-edit" onclick="handleOrderMultiEdit()" title="Editar Seleccionados"><i class="fas fa-pencil-alt"></i></button>
+                 <button id="orderMultiRevUsaBtn" class="admin-btn-action btn-invoice" onclick="handleOrderMultiBulkUSA()" title="Marcar Rev USA"><i class="fas fa-check-double"></i> Rev USA</button>
+                 <button id="orderMultiDeleteBtn" class="admin-btn-action btn-delete" onclick="handleOrderMultiDelete()" title="Eliminar Seleccionados"><i class="fas fa-trash-alt"></i></button>
+            </div>
+        </div>
+
+        <div id="adminStatus" class="catalog-status">
+            <div class="spinner"></div>
+            <p>Cargando órdenes...</p>
+        </div>
+
+        <div id="adminGrid" class="admin-grid">
+            <table class="admin-table" style="display: none;">
+                <thead>
+                    <tr class="admin-main-header">
+                        <th class="col-select" style="display: none;"><input type="checkbox" onchange="toggleOrderSelectAll(this.checked)"></th>
+                        <th>Img</th>
+                        <th class="sortable" onclick="sortOrdersBy('client_name')" data-col="client_name">Cliente <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortOrdersBy('client_phone')" data-col="client_phone">Teléfono <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortOrdersBy('product_name')" data-col="product_name">Producto <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortOrdersBy('size')" data-col="size">Talla <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortOrdersBy('quantity')" data-col="quantity">Cant. <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortOrdersBy('price')" data-col="price">Precio <span class="sort-arrow">↕</span></th>
+                        <th data-col="usa_reviewed">Rev. USA</th>
+                        <th class="col-invoice" style="display: none;">Factura ID</th>
+                        <th class="col-actions">Acciones</th>
+                    </tr>
+                    <tr class="admin-filter-row">
+                        <td class="col-select" style="display: none;"></td>
+                        <td></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setOrderColumnFilter('client_name', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setOrderColumnFilter('client_phone', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setOrderColumnFilter('product_name', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setOrderColumnFilter('size', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setOrderColumnFilter('quantity', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setOrderColumnFilter('price', this.value)" /></td>
+                        <td>
+                            <select class="admin-filter-select" onchange="setOrderColumnFilter('usa_reviewed', this.value)">
+                                <option value="">Todos</option><option value="true">Sí</option><option value="false">No</option>
+                            </select>
+                        </td>
+                        <td class="col-invoice" style="display: none;"><input type="text" placeholder="Filtrar... (o '-' sin factura)" oninput="setOrderColumnFilter('invoice_id', this.value)" /></td>
+                        <td class="col-actions"></td>
+                    </tr>
+                </thead>
+                <tbody id="adminTbody"></tbody>
+                <tfoot id="adminTableFooter" style="display: none;">
+                    <tr>
+                        <td id="footerColspan">
+                            <div class="admin-pagination-container" style="margin-top: 0;">
+                                <div class="pagination-info" id="paginationInfo">
+                                    <!-- Se rellena con JS -->
+                                </div>
+                                <div class="pagination-controls">
+                                    <div class="pagination-rows-selector">
+                                        <span>Filas:</span>
+                                        <select id="rowsPerPageSelector" onchange="changeOrderRowsPerPage(this.value)">
+                                            <option value="10">10</option>
+                                            <option value="30">30</option>
+                                            <option value="50">50</option>
+                                            <option value="100">100</option>
+                                            <option value="-1">Todos</option>
+                                        </select>
+                                    </div>
+                                    <div class="pagination-nav" id="paginationNav">
+                                        <!-- Se rellena con JS -->
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <div class="no-results" id="adminNoResults">
+            😔 No se encontraron órdenes con esa búsqueda.
+        </div>
+    </div>
+
+    <!-- ===== VISTA: NUEVO PRODUCTO ===== -->
+    <div id="adminFormNuevoView" style="display:none;">
+        <div class="container">
+            <div class="card" style="cursor:default;">
+                <button onclick="volverAlGrid()" class="admin-btn-back">← Volver</button>
+
+                <i class="fas fa-plus-circle" style="font-size:2rem; color:var(--pink-accent); margin-top:0.5rem;"></i>
+                <h3 style="margin:0.5rem 0;">Nueva Orden</h3>
+
+                <div style="text-align:left;">
+                        <div class="image-upload-container">
+                        <label for="nuevoImageUpload">Imagen del Producto</label>
+                        <div class="image-upload-content">
+                            <div class="image-preview" id="nuevoImagePreview">
+                                <img src="https://placehold.co/100x100/E19B9D/FFFFFF?text=?" alt="Vista previa de la imagen">
+                            </div>
+                            <div class="image-upload-buttons">
+                                <button class="admin-btn" onclick="triggerFileUpload('nuevo')" title="Subir Archivo"><i class="fas fa-upload"></i></button>
+                                <button class="admin-btn" onclick="triggerCameraUpload('nuevo')" title="Tomar Foto"><i class="fas fa-camera"></i></button>
+                            </div>
+                        </div>
+                        <input type="file" accept="image/*" id="nuevoImageUpload" class="image-upload-input" onchange="handleImageUpload(event, 'nuevo')">
+                        <input type="file" accept="image/*" capture id="nuevoCameraUpload" class="image-upload-input" onchange="handleImageUpload(event, 'nuevo')">
+                        <input type="hidden" id="nuevoImageUrl"> <!-- Campo oculto para guardar la URL final -->
+                        <small class="image-upload-status" id="nuevoImageStatus"></small>
+                    </div>
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Nombre del Cliente: *</label>
+                    <input type="text" id="nuevoClientName" placeholder="Ej: Ana Rodriguez"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Teléfono del Cliente: *</label>
+                    <input type="tel" id="nuevoClientPhone" placeholder="Ej: xxxx7777" maxlength="4"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Nombre del Producto: *</label>
+                    <input type="text" id="nuevoProductName" placeholder="Ej: Tenis Nike Air Force 1"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Talla:</label>
+                    <input type="text" id="nuevoSize" placeholder="Ej: 7.5"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Cantidad:</label>
+                    <div class="quantity-stepper">
+                        <button type="button" class="stepper-btn" onclick="updateQuantity('nuevoQuantity', -1)">-</button>
+                        <input type="number" id="nuevoQuantity" value="1" min="1" max="9999">
+                        <button type="button" class="stepper-btn" onclick="updateQuantity('nuevoQuantity', 1)">+</button>
+                    </div>
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Precio (₡): *</label>
+                    <input type="number" id="nuevoPrice" placeholder="Ej: 65000"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <button id="btnGuardarNuevaOrden" onclick="guardarNuevaOrden()"
+                        style="width:100%; padding:12px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
+                        Guardar Orden
+                    </button>
+
+                    <div id="nuevoMensaje" style="margin-top:0.8rem; font-weight:bold; text-align:center;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== VISTA: EDITAR Orden EXISTENTE ===== -->
+    <div id="adminFormEditView" style="display:none;">
+        <div class="container">
+            <div class="card" style="cursor:default;">
+                <button onclick="volverAlGrid()" class="admin-btn-back">← Volver</button>
+
+                <i class="fas fa-pencil-alt" style="font-size:2rem; color:var(--pink-accent); margin-top:0.5rem;"></i>
+                <h3 style="margin:0.5rem 0;">Editar Orden</h3>
+
+                <div style="text-align:left;">
+                    <div class="image-upload-container">
+                        <label for="editImageUpload">Imagen del Producto</label>
+                        <div class="image-upload-content">
+                            <div class="image-preview" id="editImagePreview">
+                                <img src="https://placehold.co/100x100/E19B9D/FFFFFF?text=?" alt="Vista previa de la imagen">
+                            </div>
+                            <div class="image-upload-buttons">
+                                <button class="admin-btn" onclick="triggerFileUpload('edit')" title="Subir Archivo"><i class="fas fa-upload"></i></button>
+                                <button class="admin-btn" onclick="triggerCameraUpload('edit')" title="Tomar Foto"><i class="fas fa-camera"></i></button>
+                            </div>
+                        </div>
+                        <input type="file" accept="image/*" id="editImageUpload" class="image-upload-input" onchange="handleImageUpload(event, 'edit')">
+                        <input type="file" accept="image/*" capture id="editCameraUpload" class="image-upload-input" onchange="handleImageUpload(event, 'edit')">
+                        <input type="hidden" id="editImageUrl"> <!-- Campo oculto para guardar la URL final -->
+                        <small class="image-upload-status" id="editImageStatus"></small>
+                    </div>
+                    
+                    <label style="font-weight:bold; font-size:0.9rem;">Nombre del Cliente: *</label>
+                    <input type="text" id="editNombre" placeholder="Nombre del cliente"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Teléfono del Cliente: *</label>
+                    <input type="tel" id="editClientPhone" placeholder="Ej: xxxx7777" maxlength="4"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Nombre del Producto: *</label>
+                    <input type="text" id="editProducto" placeholder="Nombre del producto"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Talla:</label>
+                    <input type="text" id="editTalla" placeholder="Talla del producto"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Cantidad:</label>
+                    <div class="quantity-stepper">
+                        <button type="button" class="stepper-btn" onclick="updateQuantity('editCantidad', -1)">-</button>
+                        <input type="number" id="editCantidad" placeholder="Cantidad" min="1" max="9999">
+                        <button type="button" class="stepper-btn" onclick="updateQuantity('editCantidad', 1)">+</button>
+                    </div>
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Precio: *</label>
+                    <input type="number" id="editPrecio" placeholder="Precio del producto"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+                   
+                    <label class="custom-checkbox-container">
+                        <input type="checkbox" id="editUsaReviewed">
+                        <span class="checkbox-label">Revisado en USA</span>
+                    </label>
+                    
+                    <button id="btnGuardarEdicion" onclick="guardarEdicionCompleta()"
+                        style="width:100%; padding:12px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
+                        Guardar Cambios
+                    </button>
+
+                    <div id="editMensaje" style="margin-top:0.8rem; font-weight:bold; text-align:center;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>

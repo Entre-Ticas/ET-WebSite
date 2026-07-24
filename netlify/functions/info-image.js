@@ -27,11 +27,6 @@ exports.handler = async (event) => {
         if (!response.ok) throw new Error(`Supabase error: ${response.status}`);
 
         const dataArray = await response.json();
-        // Imprimimos en los logs de Netlify para depurar
-        console.log('Respuesta de Supabase:', JSON.stringify(dataArray));
-
-        // Las funciones RPC de Supabase pueden devolver un objeto o un array con un objeto.
-        // Esta lógica maneja ambos casos de forma segura.
         const result = Array.isArray(dataArray) ? dataArray[0] : dataArray;
 
         return { statusCode: 200, body: JSON.stringify({ imageUrl: result?.value1 || null }) };

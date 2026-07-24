@@ -10,9 +10,46 @@
         </div>
 
         <!-- Espacio para mostrar el resultado -->
-        <div id="resultadoRastreo" style="display:none; margin-top: 1.5rem; text-align: center; padding: 1rem; background: var(--pink-light); border-radius: 10px; color: var(--brown-text);">
-            <h4 style="margin-top:0;">📦 Información del Paquete:</h4>
+        <div id="resultadoRastreo" style="display:none; margin-top: 1.5rem; text-align: center;">
+            <!-- Mantenemos este div para mensajes de estado como "Buscando..." o errores -->
             <div id="infoDetalle"></div>
+
+            <!-- Plantilla para los resultados (oculta por defecto) -->
+            <div id="trackingTemplate" style="display: none;">
+                <div class="tracking-info-box">
+                    <div class="tracking-info-estado-wrap">
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px;">
+                            <span class="tracking-estado-badge" style="margin: 0;" data-field="ultimoEstado"></span>
+                        </div>
+                    </div>
+                    <div class="tracking-info-rows">
+                        <!-- Las filas de información se insertarán aquí dinámicamente -->
+                    </div>
+                </div>
+
+                <div class="tracking-table-wrapper" style="display: none;">
+                    <table class="tracking-table">
+                        <thead>
+                            <tr><th>Estado</th><th>Fecha</th></tr>
+                        </thead>
+                        <tbody>
+                            <!-- Las filas del historial se insertarán aquí dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <a href="#" target="_blank" class="btn-whatsapp-track" data-field="whatsappLink">
+                    <i class="fab fa-whatsapp"></i> Consultar por WhatsApp
+                </a>
+            </div>
         </div>
     </div>
 </div>
+
+<!-- Plantilla para una fila del historial (totalmente invisible y reutilizable) -->
+<template id="historialRowTemplate">
+    <tr>
+        <td data-field="detalleEstado"></td>
+        <td data-field="fecha"></td>
+    </tr>
+</template>

@@ -1,0 +1,320 @@
+.invoice-summary-container {
+    display: grid;
+    grid-template-columns: minmax(340px, 1.6fr) minmax(260px, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.summary-card-main {
+    min-width: 0;
+}
+
+.summary-card {
+    background-color: #fff;
+    border: 1px solid var(--pink-light);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.summary-card h4 {
+    margin-top: 0;
+    color: var(--pink-accent);
+    border-bottom: 2px solid var(--pink-light);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.summary-card p {
+    margin: 0.5rem 0;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.summary-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.35rem 1rem;
+}
+
+.summary-status-line {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.invoice-status-badge {
+    display: inline-block;
+    padding: 0.2rem 0.9rem;
+    border-radius: 999px;
+    background: #f8d7da;
+    color: #8a2d3b;
+    font-weight: 700;
+}
+
+.invoice-status-badge.is-paid {
+    background: #d8f3dc;
+    color: #1b6b45;
+}
+
+.invoice-status-badge.is-pending {
+    background: #fff1cc;
+    color: #8a5a00;
+}
+
+.summary-card .balance-due {
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: #c0392b;
+    margin-top: 1rem;
+    background-color: #f9e5e5;
+    padding: 0.5rem;
+    border-radius: 8px;
+}
+
+.add-payment-section {
+    margin-bottom: 2rem;
+    text-align: left;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--pink-light);
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.invoice-collapse-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: none;
+    background: transparent;
+    color: var(--pink-accent);
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0;
+}
+
+.invoice-collapse-toggle .collapse-icon {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #fff3f6;
+    transition: transform 0.2s ease;
+}
+
+.invoice-collapse-toggle.is-open .collapse-icon {
+    transform: rotate(45deg);
+}
+
+.payment-form-collapse {
+    margin-top: 1rem;
+}
+
+.payment-form-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto;
+    gap: 1rem;
+    align-items: center;
+}
+
+.payment-form-grid input {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--pink-light);
+    box-sizing: border-box;
+}
+
+.invoice-details-title {
+    margin: 0 0 0.8rem;
+    color: var(--pink-accent);
+}
+
+.invoice-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1.5px solid #e8b8c4;
+    background: #fff;
+    box-shadow: 0 2px 12px rgba(225, 155, 157, 0.18);
+}
+
+.invoice-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    text-align: left;
+    background: #fff;
+    table-layout: fixed;
+    min-width: 760px;
+}
+
+.invoice-table col.col-tipo { width: 90px; }
+.invoice-table col.col-detalle { width: 260px; }
+.invoice-table col.col-fecha { width: 120px; }
+.invoice-table col.col-cantidad { width: 96px; }
+.invoice-table col.col-unitario { width: 110px; }
+.invoice-table col.col-monto { width: 110px; }
+
+.invoice-table thead tr {
+    background: var(--pink-accent);
+    color: white;
+}
+
+.invoice-table th,
+.invoice-table td {
+    text-align: left;
+    padding: 0.8rem;
+    border-bottom: 1px solid var(--pink-light);
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.invoice-table th:nth-child(2),
+.invoice-table td:nth-child(2) {
+    white-space: normal;
+}
+
+.invoice-table tbody tr:hover {
+    background: #fff5f8;
+}
+
+.invoice-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.invoice-table tfoot tr {
+    background: #fff5f8;
+}
+
+.invoice-table-footer-cell {
+    border-top: 2px solid #e8b8c4;
+    border-bottom: none;
+    padding: 0.75rem 0.9rem;
+}
+
+.invoice-table-footer-content {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+    font-size: 0.84rem;
+}
+
+.invoice-grid-balance {
+    color: #c0392b;
+}
+
+.invoice-entry-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 64px;
+    padding: 0.18rem 0.45rem;
+    border-radius: 999px;
+    font-size: 0.63rem;
+    font-weight: 700;
+}
+
+.invoice-entry-badge.is-item {
+    background: #ffe3ec;
+    color: #a23664;
+}
+
+.invoice-entry-badge.is-payment {
+    background: #e4f7ea;
+    color: #1b6b45;
+}
+
+.invoice-detail-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+}
+
+.invoice-thumb-button {
+    border: none;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    flex: 0 0 auto;
+}
+
+.invoice-thumb {
+    width: 42px;
+    height: 42px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #efcad3;
+    box-shadow: 0 2px 8px rgba(225, 155, 157, 0.18);
+}
+
+.invoice-row-note {
+    display: inline-block;
+    margin-top: 0.25rem;
+    font-size: 0.78rem;
+    color: #7a7a7a;
+    font-style: italic;
+}
+
+.invoice-empty-row td {
+    text-align: center;
+    color: #7a7a7a;
+    background: #fffafb;
+}
+
+.invoice-amount-negative {
+    color: #c0392b;
+    font-weight: 700;
+}
+
+@media (max-width: 900px) {
+    .invoice-summary-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .payment-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .invoice-detail-cell {
+        gap: 0.7rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .summary-card {
+        padding: 1rem;
+    }
+
+    .invoice-table {
+        min-width: 700px;
+    }
+
+    .invoice-table col.col-tipo { width: 84px; }
+    .invoice-table col.col-cantidad { width: 92px; }
+
+    .invoice-table th,
+    .invoice-table td {
+        padding: 0.7rem;
+        font-size: 0.84rem;
+    }
+
+    .invoice-table-footer-content {
+        justify-content: flex-start;
+        gap: 0.6rem 1rem;
+        font-size: 0.78rem;
+    }
+
+    .invoice-thumb {
+        width: 36px;
+        height: 36px;
+    }
+}

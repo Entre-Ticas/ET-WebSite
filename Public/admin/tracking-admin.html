@@ -9,7 +9,7 @@
 
         <div class="admin-search-bar">
             <input type="text" id="adminSearchInput" placeholder="🔍 Buscar por cliente, producto o guía..." oninput="filtrarTrackings()" />
-            <button class="admin-btn-agregar" onclick="abrirFormNuevo()">+ Agregar</button>
+            <button class="admin-btn-agregar" onclick="openTrackingNewForm()">+ Agregar</button>
         </div>
 
         <div id="adminStatus" class="catalog-status">
@@ -17,7 +17,45 @@
             <p>Cargando paquetes...</p>
         </div>
 
-        <div id="adminGrid" class="admin-grid"></div>
+        <div id="adminGrid" class="admin-grid">
+            <table class="admin-table" style="display: none;">
+                <thead>
+                    <tr class="admin-main-header">
+                        <th class="sortable" onclick="trackingSortBy('cliente')" data-col="cliente">Cliente <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="trackingSortBy('producto')" data-col="producto">Producto <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="trackingSortBy('guia')" data-col="guia">Guía <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="trackingSortBy('fecha')" data-col="fecha">F. Compra <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="trackingSortBy('estado')" data-col="estado">Estado Actual <span class="sort-arrow">↕</span></th>
+                        <th>Acciones</th>
+                    </tr>
+                    <tr class="admin-filter-row">
+                        <td><input type="text" placeholder="Filtrar..." oninput="setTrackingColumnFilter('cliente', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setTrackingColumnFilter('producto', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setTrackingColumnFilter('guia', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setTrackingColumnFilter('fecha', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setTrackingColumnFilter('estado', this.value)" /></td>
+                        <td></td>
+                    </tr>
+                </thead>
+                <tbody id="adminTbody"></tbody>
+                <tfoot id="adminTableFooter" style="display: none;">
+                    <tr>
+                        <td id="footerColspan">
+                            <div class="admin-pagination-container" style="margin-top: 0;">
+                                <div class="pagination-info" id="paginationInfo"></div>
+                                <div class="pagination-controls">
+                                    <div class="pagination-rows-selector">
+                                        <span>Filas:</span>
+                                        <select id="rowsPerPageSelector" onchange="changeTrackingRowsPerPage(this.value)"><option value="10">10</option><option value="30">30</option><option value="50">50</option><option value="100">100</option><option value="-1">Todos</option></select>
+                                    </div>
+                                    <div class="pagination-nav" id="paginationNav"></div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
 
         <div class="no-results" id="adminNoResults">
             😔 No se encontraron paquetes con esa búsqueda.
@@ -28,7 +66,7 @@
     <div id="adminFormNuevoView" style="display:none;">
         <div class="container">
             <div class="card" style="cursor:default;">
-                <button onclick="cerrarFormNuevo()" class="admin-btn-back">← Volver</button>
+                <button onclick="closeTrackingNewForm()" class="admin-btn-back">← Volver</button>
 
                 <i class="fas fa-plus-circle" style="font-size:2rem; color:var(--pink-accent); margin-top:0.5rem;"></i>
                 <h3 style="margin:0.5rem 0;">Nuevo Paquete</h3>
@@ -79,7 +117,7 @@
     <div id="adminFormView" style="display:none;">
         <div class="container">
             <div class="card" style="cursor:default;">
-                <button onclick="volverAlGrid()" class="admin-btn-back">← Volver</button>
+                <button onclick="backToTrackingGrid()" class="admin-btn-back">← Volver</button>
 
                 <i class="fa fa-edit" style="font-size:2rem; color:var(--pink-accent); margin-top:0.5rem;"></i>
                 <h3 style="margin:0.5rem 0;">Actualizar Estado</h3>
@@ -97,7 +135,7 @@
                     <input type="text" id="adminDetalle" placeholder="Ej: Retenido por falta de factura..."
                         style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
 
-                    <button onclick="guardarEstado()"
+                    <button onclick="saveTrackingStatus()"
                         style="width:100%; padding:12px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
                         Guardar Estado
                     </button>
@@ -112,7 +150,7 @@
     <div id="adminFormEditView" style="display:none;">
         <div class="container">
             <div class="card" style="cursor:default;">
-                <button onclick="volverAlGrid()" class="admin-btn-back">← Volver</button>
+                <button onclick="backToTrackingGrid()" class="admin-btn-back">← Volver</button>
 
                 <i class="fas fa-pencil-alt" style="font-size:2rem; color:var(--pink-accent); margin-top:0.5rem;"></i>
                 <h3 style="margin:0.5rem 0;">Editar Paquete</h3>
@@ -142,7 +180,7 @@
                     <input type="date" id="editFechaMiami"
                         style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
 
-                    <button onclick="guardarEdicionCompleta()"
+                    <button onclick="saveTrackingFullEdit()"
                         style="width:100%; padding:12px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
                         Guardar Cambios
                     </button>

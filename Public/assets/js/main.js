@@ -1,4 +1,22 @@
 // Lógica principal y navegación del sitio
+
+async function loadHeaderImage() {
+    const logoImg = document.querySelector('header .logo');
+    if (!logoImg) return;
+
+    try {
+        const response = await fetch(`/.netlify/functions/info-image?id=ImagenET`);
+        if (!response.ok) return; // Si falla, simplemente se queda la imagen por defecto.
+
+        const { imageUrl } = await response.json();
+        if (imageUrl) {
+            logoImg.src = imageUrl;
+        }
+    } catch (error) {
+        console.error('Error al cargar la imagen del encabezado:', error);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // Inicializar links de redes sociales con variables de setup.js
     if (document.getElementById('btnWhatsappFlotante')) {
@@ -14,18 +32,28 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('btnFacebookFlotante').href = `https://www.facebook.com/${Facebook_user}`;
     }
 
-    // Routing basado en pathname: /tracking/qwerty → page=tracking, param=qwerty
+    loadHeaderImage();
+
     const handleRouting = () => {
-        const parts = window.location.pathname.split('/').filter(Boolean);
-        const pageName = parts[0] || null;
-        const param    = parts[1] || null;
-        if (pageName) loadPage(pageName, param);
+        const parts = window.location.pathname.split('/').filter(Boolean); // ej: ['admin', 'catalog']
+        let pageToLoad = parts[0] || 'home'; // Si no hay nada, vamos a home.
+        let paramToLoad = parts[1] || null;
+
+        // Manejo especial para rutas anidadas como /admin/catalog
+        if (pageToLoad === 'admin' && parts.length > 1) {
+            pageToLoad = `admin/${parts[1]}`; // Construye la ruta completa: 'admin/catalog'
+            paramToLoad = parts[2] || null; // El siguiente sería el parámetro
+        }
+
+        // Si estamos en la página de inicio, no hacemos nada para evitar el bucle de recarga.
+        // El contenido de la home ya está en index.html.
+        if (pageToLoad !== 'home') {
+            loadPage(pageToLoad, paramToLoad);
+        }
     };
 
-    // Ejecutar al cargar la página
     handleRouting();
 
-    // Escuchar navegación con botones atrás/adelante del browser
     window.addEventListener('popstate', handleRouting);
 
     // Cerrar el menú social si se hace clic fuera de él (en cualquier otro sector)
@@ -35,6 +63,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (menu && links && links.classList.contains('active') && !menu.contains(e.target)) {
             toggleSocialMenu();
         }
+
+        // --- LÓGICA GLOBAL PARA CERRAR MODAL DE IMAGEN ---
+        // Si se hace clic en el fondo oscuro del modal...
+        if (e.target.id === 'imgModal') {
+            closeImageModal();
+        }
+        // Si se hace clic en el botón de cerrar (o en el ícono dentro de él)...
+        if (e.target.closest('.close-btn')) {
+            closeImageModal();
+        }
+        // --- FIN LÓGICA GLOBAL ---
+
     });
 });
 
@@ -58,7 +98,6 @@ async function loadPage(page, param = null) {
     const container = document.getElementById('content-area');
     if (!container) return;
     
-    // Colapsar el menú social si está abierto al cambiar de página
     const socialLinks = document.getElementById('socialLinks');
     if (socialLinks && socialLinks.classList.contains('active')) {
         toggleSocialMenu();
@@ -67,11 +106,27 @@ async function loadPage(page, param = null) {
     // Efecto de salida (hace la pantalla transparente temporalmente)
     container.classList.add('fade-out');
     
+    // --- INICIO: LÓGICA DE SEGURIDAD ---
+    // Lista de rutas que requieren que el usuario esté autenticado.
+    const protectedRoutes = ['admin/tracking', 'admin/catalog', 'admin/order', 'admin/invoices', 'admin/invoice', 'admin/payments'];
+    // Verificamos si la página solicitada es protegida Y si el usuario NO tiene una sesión activa.
+    // La función getSession() ya existe en auth.js y nos dice si hay un token válido.
+    if (protectedRoutes.includes(page) && !getSession()) {
+        console.warn(`Acceso no autorizado a la ruta protegida '${page}'. Redirigiendo al inicio.`);
+        alert('Debes iniciar sesión para acceder a esta página.');
+        
+        // Redirigimos a la página de inicio de forma segura.
+        window.location.href = '/';
+        return; // Detenemos la ejecución para no cargar la página de admin.
+    }
+    // --- FIN: LÓGICA DE SEGURIDAD ---
+
     setTimeout(async () => {
         try {
             if (page === 'home') {
                 history.pushState({}, '', '/');
-                location.reload();
+                const response = await fetch('/index.html');
+                container.innerHTML = (await response.text()).match(/<div id="content-area">([\s\S]*)<\/div>/)[1];
                 return;
             }
 
@@ -84,7 +139,12 @@ async function loadPage(page, param = null) {
                 'calc': 'Calc/calc.html',
                 'catalog': 'Catalog/catalog.html',
                 'tracking': 'Tracking/tracking.html',
-                'admin': 'Tracking/tracking-admin.html',
+                'admin/tracking': 'admin/tracking-admin.html',
+                'admin/catalog': 'admin/catalog-admin.html',
+                'admin/order': 'admin/order_items-admin.html', // Nueva ruta estándar
+                'admin/invoices': 'admin/invoices-admin.html', // Nueva ruta
+                'admin/invoice': 'admin/invoice-admin.html', // Nueva ruta
+                'admin/payments': 'admin/payments-admin.html', // Nueva ruta
                 'info': 'InformationImg/info.html',
                 'informacion': 'InformationImg/infoImg.html'
             };
@@ -101,6 +161,10 @@ async function loadPage(page, param = null) {
 
             container.innerHTML = html;
 
+            // Ejecutamos la limpieza en el siguiente ciclo de eventos,
+            // asegurando que el DOM se haya actualizado.
+            setTimeout(() => cleanupLegacyModalEvents(), 0);
+
             if (page === 'calc') {
                 // La función init() ya se llama dentro del calc.html revertido
                 if (typeof init === 'function') init();
@@ -111,8 +175,19 @@ async function loadPage(page, param = null) {
                 if (input) { input.value = param; buscarTracking(); }
             } else if (page === 'informacion' && typeof loadInfo === 'function' && param) {
                 loadInfo(param);
-            } else if (page === 'admin' && typeof loadAdmin === 'function') {
-                loadAdmin();
+            // --- INICIALIZACIÓN DE PÁGINAS DE ADMINISTRACIÓN ---
+            } else if (page === 'admin/tracking' && typeof window.initTrackingAdminPage === 'function') {
+                window.initTrackingAdminPage();
+            } else if (page === 'admin/catalog' && typeof window.initCatalogAdminPage === 'function') {
+                window.initCatalogAdminPage();
+            } else if (page === 'admin/order' && typeof window.initOrderItemsAdminPage === 'function') {
+                window.initOrderItemsAdminPage();
+            } else if (page === 'admin/invoices' && typeof window.initInvoicesAdminPage === 'function') {
+                window.initInvoicesAdminPage();
+            } else if (page === 'admin/invoice' && typeof window.initInvoiceAdminPage === 'function' && param) {
+                window.initInvoiceAdminPage(param);
+            } else if (page === 'admin/payments' && typeof window.initPaymentsAdminPage === 'function') {
+                window.initPaymentsAdminPage();
             }
 
         } catch (error) {
@@ -152,3 +227,62 @@ async function copiarGuia(btn, guia) {
         console.error('Error al copiar:', err);
     }
 }
+
+/**
+ * Abre el modal para mostrar una imagen en grande.
+ * @param {string} src - La URL de la imagen a mostrar.
+ */
+function openImageModal(src) {
+    if (!src) return; // No hacer nada si no hay imagen
+    const modal = document.getElementById('imgModal');
+    const modalImg = document.getElementById('modalImg');
+    if (modal && modalImg) {
+        modalImg.src = src;
+        modal.classList.add('active');
+    }
+}
+
+/** Cierra el modal de la imagen. */
+function closeImageModal() {
+    document.getElementById('imgModal')?.classList.remove('active');
+}
+
+/**
+ * Busca y elimina los atributos onclick obsoletos del modal de imagen
+ * para prevenir errores en la consola. La lógica de cierre real
+ * está centralizada en el event listener global de main.js.
+ */
+function cleanupLegacyModalEvents() {
+    const modalOverlay = document.getElementById('imgModal');
+    const modalCloseBtn = modalOverlay?.querySelector('.close-btn');
+
+    if (modalOverlay) modalOverlay.removeAttribute('onclick');
+    if (modalCloseBtn) modalCloseBtn.removeAttribute('onclick');
+}
+
+/**
+ * Abre un modal genérico con contenido personalizado.
+ * @param {string} title - El título para el encabezado del modal.
+ * @param {string} bodyHtml - El contenido HTML para el cuerpo del modal.
+ * @param {string} footerHtml - El HTML para los botones del pie de página.
+ */
+function openGenericModal(title, bodyHtml, footerHtml = '') {
+    document.getElementById('genericModalTitle').textContent = title;
+    document.getElementById('genericModalBody').innerHTML = bodyHtml;
+    
+    // Si se provee un footer personalizado, lo usamos.
+    // Si no, la función no hace nada y se usan los botones por defecto del HTML.
+    if (footerHtml !== '') {
+        document.getElementById('genericModalFooter').innerHTML = footerHtml;
+    }
+
+    document.getElementById('genericModal').classList.add('active');
+}
+
+/** Cierra el modal genérico. */
+function closeGenericModal() {
+    document.getElementById('genericModal').classList.remove('active');
+}
+
+
+window.loadPage = loadPage;

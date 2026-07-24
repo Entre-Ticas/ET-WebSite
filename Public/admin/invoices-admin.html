@@ -1,0 +1,182 @@
+<link rel="stylesheet" href="../assets/css/order_items-admin.css"> <!-- Reutilizamos el CSS de órdenes -->
+
+<div class="admin-wrapper">
+
+    <!-- ===== VISTA: GRID DE FACTURAS ===== -->
+    <div id="adminGridView">
+        <div class="admin-header">
+            <h2>🧾 Gestión de Facturas</h2>
+            <p>Busca, agrupa y gestiona las facturas de los clientes.</p>
+        </div>
+
+        <div class="admin-search-bar">
+            <input type="text" id="adminSearchInput" placeholder="🔍 Buscar por cliente, teléfono o ID de factura..." oninput="filtrarFacturas()" />
+            <button class="admin-btn-agregar" onclick="openNewInvoiceForm()">+ Agregar Factura</button>
+        </div>
+        <div class="admin-multi-select-toolbar">
+            <label for="multiSelectToggle">
+                <input type="checkbox" id="multiSelectToggle" onchange="toggleInvoiceMultiSelect(this.checked)">
+                <span id="multiSelectLabel">Seleccionar Varios</span>
+            </label>
+            <div id="multiActionContainer" style="display: none;">
+                <button id="multiEditBtn" class="admin-btn-action btn-edit" onclick="handleMultiEdit()" title="Editar Seleccionados"><i class="fas fa-pencil-alt"></i></button>
+                <button id="multiDeleteBtn" class="admin-btn-action btn-delete" onclick="handleMultiDelete()" title="Eliminar Seleccionados"><i class="fas fa-trash-alt"></i></button>
+            </div>
+        </div>
+
+        <div id="adminStatus" class="catalog-status">
+            <div class="spinner"></div>
+            <p>Cargando facturas...</p>
+        </div>
+
+        <div id="adminGrid" class="admin-grid">
+            <table class="admin-table" style="display: none;">
+                <thead>
+                    <tr class="admin-main-header">
+                        <th class="col-select" style="display: none;"><input type="checkbox" onchange="toggleInvoiceSelectAll(this.checked)"></th>
+                        <th class="sortable" onclick="sortInvoicesBy('id')" data-col="id">ID Factura <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortInvoicesBy('client_name')" data-col="client_name">Cliente <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortInvoicesBy('client_phone')" data-col="client_phone">Teléfono <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortInvoicesBy('invoice_date')" data-col="invoice_date">Fecha <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortInvoicesBy('status_name')" data-col="status_name">Estado <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortInvoicesBy('items_count')" data-col="items_count">Items <span class="sort-arrow">↕</span></th>
+                        <th data-col="paid">Pagada</th>
+                        <th>Acciones</th>
+                    </tr>
+                    <tr class="admin-filter-row">
+                        <td class="col-select" style="display: none;"></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('id', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('client_name', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('client_phone', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('invoice_date', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('status_name', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setColumnFilter('items_count', this.value)" /></td>
+                        <td>
+                            <select class="admin-filter-select" onchange="setColumnFilter('paid', this.value)">
+                                <option value="">Todos</option><option value="true">Sí</option><option value="false">No</option>
+                            </select>
+                        </td>
+                        <td></td>
+                    </tr>
+                </thead>
+                <tbody id="adminTbody"></tbody>
+                <tfoot id="adminTableFooter" style="display: none;">
+                    <tr>
+                        <td id="footerColspan">
+                            <div class="admin-pagination-container" style="margin-top: 0;">
+                                <div class="pagination-info" id="paginationInfo">
+                                    <!-- Se rellena con JS -->
+                                </div>
+                                <div class="pagination-controls">
+                                    <div class="pagination-rows-selector">
+                                        <span>Filas:</span>
+                                        <select id="rowsPerPageSelector" onchange="changeInvoiceRowsPerPage(this.value)">
+                                            <option value="10">10</option>
+                                            <option value="30">30</option>
+                                            <option value="50">50</option>
+                                            <option value="100">100</option>
+                                            <option value="-1">Todos</option>
+                                        </select>
+                                    </div>
+                                    <div class="pagination-nav" id="paginationNav">
+                                        <!-- Se rellena con JS -->
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <div class="no-results" id="adminNoResults">
+            😔 No se encontraron facturas con esa búsqueda.
+        </div>
+    </div>
+
+    <!-- ===== VISTA: NUEVA FACTURA ===== -->
+    <div id="adminFormNuevoView" style="display:none;">
+        <div class="container">
+            <div class="card" style="cursor:default;">
+                <button onclick="backToInvoicesGrid()" class="admin-btn-back">← Volver</button>
+
+                <i class="fas fa-plus-circle" style="font-size:2rem; color:var(--pink-accent); margin-top:0.5rem;"></i>
+                <h3 style="margin:0.5rem 0;">Nueva Factura</h3>
+
+                <div style="text-align:left;">
+                    <label style="font-weight:bold; font-size:0.9rem;">Nombre del Cliente: *</label>
+                    <input type="text" id="newInvoiceClientName" placeholder="Ej: Ana Rodriguez"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Telefono del Cliente: *</label>
+                    <input type="text" id="newInvoiceClientPhone" placeholder="Ej: 88887777"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Fecha Factura (opcional):</label>
+                    <input type="datetime-local" id="newInvoiceDate"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Estado ID (opcional):</label>
+                    <input type="number" id="newInvoiceStatusId" min="1" step="1" placeholder="1"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.5rem; box-sizing:border-box;">
+                    <small style="display:block; color:#777; margin-bottom:0.8rem;">Si lo dejas vacio se usa 1.</small>
+
+                    <label class="custom-checkbox-container" style="margin-bottom:1rem; display:flex; align-items:center; gap:8px;">
+                        <input type="checkbox" id="newInvoicePaid">
+                        <span class="checkbox-label">Marcar como pagada</span>
+                    </label>
+
+                    <button id="btnGuardarNuevaFactura" onclick="saveNewInvoice()"
+                        style="width:100%; padding:12px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
+                        Guardar Factura
+                    </button>
+
+                    <div id="newInvoiceError" style="margin-top:0.8rem; font-weight:bold; text-align:center;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== VISTA: EDITAR FACTURA ===== -->
+    <div id="adminFormEditView" style="display:none;">
+        <div class="container">
+            <div class="card" style="cursor:default;">
+                <button onclick="backToInvoicesGrid()" class="admin-btn-back">← Volver</button>
+
+                <i class="fas fa-pencil-alt" style="font-size:2rem; color:var(--pink-accent); margin-top:0.5rem;"></i>
+                <h3 style="margin:0.5rem 0;">Editar Factura</h3>
+
+                <div style="text-align:left;">
+                    <label style="font-weight:bold; font-size:0.9rem;">Nombre del Cliente: *</label>
+                    <input type="text" id="editInvoiceClientName" placeholder="Nombre del cliente"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Telefono del Cliente: *</label>
+                    <input type="text" id="editInvoiceClientPhone" placeholder="Telefono del cliente" maxlength="4" inputmode="numeric" pattern="[0-9]{1,4}" oninput="this.value = this.value.replace(/\D/g, '').slice(0, 4)"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Fecha Factura:</label>
+                    <input type="datetime-local" id="editInvoiceDate"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label style="font-weight:bold; font-size:0.9rem;">Estado ID:</label>
+                    <input type="number" id="editInvoiceStatusId" min="1" step="1"
+                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <label class="custom-checkbox-container" style="margin-bottom:1rem; display:flex; align-items:center; gap:8px;">
+                        <input type="checkbox" id="editInvoicePaid">
+                        <span class="checkbox-label">Marcar como pagada</span>
+                    </label>
+
+                    <button id="btnGuardarEdicionFactura" onclick="saveInvoiceEdit()"
+                        style="width:100%; padding:12px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
+                        Guardar Cambios
+                    </button>
+
+                    <div id="editInvoiceError" style="margin-top:0.8rem; font-weight:bold; text-align:center;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>

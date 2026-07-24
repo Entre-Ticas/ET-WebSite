@@ -3,7 +3,7 @@ body {
       background: linear-gradient(to bottom, #ffe6f0, #fff5fa);
       color: #4b2e2e;
       text-align: center;
-      padding: 30px;
+      padding: 0px;
       margin: 0;
     }
 
@@ -29,6 +29,36 @@ body {
         color: #E19B9D;
         font-size: 1.1rem;
         display: none;
+    }
+    .img-modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.75);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+    }
+    .img-modal-overlay.active {
+        display: flex;
+    }
+    .img-modal-overlay img {
+        max-width: 90vw;
+        max-height: 85vh;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        margin: 0;
+    }
+    .img-modal-overlay .close-btn {
+        position: absolute;
+        top: 20px;
+        right: 25px;
+        font-size: 2rem;
+        color: white;
+        cursor: pointer;
+        line-height: 1;
+        background: none;
+        border: none;
     }
     .img-modal-overlay {
         display: none;
@@ -338,7 +368,8 @@ body {
 
 .admin-table tbody td {
     font-size: 0.82rem;   
-    padding: 6px 14px;     
+    padding: 6px 14px;
+}
 
 .admin-actions-cell button {
     font-size: 0.75rem;   
@@ -404,4 +435,274 @@ body {
 
 .nav-dropdown:hover .nav-dropdown-content {
     display: block;
+}
+
+/* ========================================= */
+/* ESTILOS ESTANDARIZADOS PARA BOTONES ADMIN */
+/* ========================================= */
+.admin-btn-action {
+    background: none; 
+    border: 1px solid rgba(112, 78, 54, 0.2);
+    color: var(--brown-text);
+    cursor: pointer;
+    padding: 5px 8px;
+    border-radius: 6px;
+    margin: 0 2px;
+    transition: all 0.2s ease;
+    font-size: 0.8rem; 
+}
+
+.admin-btn-action:hover {
+    background-color: #fdf0f1; /* Un rosado muy pálido al pasar el mouse */
+    border-color: var(--pink-accent);
+    color: var(--pink-accent);
+    transform: translateY(-1px);
+}
+
+/* Colores específicos para cada tipo de botón, como en Tracking Admin */
+.admin-btn-action.btn-edit { background-color: #f3bfc1; color: white; }
+.admin-btn-action.btn-update { background-color: var(--pink-accent); color: white; }
+.admin-btn-action.btn-track { background-color: #f3bfc1; color: white; }
+.admin-btn-action.btn-invoice { background-color: #a8d8b9; color: white; } /* Verde para facturas */
+.admin-btn-action.btn-delete { background-color: #f5c6cb; color: white; } 
+
+.admin-btn-action.btn-edit:hover,
+.admin-btn-action.btn-update:hover,
+.admin-btn-action.btn-invoice:hover,
+.admin-btn-action.btn-track:hover { opacity: 0.85; background-color: var(--pink-accent); }
+
+/* Colores específicos para acciones comunes */
+.admin-btn-action.btn-delete:hover {
+    background-color: #ffdddd;
+    border-color: #dc3545;
+    color: #dc3545;
+}
+
+
+.admin-pagination-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+    background-color: #fff;
+    border: none; 
+    border-top: 1px solid var(--pink-light); /* Dejamos solo el borde superior */
+    font-size: 0.85rem;
+}
+
+.pagination-info {
+    color: #777;
+}
+
+.pagination-controls, .pagination-rows-selector {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    margin-top: 0.2rem;
+}
+
+.pagination-rows-selector select {
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--pink-light);
+    background-color: #fff;
+    color: var(--brown-text);
+    margin-left: 8px;
+}
+
+.pagination-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.2rem;
+}
+
+.pagination-nav button {
+    background: var(--pink-light);
+    border: none;
+    color: var(--pink-accent);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.pagination-nav button:hover:not(:disabled) {
+    background: var(--pink-accent);
+    color: white;
+    transform: scale(1.1);
+}
+
+.pagination-nav button:disabled {
+    cursor: not-allowed;
+    background-color: #f9f9f9;
+    color: #ccc;
+}
+
+.pagination-nav span {
+    color: var(--brown-text);
+    white-space: nowrap;
+}
+
+/* Barra de herramientas para selección múltiple */
+.admin-multi-select-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* Mueve los elementos a los extremos */
+    text-align: left;
+    padding: 0.5rem 0.8rem;
+    margin-top: 0.5rem;
+    background-color: var(--pink-light);
+    border-radius: 8px;
+}
+
+.admin-multi-select-toolbar label {
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--brown-text);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: bold;
+}
+
+.admin-multi-select-toolbar #multiActionContainer {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem; /* Reducimos aún más el espacio entre los botones */
+}
+
+.admin-multi-select-toolbar #selectionCounter {
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 9990;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+.modal-overlay.active {
+    display: flex;
+}
+.modal-content {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+    animation: modal-pop-in 0.3s ease;
+}
+@keyframes modal-pop-in {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+}
+.modal-title {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--brown-text);
+}
+.modal-body {
+    margin-bottom: 1.5rem;
+    color: var(--brown-text);
+}
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    border-top: 1px solid #eee;
+    padding-top: 1rem;
+}
+
+/* Estilos para los botones dentro del footer del modal */
+.modal-footer .btn {
+    padding: 8px 20px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.modal-footer .btn-primary {
+    background-color: var(--pink-accent);
+    color: white;
+    border-color: var(--pink-accent);
+}
+.modal-footer .btn-primary:hover {
+    opacity: 0.85;
+}
+
+.modal-footer .btn-secondary {
+    background-color: #f0f0f0;
+    color: var(--brown-text);
+}
+.modal-footer .btn-secondary:hover {
+    background-color: #e6e6e6;
+}
+
+.modal-footer .btn-danger {
+    background-color: #dc3545;
+    color: white;
+    border-color: #dc3545;
+}
+.modal-footer .btn-danger:hover {
+    opacity: 0.85;
+}
+
+/* Estilo para alertas informativas dentro del modal genérico */
+.modal-alert {
+    background-color: #fdf0f1; /* Un rosado muy pálido */
+    color: var(--brown-text);
+    border: 1px solid var(--pink-light);
+    border-radius: 8px;
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.9rem;
+}
+
+/* Estilo para alertas informativas dentro del modal genérico */
+.modal-alert {
+    background-color: #fdf0f1; /* Un rosado muy pálido */
+    color: var(--brown-text);
+    border: 1px solid var(--pink-light);
+    border-radius: 8px;
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.9rem;
+}
+
+/* Estilo para alertas informativas dentro del modal genérico */
+.modal-alert {
+    background-color: #fdf0f1; /* Un rosado muy pálido */
+    color: var(--brown-text);
+    border: 1px solid var(--pink-light);
+    border-radius: 8px;
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.9rem;
 }

@@ -3,9 +3,8 @@ const SUPABASE_KEY    = () => process.env.SUPABASE_SERVICE_ROLE_KEY;
 const ADMIN_SECRET    = () => process.env.ADMIN_SECRET;
 
 const sbHeaders = () => ({
-    'apikey':        SUPABASE_KEY(),
-    'Authorization': `Bearer ${SUPABASE_KEY()}`,
-    'Content-Type':  'application/json'
+    'apikey': SUPABASE_KEY(),
+    'Content-Type': 'application/json',
 });
 
 function verifyToken(token) {
@@ -73,11 +72,13 @@ exports.handler = async (event) => {
 
     // ── GET todos (admin) ───────────────────────────────────────────────────
     if (method === 'GET') {
+        if (!verifyToken(event.headers['x-admin-token'])) {
+            return { statusCode: 401, body: JSON.stringify({ error: 'No autorizado.' }) };
+        }
         try {
             const response = await fetch(`${SUPABASE_URL()}/rest/v1/rpc/get_all_trackings`, {
                 method:  'POST',
-                headers: sbHeaders(),
-                body:    JSON.stringify({})
+                headers: sbHeaders()
             });
             if (!response.ok) throw new Error(`Supabase ${response.status}: ${await response.text()}`);
             const rows = await response.json();
