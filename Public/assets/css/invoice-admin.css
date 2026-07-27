@@ -199,6 +199,10 @@
     white-space: nowrap;
 }
 
+.th-label-short {
+    display: none;
+}
+
 .invoice-table td:first-child strong {
     font-weight: 600;
     color: var(--brown-text);
@@ -347,16 +351,19 @@
 
     .invoice-table {
         table-layout: auto;
-        min-width: 500px;
+        min-width: 480px;
         font-size: 0.82rem;
     }
 
     .invoice-table col.col-detalle,
-    .invoice-table col.col-fecha,
     .invoice-table col.col-cantidad,
     .invoice-table col.col-unitario,
     .invoice-table col.col-monto {
         width: auto;
+    }
+
+    .invoice-table col.col-fecha {
+        width: 60px;
     }
 
     .invoice-table th,
@@ -367,6 +374,11 @@
     .invoice-table td {
         white-space: normal;
         word-break: break-word;
+    }
+
+    .invoice-table th:nth-child(2),
+    .invoice-table td:nth-child(2) {
+        font-size: 0.68rem;
     }
 
     .invoice-detail-cell {
@@ -381,24 +393,41 @@
 
     .invoice-table {
         table-layout: fixed;
-        min-width: 430px;
+        min-width: 400px;
     }
 
     .invoice-table col.col-detalle { width: auto; }
-    .invoice-table col.col-fecha { width: 78px; }
-    .invoice-table col.col-cantidad { width: 52px; }
-    .invoice-table col.col-unitario { width: 88px; }
-    .invoice-table col.col-monto { width: 88px; }
+    .invoice-table col.col-fecha { width: 56px; }
+    .invoice-table col.col-cantidad { width: 46px; }
+    .invoice-table col.col-unitario { width: 80px; }
+    .invoice-table col.col-monto { width: 80px; }
 
     .invoice-table th,
     .invoice-table td {
-        padding: 0.55rem;
+        padding: 0.48rem;
         font-size: 0.8rem;
+    }
+
+    .invoice-table th {
+        font-size: 0.72rem;
+        letter-spacing: 0.01em;
+    }
+
+    .th-label-full {
+        display: none;
+    }
+
+    .th-label-short {
+        display: inline;
     }
 
     .invoice-table td:nth-child(2),
     .invoice-table td:nth-child(3) {
         font-size: 0.74rem;
+    }
+
+    .invoice-table td:nth-child(2) {
+        font-size: 0.66rem;
     }
 
     .invoice-table td:nth-child(4),
