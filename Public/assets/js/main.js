@@ -1,5 +1,7 @@
 // Lógica principal y navegación del sitio
 
+let homeContentCache = null;
+
 async function loadHeaderImage() {
     const logoImg = document.querySelector('header .logo');
     if (!logoImg) return;
@@ -18,6 +20,12 @@ async function loadHeaderImage() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Guardar el contenido original de HOME antes de cualquier navegación
+    const container = document.getElementById('content-area');
+    if (container) {
+        homeContentCache = container.innerHTML;
+    }
+
     // Inicializar links de redes sociales con variables de setup.js
     if (document.getElementById('btnWhatsappFlotante')) {
         document.getElementById('btnWhatsappFlotante').href = `https://wa.me/${WHATSAPP_NUMBER}`;
@@ -125,8 +133,10 @@ async function loadPage(page, param = null) {
         try {
             if (page === 'home') {
                 history.pushState({}, '', '/');
-                const response = await fetch('/index.html');
-                container.innerHTML = (await response.text()).match(/<div id="content-area">([\s\S]*)<\/div>/)[1];
+                container.innerHTML = homeContentCache || (await fetch('/index.html').then(r => r.text())).match(/<div id="content-area">([\s\S]*)<\/div>/)[1];
+                
+                container.classList.remove('fade-out');
+                window.scrollTo(0, 0);
                 return;
             }
 
