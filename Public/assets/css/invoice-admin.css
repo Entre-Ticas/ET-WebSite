@@ -266,7 +266,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 64px;
+    /* min-width: 64px; */
     padding: 0.18rem 0.45rem;
     border-radius: 999px;
     font-size: 0.63rem;
@@ -355,20 +355,23 @@
         font-size: 0.82rem;
     }
 
-    .invoice-table col.col-detalle,
     .invoice-table col.col-cantidad,
     .invoice-table col.col-unitario,
     .invoice-table col.col-monto {
         width: auto;
     }
 
+    .invoice-table col.col-detalle {
+        width: 100px;
+    }
+
     .invoice-table col.col-fecha {
         width: 60px;
     }
 
-    .invoice-table th,
-    .invoice-table td {
-        padding: 0.6rem;
+    .invoice-table col.col-unitario,
+    .invoice-table col.col-monto {
+        width: 55px;
     }
 
     .invoice-table td {
@@ -379,6 +382,11 @@
     .invoice-table th:nth-child(2),
     .invoice-table td:nth-child(2) {
         font-size: 0.68rem;
+    }
+
+    .invoice-table th:nth-child(4),
+    .invoice-table td:nth-child(4) {
+        font-size: 0.66rem;
     }
 
     .invoice-detail-cell {
@@ -396,11 +404,11 @@
         min-width: 400px;
     }
 
-    .invoice-table col.col-detalle { width: auto; }
-    .invoice-table col.col-fecha { width: 56px; }
-    .invoice-table col.col-cantidad { width: 46px; }
-    .invoice-table col.col-unitario { width: 80px; }
-    .invoice-table col.col-monto { width: 80px; }
+    .invoice-table col.col-detalle { width: 75px; }
+    .invoice-table col.col-fecha { width: 40px; }
+    .invoice-table col.col-cantidad { width: 40px; }
+    .invoice-table col.col-unitario { width: 40px; }
+    .invoice-table col.col-monto { width: 50px; }
 
     .invoice-table th,
     .invoice-table td {
@@ -433,6 +441,10 @@
     .invoice-table td:nth-child(4),
     .invoice-table td:nth-child(5) {
         font-size: 0.78rem;
+    }
+
+    .invoice-table td:nth-child(4) {
+        font-size: 0.66rem;
     }
 
     .invoice-table th:nth-child(3),
