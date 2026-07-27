@@ -2,3 +2,9 @@
 .netlify
 node_modules/
 .env
+
+# Capacitor Android project (generado con npx cap sync)
+android/
+
+# Capacitor splash screens generados (iOS, no usados en el sitio)
+Public/assets/icons/apple-splash-*

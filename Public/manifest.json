@@ -7,9 +7,46 @@
   "theme_color": "#E19B9D",
   "icons": [
     {
-      "src": "assets/EntreTicas.jpg",
+      "src": "assets/icons/icon-48.webp",
+      "type": "image/png",
+      "sizes": "48x48",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/icons/icon-72.webp",
+      "type": "image/png",
+      "sizes": "72x72",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/icons/icon-96.webp",
+      "type": "image/png",
+      "sizes": "96x96",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/icons/icon-128.webp",
+      "type": "image/png",
+      "sizes": "128x128",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/icons/icon-192.webp",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/icons/icon-256.webp",
+      "type": "image/png",
+      "sizes": "256x256",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/icons/icon-512.webp",
+      "type": "image/png",
       "sizes": "512x512",
-      "type": "image/jpeg"
+      "purpose": "any maskable"
     }
   ],
   "shortcuts": [
@@ -18,21 +55,36 @@
       "short_name": "Calculadora",
       "description": "Calcular costos de importación",
       "url": "/calc",
-      "icons": [{ "src": "assets/EntreTicas.jpg", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "assets/img/EntreTicas.jpeg",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Catálogo",
       "short_name": "Catálogo",
       "description": "Ver productos disponibles",
       "url": "/catalog",
-      "icons": [{ "src": "assets/EntreTicas.jpg", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "assets/img/EntreTicas.jpeg",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Rastreo",
       "short_name": "Rastreo",
       "description": "Rastrear mis paquetes",
       "url": "/tracking",
-      "icons": [{ "src": "assets/EntreTicas.jpg", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "assets/img/EntreTicas.jpeg",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }

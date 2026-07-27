@@ -1,0 +1,9 @@
+{
+  "appId": "com.entreticas.app",
+  "appName": "EntreTicas-App",
+  "webDir": "Public",
+  "server": {
+    "url": "https://entreticas.netlify.app",
+    "cleartext": false
+  }
+}
