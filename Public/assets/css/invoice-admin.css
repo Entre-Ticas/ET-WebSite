@@ -119,15 +119,40 @@
     display: grid;
     grid-template-columns: 2fr 1fr 1fr auto;
     gap: 1rem;
-    align-items: center;
+    align-items: stretch;
 }
 
 .payment-form-grid input {
     width: 100%;
     padding: 10px;
+    height: 44px;
+    margin: 0;
+    line-height: 1.2;
     border-radius: 8px;
     border: 1px solid var(--pink-light);
     box-sizing: border-box;
+}
+
+.payment-form-grid .admin-btn-agregar {
+    height: 44px;
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+/* Evita que input[type=number] meta spinners que desalinean altura en algunos navegadores */
+.payment-form-grid input[type="number"] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+    line-height: normal;
+}
+
+.payment-form-grid input[type="number"]::-webkit-outer-spin-button,
+.payment-form-grid input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }
 
 .invoice-details-title {

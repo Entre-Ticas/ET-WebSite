@@ -265,7 +265,7 @@ function changeOrderRowsPerPage(value) {
 }
 
 function verFactura(invoiceId) {
-    if (typeof loadPage === 'function') loadPage('admin/invoice', invoiceId);
+    if (typeof loadPage === 'function') loadPage('invoice', invoiceId);
 }
 
 function sortOrdersBy(col) {

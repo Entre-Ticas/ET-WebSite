@@ -200,7 +200,7 @@ function changeInvoiceRowsPerPage(value) {
 }
 
 function viewInvoiceDetail(invoiceId) {
-    if (typeof loadPage === 'function') loadPage('admin/invoice', invoiceId);
+    if (typeof loadPage === 'function') loadPage('invoice', invoiceId);
 }
 
 function backToInvoicesGrid() {

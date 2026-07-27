@@ -108,7 +108,7 @@ async function loadPage(page, param = null) {
     
     // --- INICIO: LÓGICA DE SEGURIDAD ---
     // Lista de rutas que requieren que el usuario esté autenticado.
-    const protectedRoutes = ['admin/tracking', 'admin/catalog', 'admin/order', 'admin/invoices', 'admin/invoice', 'admin/payments'];
+    const protectedRoutes = ['admin/tracking', 'admin/catalog', 'admin/order', 'admin/invoices', 'admin/payments'];
     // Verificamos si la página solicitada es protegida Y si el usuario NO tiene una sesión activa.
     // La función getSession() ya existe en auth.js y nos dice si hay un token válido.
     if (protectedRoutes.includes(page) && !getSession()) {
@@ -142,9 +142,9 @@ async function loadPage(page, param = null) {
                 'admin/tracking': 'admin/tracking-admin.html',
                 'admin/catalog': 'admin/catalog-admin.html',
                 'admin/order': 'admin/order_items-admin.html', // Nueva ruta estándar
-                'admin/invoices': 'admin/invoices-admin.html', // Nueva ruta
-                'admin/invoice': 'admin/invoice-admin.html', // Nueva ruta
-                'admin/payments': 'admin/payments-admin.html', // Nueva ruta
+                'admin/invoices': 'admin/invoices-admin.html',
+                'admin/payments': 'admin/payments-admin.html',
+                'invoice': 'invoice.html',
                 'info': 'InformationImg/info.html',
                 'informacion': 'InformationImg/infoImg.html'
             };
@@ -184,8 +184,8 @@ async function loadPage(page, param = null) {
                 window.initOrderItemsAdminPage();
             } else if (page === 'admin/invoices' && typeof window.initInvoicesAdminPage === 'function') {
                 window.initInvoicesAdminPage();
-            } else if (page === 'admin/invoice' && typeof window.initInvoiceAdminPage === 'function' && param) {
-                window.initInvoiceAdminPage(param);
+            } else if (page === 'invoice' && typeof window.initInvoicePage === 'function' && param) {
+                window.initInvoicePage(param);
             } else if (page === 'admin/payments' && typeof window.initPaymentsAdminPage === 'function') {
                 window.initPaymentsAdminPage();
             }
