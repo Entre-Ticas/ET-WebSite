@@ -2,6 +2,47 @@
 
 let homeContentCache = null;
 
+function getVisibleNavLinkCount() {
+    const nav = document.querySelector('nav');
+    if (!nav) return 0;
+
+    return Array.from(nav.querySelectorAll('a')).filter((link) => {
+        const style = window.getComputedStyle(link);
+        return style.display !== 'none' && style.visibility !== 'hidden';
+    }).length;
+}
+
+function pickMobileNavColumns(count) {
+    const candidates = [3, 4];
+    let bestCols = 3;
+    let bestScore = Number.POSITIVE_INFINITY;
+
+    for (const cols of candidates) {
+        const rows = Math.ceil(count / cols);
+        const remainder = count % cols;
+        const orphanPenalty = remainder === 1 ? 100 : 0;
+        const tooManyRowsPenalty = rows > 3 ? (rows - 3) * 10 : 0;
+        const tieBreaker = cols === 4 ? 1 : 0;
+        const score = orphanPenalty + tooManyRowsPenalty + tieBreaker;
+
+        if (score < bestScore) {
+            bestScore = score;
+            bestCols = cols;
+        }
+    }
+
+    return bestCols;
+}
+
+function updateMobileNavColumns() {
+    const nav = document.querySelector('nav');
+    if (!nav) return;
+
+    const visibleCount = getVisibleNavLinkCount();
+    const cols = pickMobileNavColumns(visibleCount || 1);
+    nav.style.setProperty('--mobile-nav-cols', String(cols));
+}
+
 async function loadHeaderImage() {
     const logoImg = document.querySelector('header .logo');
     if (!logoImg) return;
@@ -41,6 +82,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     loadHeaderImage();
+    updateMobileNavColumns();
+
+    const nav = document.querySelector('nav');
+    if (nav) {
+        const observer = new MutationObserver(() => {
+            updateMobileNavColumns();
+        });
+        observer.observe(nav, {
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['style', 'class']
+        });
+    }
+
+    window.addEventListener('resize', updateMobileNavColumns);
 
     const handleRouting = () => {
         const parts = window.location.pathname.split('/').filter(Boolean); // ej: ['admin', 'catalog']

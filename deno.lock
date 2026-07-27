@@ -11,6 +11,10 @@
   "workspace": {
     "packageJson": {
       "dependencies": [
+        "npm:@capacitor/android@^8.4.2",
+        "npm:@capacitor/assets@^3.0.5",
+        "npm:@capacitor/cli@^8.4.2",
+        "npm:@capacitor/core@^8.4.2",
         "npm:argon2@0.44",
         "npm:node-fetch@^3.3.2"
       ]
