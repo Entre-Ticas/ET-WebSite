@@ -142,7 +142,7 @@ function renderInvoices() {
                 <td style="text-align: center;"><input type="checkbox" id="paid-cb-${f.id}" onclick="confirmTogglePaid(${f.id}, this)" ${f.paid ? 'checked' : ''}></td>
                 <td class="admin-actions-cell">
                     <button class="admin-btn-action btn-edit" onclick="openInvoiceEditForm(${f.id})" title="Editar Factura"><i class="fas fa-pencil-alt"></i></button>
-                    <button class="admin-btn-action btn-invoice" onclick="viewInvoiceDetail(${f.id})" title="Ver Detalle de Factura"><i class="fas fa-eye"></i></button>
+                    <button class="admin-btn-action btn-invoice" onclick="viewInvoiceDetail('${f.public_ref || ''}', ${f.id})" title="Ver Detalle de Factura"><i class="fas fa-eye"></i></button>
                     <button class="admin-btn-action btn-delete" onclick="eliminarFactura(${f.id})" title="Eliminar Factura"><i class="fas fa-trash-alt"></i></button>
                 </td>
             </tr>`
@@ -199,8 +199,34 @@ function changeInvoiceRowsPerPage(value) {
     renderInvoices();
 }
 
-function viewInvoiceDetail(invoiceId) {
-    if (typeof loadPage === 'function') loadPage('invoice', invoiceId);
+async function viewInvoiceDetail(publicRef, invoiceId) {
+    try {
+        let refToUse = publicRef;
+
+        if (!refToUse) {
+            const session = getSession();
+            if (!session) throw new Error('Sesión no válida.');
+
+            const response = await fetch(`/.netlify/functions/invoices?id=${invoiceId}`, {
+                headers: { 'x-admin-token': session.token }
+            });
+
+            if (!response.ok) {
+                throw new Error('No se pudo generar el enlace seguro de factura.');
+            }
+
+            const payload = await response.json();
+            refToUse = payload?.invoice?.public_ref || null;
+        }
+
+        if (!refToUse) {
+            throw new Error('No se encontró una referencia válida para la factura.');
+        }
+
+        if (typeof loadPage === 'function') loadPage('invoice', refToUse);
+    } catch (error) {
+        alert(error.message || 'No se pudo abrir la factura.');
+    }
 }
 
 function backToInvoicesGrid() {

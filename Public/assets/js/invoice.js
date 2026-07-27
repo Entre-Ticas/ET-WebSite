@@ -1,19 +1,21 @@
 (() => {
-let currentInvoiceId = null;
+let currentInvoiceRef = null;
+let currentInvoiceNumericId = null;
 
-async function initInvoicePage(invoiceId) {
-    if (!invoiceId) {
-        showInvoiceError('No se especificó un ID de factura.');
+async function initInvoicePage(invoiceRef) {
+    if (!invoiceRef) {
+        showInvoiceError('No se especificó una referencia de factura.');
         return;
     }
 
-    currentInvoiceId = invoiceId;
+    currentInvoiceRef = invoiceRef;
+    currentInvoiceNumericId = null;
     setPaymentSectionExpanded(false);
 
-    await loadInvoiceDetails(invoiceId);
+    await loadInvoiceDetails(invoiceRef);
 }
 
-async function loadInvoiceDetails(invoiceId) {
+async function loadInvoiceDetails(invoiceRef) {
     const statusEl = document.getElementById('adminStatus');
     const contentEl = document.getElementById('invoiceContent');
     const noResultsEl = document.getElementById('adminNoResults');
@@ -23,11 +25,11 @@ async function loadInvoiceDetails(invoiceId) {
     noResultsEl.style.display = 'none';
 
     try {
-        // Endpoint público — no requiere token
-        const response = await fetch(`/.netlify/functions/invoice?id=${invoiceId}`);
+        const response = await fetch(`/.netlify/functions/invoice?ref=${encodeURIComponent(invoiceRef)}`);
 
         if (!response.ok) {
             if (response.status === 404) throw new Error('Factura no encontrada.');
+            if (response.status === 403) throw new Error('Referencia de factura inválida.');
             throw new Error(`Error del servidor: ${response.statusText}`);
         }
 
@@ -51,8 +53,9 @@ async function loadInvoiceDetails(invoiceId) {
 
 function renderInvoice(payload) {
     const { invoice, items, payments } = normalizeInvoiceData(payload);
+    currentInvoiceNumericId = invoice?.id || currentInvoiceNumericId;
 
-    if (!invoice || (!invoice.id && !currentInvoiceId)) {
+    if (!invoice || (!invoice.id && !currentInvoiceRef)) {
         throw new Error('La factura no contiene datos válidos.');
     }
 
@@ -66,7 +69,7 @@ function renderInvoice(payload) {
 
     document.getElementById('inv-client-name').textContent = invoice.client_name || 'Cliente no disponible';
     document.getElementById('inv-client-phone').textContent = invoice.client_phone ? `Tel: ${invoice.client_phone}` : 'Tel: --';
-    document.getElementById('inv-id').textContent = invoice.id || currentInvoiceId;
+    document.getElementById('inv-id').textContent = invoice.id || '--';
     document.getElementById('inv-date').textContent = formatDate(invoice.invoice_date);
 
     const statusBadge = document.getElementById('inv-status');
@@ -225,8 +228,6 @@ function appendSecondaryText(cell, text) {
     cell.appendChild(note);
 }
 
-// --- Normalización de datos ---
-
 function normalizeInvoiceData(payload) {
     if (!payload) return { invoice: {}, items: [], payments: [] };
 
@@ -378,8 +379,6 @@ function showInvoiceError(message) {
     noResultsEl.textContent = `😕 ${message}`;
 }
 
-// --- Sección de abono (solo para admins) ---
-
 async function guardarNuevoAbono() {
     const messageEl = document.getElementById('paymentMensaje');
     const amountEl = document.getElementById('paymentAmount');
@@ -387,7 +386,7 @@ async function guardarNuevoAbono() {
     const refEl = document.getElementById('paymentRef');
     const saveBtn = document.getElementById('btnGuardarAbono');
 
-    if (!currentInvoiceId) {
+    if (!currentInvoiceNumericId) {
         if (messageEl) messageEl.textContent = '⚠️ No hay una factura activa para registrar el abono.';
         return;
     }
@@ -415,7 +414,7 @@ async function guardarNuevoAbono() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'x-admin-token': session.token },
             body: JSON.stringify({
-                invoice_id: Number(currentInvoiceId),
+                invoice_id: Number(currentInvoiceNumericId),
                 amount,
                 payment_method: paymentMethod,
                 reference_code: referenceCode
@@ -433,7 +432,7 @@ async function guardarNuevoAbono() {
 
         if (messageEl) messageEl.textContent = '✅ Abono agregado correctamente.';
 
-        await loadInvoiceDetails(currentInvoiceId);
+        await loadInvoiceDetails(currentInvoiceRef);
         setPaymentSectionExpanded(false);
     } catch (error) {
         if (messageEl) messageEl.textContent = `⚠️ ${error.message}`;

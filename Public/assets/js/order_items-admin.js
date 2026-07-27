@@ -264,8 +264,30 @@ function changeOrderRowsPerPage(value) {
     renderOrders();
 }
 
-function verFactura(invoiceId) {
-    if (typeof loadPage === 'function') loadPage('invoice', invoiceId);
+async function verFactura(invoiceId) {
+    try {
+        const session = getSession();
+        if (!session) throw new Error('Sesión no válida.');
+
+        const response = await fetch(`/.netlify/functions/invoices?id=${invoiceId}`, {
+            headers: { 'x-admin-token': session.token }
+        });
+
+        if (!response.ok) {
+            throw new Error('No se pudo generar el enlace seguro de factura.');
+        }
+
+        const payload = await response.json();
+        const publicRef = payload?.invoice?.public_ref;
+
+        if (!publicRef) {
+            throw new Error('No se encontró referencia pública para la factura.');
+        }
+
+        if (typeof loadPage === 'function') loadPage('invoice', publicRef);
+    } catch (error) {
+        alert(error.message || 'No se pudo abrir la factura.');
+    }
 }
 
 function sortOrdersBy(col) {

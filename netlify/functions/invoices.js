@@ -1,5 +1,6 @@
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const crypto = require('crypto');
 
 const sbHeaders = {
     'apikey': supabaseKey,
@@ -8,6 +9,42 @@ const sbHeaders = {
 };
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET;
+
+function toBase64Url(buffer) {
+    return buffer.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function normalizeName(value) {
+    return String(value || '').trim().toLowerCase();
+}
+
+function normalizePhone(value) {
+    return String(value || '').replace(/\D+/g, '');
+}
+
+function fingerprint(value) {
+    return toBase64Url(crypto.createHash('sha256').update(value).digest().subarray(0, 12));
+}
+
+function signEncodedPayload(encodedPayload) {
+    return toBase64Url(
+        crypto
+            .createHmac('sha256', ADMIN_SECRET)
+            .update(encodedPayload)
+            .digest()
+    );
+}
+
+function createInvoiceReference(invoice) {
+    const id = Number(invoice?.id || 0);
+    const nameHash = fingerprint(normalizeName(invoice?.client_name));
+    const phoneHash = fingerprint(normalizePhone(invoice?.client_phone));
+    const payload = `${id}:${nameHash}:${phoneHash}`;
+    const encodedPayload = toBase64Url(Buffer.from(payload, 'utf8'));
+    const signature = signEncodedPayload(encodedPayload);
+    return `inv_${encodedPayload}.${signature}`;
+}
+
 function verifyToken(token) {
     if (!token) return false;
     try {
@@ -57,6 +94,10 @@ async function getInvoices(event) {
             return { statusCode: 404, body: JSON.stringify({ error: 'Factura no encontrada' }) };
         }
 
+        if (summaryPayload?.invoice?.id) {
+            summaryPayload.invoice.public_ref = createInvoiceReference(summaryPayload.invoice);
+        }
+
         return { statusCode: 200, body: JSON.stringify(summaryPayload) };
 
     } else {
@@ -69,7 +110,14 @@ async function getInvoices(event) {
         if (!response.ok) throw new Error(`Error de Supabase: ${await response.text()}`);
         
         const data = await response.json();
-        return { statusCode: 200, body: JSON.stringify(data) };
+        const withPublicRefs = Array.isArray(data)
+            ? data.map((invoice) => ({
+                ...invoice,
+                public_ref: invoice?.id ? createInvoiceReference(invoice) : null
+            }))
+            : data;
+
+        return { statusCode: 200, body: JSON.stringify(withPublicRefs) };
     }
 }
 
@@ -357,6 +405,9 @@ async function updateInvoice(event) {
     if (!response.ok) throw new Error(`Error actualizando factura: ${await response.text()}`);
 
     const [data] = await response.json();
+    if (data?.id) {
+        data.public_ref = createInvoiceReference(data);
+    }
     return { statusCode: 200, body: JSON.stringify(data) };
 }
 
@@ -403,6 +454,9 @@ async function createInvoice(event) {
     if (!response.ok) throw new Error(`Error creando factura: ${await response.text()}`);
 
     const [data] = await response.json();
+    if (data?.id) {
+        data.public_ref = createInvoiceReference(data);
+    }
     return { statusCode: 201, body: JSON.stringify(data) };
 }
 
