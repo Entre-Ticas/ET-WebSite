@@ -192,12 +192,6 @@ function renderItemDetail(cell, entry) {
 function renderPaymentDetail(cell, entry) {
     cell.innerHTML = '';
 
-    const badge = document.createElement('span');
-    badge.className = 'invoice-entry-badge is-payment';
-    badge.textContent = entry.kindLabel || 'Abono';
-    cell.appendChild(badge);
-    cell.appendChild(document.createElement('br'));
-
     const title = document.createElement('strong');
     title.textContent = entry.title;
     cell.appendChild(title);
@@ -208,6 +202,12 @@ function renderPaymentDetail(cell, entry) {
     if (entry.notes) {
         appendSecondaryText(cell, entry.notes);
     }
+
+    cell.appendChild(document.createElement('br'));
+    const badge = document.createElement('span');
+    badge.className = 'invoice-entry-badge is-payment';
+    badge.textContent = entry.kindLabel || 'Abono';
+    cell.appendChild(badge);
 }
 
 function createEmptyRow(message, colspan) {
