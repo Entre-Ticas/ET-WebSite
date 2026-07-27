@@ -97,7 +97,7 @@ function renderInvoiceDetails(items, payments) {
     tbody.innerHTML = '';
 
     if (!entries.length || !rowTemplate) {
-        tbody.appendChild(createEmptyRow('No hay movimientos registrados para esta factura.', 6));
+        tbody.appendChild(createEmptyRow('No hay movimientos registrados para esta factura.', 5));
         return;
     }
 
@@ -109,7 +109,6 @@ function renderInvoiceDetails(items, payments) {
             ? `- ${formatCurrency(entry.amount)}`
             : formatCurrency(entry.amount);
 
-        clone.querySelector('[data-field="entryType"]').innerHTML = `<span class="invoice-entry-badge ${entry.kind === 'item' ? 'is-item' : 'is-payment'}">${entry.kindLabel}</span>`;
         clone.querySelector('[data-field="entryDate"]').textContent = formatDate(entry.date);
         clone.querySelector('[data-field="quantity"]').textContent = entry.quantityLabel;
         clone.querySelector('[data-field="unitPrice"]').textContent = entry.unitPriceLabel;
@@ -168,25 +167,23 @@ function renderItemDetail(cell, entry) {
     const wrapper = document.createElement('div');
     wrapper.className = 'invoice-detail-cell';
 
-    if (entry.imageUrl) {
-        const imageButton = document.createElement('button');
-        imageButton.type = 'button';
-        imageButton.className = 'invoice-thumb-button';
-        imageButton.onclick = () => openImageModal(entry.imageUrl);
-
-        const image = document.createElement('img');
-        image.src = entry.imageUrl;
-        image.alt = entry.title;
-        image.className = 'invoice-thumb';
-
-        imageButton.appendChild(image);
-        wrapper.appendChild(imageButton);
-    }
-
     const textBlock = document.createElement('div');
     const title = document.createElement('strong');
     title.textContent = entry.title;
     textBlock.appendChild(title);
+
+    if (entry.imageUrl) {
+        textBlock.appendChild(document.createElement('br'));
+        const photoLink = document.createElement('a');
+        photoLink.href = '#';
+        photoLink.className = 'invoice-photo-link';
+        photoLink.textContent = 'Ver foto';
+        photoLink.onclick = (event) => {
+            event.preventDefault();
+            openImageModal(entry.imageUrl);
+        };
+        textBlock.appendChild(photoLink);
+    }
 
     wrapper.appendChild(textBlock);
     cell.appendChild(wrapper);
@@ -194,6 +191,12 @@ function renderItemDetail(cell, entry) {
 
 function renderPaymentDetail(cell, entry) {
     cell.innerHTML = '';
+
+    const badge = document.createElement('span');
+    badge.className = 'invoice-entry-badge is-payment';
+    badge.textContent = entry.kindLabel || 'Abono';
+    cell.appendChild(badge);
+    cell.appendChild(document.createElement('br'));
 
     const title = document.createElement('strong');
     title.textContent = entry.title;

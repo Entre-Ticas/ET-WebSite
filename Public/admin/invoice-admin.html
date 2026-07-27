@@ -55,18 +55,17 @@
             <div class="invoice-table-wrapper">
                 <table class="invoice-table" id="invoiceDetailsTable">
                     <colgroup>
-                        <col class="col-tipo">
                         <col class="col-detalle">
                         <col class="col-fecha">
                         <col class="col-cantidad">
                         <col class="col-unitario">
                         <col class="col-monto">
                     </colgroup>
-                    <thead><tr><th>Tipo</th><th>Detalle</th><th>Fecha</th><th>Cantidad</th><th>Precio Unit.</th><th>Monto</th></tr></thead>
+                    <thead><tr><th>Detalle</th><th>Fecha</th><th>Cant</th><th>Precio Unit.</th><th>Monto</th></tr></thead>
                     <tbody><!-- Filas de detalle se insertarán aquí --></tbody>
                     <tfoot>
                         <tr>
-                            <td colspan="6" class="invoice-table-footer-cell">
+                            <td colspan="5" class="invoice-table-footer-cell">
                                 <div class="invoice-table-footer-content">
                                     <span><strong>Total Factura:</strong> <span id="inv-grid-total-amount">₡0</span></span>
                                     <span><strong>Total Abonos:</strong> <span id="inv-grid-total-paid">₡0</span></span>
@@ -87,7 +86,6 @@
 
 <template id="invoiceItemRowTemplate">
     <tr>
-        <td data-field="entryType"></td>
         <td data-field="detail"></td>
         <td data-field="entryDate"></td>
         <td data-field="quantity"></td>

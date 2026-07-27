@@ -172,19 +172,18 @@
 .invoice-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     text-align: left;
     background: #fff;
     table-layout: fixed;
-    min-width: 760px;
+    min-width: 680px;
 }
 
-.invoice-table col.col-tipo { width: 90px; }
-.invoice-table col.col-detalle { width: 260px; }
-.invoice-table col.col-fecha { width: 120px; }
-.invoice-table col.col-cantidad { width: 96px; }
-.invoice-table col.col-unitario { width: 110px; }
-.invoice-table col.col-monto { width: 110px; }
+.invoice-table col.col-detalle { width: auto; }
+.invoice-table col.col-fecha { width: 88px; }
+.invoice-table col.col-cantidad { width: 70px; }
+.invoice-table col.col-unitario { width: 104px; }
+.invoice-table col.col-monto { width: 104px; }
 
 .invoice-table thead tr {
     background: var(--pink-accent);
@@ -194,14 +193,38 @@
 .invoice-table th,
 .invoice-table td {
     text-align: left;
-    padding: 0.8rem;
+    padding: 0.68rem;
     border-bottom: 1px solid var(--pink-light);
     vertical-align: middle;
     white-space: nowrap;
 }
 
-.invoice-table th:nth-child(2),
-.invoice-table td:nth-child(2) {
+.invoice-table td:first-child strong {
+    font-weight: 600;
+    color: var(--brown-text);
+}
+
+.invoice-table td:nth-child(2),
+.invoice-table td:nth-child(3) {
+    font-size: 0.79rem;
+    color: #6f6f6f;
+}
+
+.invoice-table td:nth-child(4) {
+    font-size: 0.82rem;
+    color: #5f5f5f;
+    font-variant-numeric: tabular-nums;
+}
+
+.invoice-table td:nth-child(5) {
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: var(--brown-text);
+    font-variant-numeric: tabular-nums;
+}
+
+.invoice-table th:first-child,
+.invoice-table td:first-child {
     white-space: normal;
 }
 
@@ -258,8 +281,21 @@
 
 .invoice-detail-cell {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 0.9rem;
+}
+
+.invoice-photo-link {
+    display: inline-block;
+    margin-top: 0.2rem;
+    font-size: 0.78rem;
+    color: var(--pink-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.invoice-photo-link:hover {
+    opacity: 0.85;
 }
 
 .invoice-thumb-button {
@@ -283,7 +319,7 @@
     display: inline-block;
     margin-top: 0.25rem;
     font-size: 0.78rem;
-    color: #7a7a7a;
+    color: #8a8a8a;
     font-style: italic;
 }
 
@@ -309,6 +345,30 @@
         grid-template-columns: 1fr;
     }
 
+    .invoice-table {
+        table-layout: auto;
+        min-width: 500px;
+        font-size: 0.82rem;
+    }
+
+    .invoice-table col.col-detalle,
+    .invoice-table col.col-fecha,
+    .invoice-table col.col-cantidad,
+    .invoice-table col.col-unitario,
+    .invoice-table col.col-monto {
+        width: auto;
+    }
+
+    .invoice-table th,
+    .invoice-table td {
+        padding: 0.6rem;
+    }
+
+    .invoice-table td {
+        white-space: normal;
+        word-break: break-word;
+    }
+
     .invoice-detail-cell {
         gap: 0.7rem;
     }
@@ -320,16 +380,37 @@
     }
 
     .invoice-table {
-        min-width: 700px;
+        table-layout: fixed;
+        min-width: 430px;
     }
 
-    .invoice-table col.col-tipo { width: 84px; }
-    .invoice-table col.col-cantidad { width: 92px; }
+    .invoice-table col.col-detalle { width: auto; }
+    .invoice-table col.col-fecha { width: 78px; }
+    .invoice-table col.col-cantidad { width: 52px; }
+    .invoice-table col.col-unitario { width: 88px; }
+    .invoice-table col.col-monto { width: 88px; }
 
     .invoice-table th,
     .invoice-table td {
-        padding: 0.7rem;
-        font-size: 0.84rem;
+        padding: 0.55rem;
+        font-size: 0.8rem;
+    }
+
+    .invoice-table td:nth-child(2),
+    .invoice-table td:nth-child(3) {
+        font-size: 0.74rem;
+    }
+
+    .invoice-table td:nth-child(4),
+    .invoice-table td:nth-child(5) {
+        font-size: 0.78rem;
+    }
+
+    .invoice-table th:nth-child(3),
+    .invoice-table td:nth-child(3) {
+        padding-left: 0.35rem;
+        padding-right: 0.35rem;
+        text-align: center;
     }
 
     .invoice-table-footer-content {
