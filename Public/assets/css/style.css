@@ -511,6 +511,7 @@ body {
 .admin-btn-action.btn-edit { background-color: #f3bfc1; color: white; }
 .admin-btn-action.btn-update { background-color: var(--pink-accent); color: white; }
 .admin-btn-action.btn-track { background-color: #f3bfc1; color: white; }
+.admin-btn-action.btn-copy { background-color: #8db8d9; color: white; } /* Azul suave para copiar link */
 .admin-btn-action.btn-invoice { background-color: #a8d8b9; color: white; } /* Verde para facturas */
 .admin-btn-action.btn-delete { background-color: #f5c6cb; color: white; } 
 
@@ -518,6 +519,13 @@ body {
 .admin-btn-action.btn-update:hover,
 .admin-btn-action.btn-invoice:hover,
 .admin-btn-action.btn-track:hover { opacity: 0.85; background-color: var(--pink-accent); }
+
+.admin-btn-action.btn-copy:hover {
+    opacity: 0.9;
+    background-color: #6fa5cd;
+    border-color: #5d95bf;
+    color: white;
+}
 
 /* Colores específicos para acciones comunes */
 .admin-btn-action.btn-delete:hover {

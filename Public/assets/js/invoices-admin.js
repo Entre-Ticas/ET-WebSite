@@ -142,7 +142,7 @@ function renderInvoices() {
                 <td style="text-align: center;"><input type="checkbox" id="paid-cb-${f.id}" onclick="confirmTogglePaid(${f.id}, this)" ${f.paid ? 'checked' : ''}></td>
                 <td class="admin-actions-cell">
                     <button class="admin-btn-action btn-edit" onclick="openInvoiceEditForm(${f.id})" title="Editar Factura"><i class="fas fa-pencil-alt"></i></button>
-                    <button class="admin-btn-action btn-invoice" onclick="viewInvoiceDetail('${f.public_ref || ''}', ${f.id})" title="Ver Detalle de Factura"><i class="fas fa-eye"></i></button>
+                    <button class="admin-btn-action btn-invoice" onclick="viewInvoiceDetail('${f.public_ref || ''}', ${f.id})" title="Ver Detalle de Factura"><i class="fas fa-file-invoice-dollar"></i></button>
                     <button class="admin-btn-action btn-delete" onclick="eliminarFactura(${f.id})" title="Eliminar Factura"><i class="fas fa-trash-alt"></i></button>
                 </td>
             </tr>`
