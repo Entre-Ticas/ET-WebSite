@@ -1,19 +1,21 @@
-let currentInvoiceId = null;
+(() => {
+let currentInvoiceRef = null;
+let currentInvoiceNumericId = null;
 
-async function initInvoiceAdminPage(invoiceId) {
-    if (!invoiceId) {
-        showInvoiceError('No se especificó un ID de factura.');
+async function initInvoicePage(invoiceRef) {
+    if (!invoiceRef) {
+        showInvoiceError('No se especificó una referencia de factura.');
         return;
     }
 
-    currentInvoiceId = invoiceId;
-    document.querySelector('.admin-btn-back').onclick = () => history.back();
+    currentInvoiceRef = invoiceRef;
+    currentInvoiceNumericId = null;
     setPaymentSectionExpanded(false);
 
-    await loadInvoiceDetails(invoiceId);
+    await loadInvoiceDetails(invoiceRef);
 }
 
-async function loadInvoiceDetails(invoiceId) {
+async function loadInvoiceDetails(invoiceRef) {
     const statusEl = document.getElementById('adminStatus');
     const contentEl = document.getElementById('invoiceContent');
     const noResultsEl = document.getElementById('adminNoResults');
@@ -23,15 +25,11 @@ async function loadInvoiceDetails(invoiceId) {
     noResultsEl.style.display = 'none';
 
     try {
-        const session = getSession();
-        if (!session) throw new Error('Sesión no válida.');
-
-        const response = await fetch(`/.netlify/functions/invoices?id=${invoiceId}`, {
-            headers: { 'x-admin-token': session.token }
-        });
+        const response = await fetch(`/.netlify/functions/invoice?ref=${encodeURIComponent(invoiceRef)}`);
 
         if (!response.ok) {
             if (response.status === 404) throw new Error('Factura no encontrada.');
+            if (response.status === 403) throw new Error('Referencia de factura inválida.');
             throw new Error(`Error del servidor: ${response.statusText}`);
         }
 
@@ -39,6 +37,15 @@ async function loadInvoiceDetails(invoiceId) {
 
         statusEl.style.display = 'none';
         contentEl.style.display = 'block';
+
+        const adminSection = document.getElementById('adminPaymentSection');
+        if (adminSection) {
+            if (getSession()) {
+                adminSection.style.display = 'block';
+            } else {
+                adminSection.remove();
+            }
+        }
     } catch (error) {
         showInvoiceError(error.message);
     }
@@ -46,8 +53,9 @@ async function loadInvoiceDetails(invoiceId) {
 
 function renderInvoice(payload) {
     const { invoice, items, payments } = normalizeInvoiceData(payload);
+    currentInvoiceNumericId = invoice?.id || currentInvoiceNumericId;
 
-    if (!invoice || (!invoice.id && !currentInvoiceId)) {
+    if (!invoice || (!invoice.id && !currentInvoiceRef)) {
         throw new Error('La factura no contiene datos válidos.');
     }
 
@@ -61,7 +69,7 @@ function renderInvoice(payload) {
 
     document.getElementById('inv-client-name').textContent = invoice.client_name || 'Cliente no disponible';
     document.getElementById('inv-client-phone').textContent = invoice.client_phone ? `Tel: ${invoice.client_phone}` : 'Tel: --';
-    document.getElementById('inv-id').textContent = invoice.id || currentInvoiceId;
+    document.getElementById('inv-id').textContent = invoice.id || '--';
     document.getElementById('inv-date').textContent = formatDate(invoice.invoice_date);
 
     const statusBadge = document.getElementById('inv-status');
@@ -151,10 +159,7 @@ function buildInvoiceEntries(items, payments) {
     }));
 
     return [...itemEntries, ...paymentEntries].sort((a, b) => {
-        if (a.kind !== b.kind) {
-            return a.kind === 'item' ? -1 : 1;
-        }
-
+        if (a.kind !== b.kind) return a.kind === 'item' ? -1 : 1;
         const aTime = a.date ? new Date(a.date).getTime() : 0;
         const bTime = b.date ? new Date(b.date).getTime() : 0;
         return aTime - bTime;
@@ -163,7 +168,6 @@ function buildInvoiceEntries(items, payments) {
 
 function renderItemDetail(cell, entry) {
     cell.innerHTML = '';
-
     const wrapper = document.createElement('div');
     wrapper.className = 'invoice-detail-cell';
 
@@ -213,11 +217,9 @@ function renderPaymentDetail(cell, entry) {
 function createEmptyRow(message, colspan) {
     const row = document.createElement('tr');
     const cell = document.createElement('td');
-
     row.className = 'invoice-empty-row';
     cell.colSpan = colspan;
     cell.textContent = message;
-
     row.appendChild(cell);
     return row;
 }
@@ -231,13 +233,9 @@ function appendSecondaryText(cell, text) {
 }
 
 function normalizeInvoiceData(payload) {
-    if (!payload) {
-        return { invoice: {}, items: [], payments: [] };
-    }
+    if (!payload) return { invoice: {}, items: [], payments: [] };
 
-    if (Array.isArray(payload)) {
-        return normalizeFlattenedInvoiceRows(payload);
-    }
+    if (Array.isArray(payload)) return normalizeFlattenedInvoiceRows(payload);
 
     if (payload.invoice || payload.items || payload.payments || payload.order_items || payload.abonos) {
         return normalizeStructuredInvoiceObject(payload);
@@ -339,13 +337,9 @@ function coerceArray(value) {
 
 function pickFirst(source, keys) {
     if (!source || typeof source !== 'object') return null;
-
     for (const key of keys) {
-        if (source[key] !== undefined && source[key] !== null) {
-            return source[key];
-        }
+        if (source[key] !== undefined && source[key] !== null) return source[key];
     }
-
     return null;
 }
 
@@ -373,10 +367,8 @@ function formatCurrency(value) {
 
 function formatDate(value) {
     if (!value) return '--';
-
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return '--';
-
     const day = date.getDate();
     const month = date.toLocaleDateString('en-US', { month: 'short' });
     return `${day}/${month}`;
@@ -400,10 +392,8 @@ async function guardarNuevoAbono() {
     const refEl = document.getElementById('paymentRef');
     const saveBtn = document.getElementById('btnGuardarAbono');
 
-    if (!currentInvoiceId) {
-        if (messageEl) {
-            messageEl.textContent = '⚠️ No hay una factura activa para registrar el abono.';
-        }
+    if (!currentInvoiceNumericId) {
+        if (messageEl) messageEl.textContent = '⚠️ No hay una factura activa para registrar el abono.';
         return;
     }
 
@@ -416,18 +406,21 @@ async function guardarNuevoAbono() {
         return;
     }
 
+    const session = getSession();
+    if (!session) {
+        if (messageEl) messageEl.textContent = '⚠️ Sesión no válida.';
+        return;
+    }
+
     if (messageEl) messageEl.textContent = 'Guardando abono...';
     if (saveBtn) saveBtn.disabled = true;
 
     try {
-        const session = getSession();
-        if (!session) throw new Error('Sesión no válida.');
-
         const response = await fetch('/.netlify/functions/invoices', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'x-admin-token': session.token },
             body: JSON.stringify({
-                invoice_id: Number(currentInvoiceId),
+                invoice_id: Number(currentInvoiceNumericId),
                 amount,
                 payment_method: paymentMethod,
                 reference_code: referenceCode
@@ -445,7 +438,7 @@ async function guardarNuevoAbono() {
 
         if (messageEl) messageEl.textContent = '✅ Abono agregado correctamente.';
 
-        await loadInvoiceDetails(currentInvoiceId);
+        await loadInvoiceDetails(currentInvoiceRef);
         setPaymentSectionExpanded(false);
     } catch (error) {
         if (messageEl) messageEl.textContent = `⚠️ ${error.message}`;
@@ -457,7 +450,6 @@ async function guardarNuevoAbono() {
 function togglePaymentSection() {
     const collapseEl = document.getElementById('paymentFormCollapse');
     if (!collapseEl) return;
-
     const isExpanded = collapseEl.style.display !== 'none';
     setPaymentSectionExpanded(!isExpanded);
 }
@@ -466,7 +458,6 @@ function setPaymentSectionExpanded(isExpanded) {
     const collapseEl = document.getElementById('paymentFormCollapse');
     const toggleEl = document.getElementById('togglePaymentForm');
     if (!collapseEl || !toggleEl) return;
-
     collapseEl.style.display = isExpanded ? 'block' : 'none';
     toggleEl.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
     toggleEl.classList.toggle('is-open', isExpanded);
@@ -477,5 +468,6 @@ function volverAlGrid() {
 }
 
 window.togglePaymentSection = togglePaymentSection;
-window.initInvoiceAdminPage = initInvoiceAdminPage;
 window.guardarNuevoAbono = guardarNuevoAbono;
+window.initInvoicePage = initInvoicePage;
+})();

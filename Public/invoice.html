@@ -1,11 +1,11 @@
-<link rel="stylesheet" href="../assets/css/invoice-admin.css">
+<link rel="stylesheet" href="assets/css/invoice-admin.css">
 
 <div class="admin-wrapper">
     <div id="invoiceView">
         <div class="admin-header">
-            <button onclick="volverAlGrid()" class="admin-btn-back">← Volver a Órdenes</button>
+            <button onclick="volverAlGrid()" class="admin-btn-back">← Volver</button>
             <h2>🧾 Detalle de Factura</h2>
-            <p>Aquí puedes ver todos los artículos y abonos de una factura.</p>
+            <p>Aquí puedes ver todos los artículos y abonos de tu factura.</p>
         </div>
 
         <div id="adminStatus" class="catalog-status">
@@ -34,8 +34,8 @@
                 </div>
             </div>
 
-            <!-- Sección para Agregar Abonos -->
-            <div class="add-payment-section">
+            <!-- Sección para Agregar Abonos (solo visible para admins) -->
+            <div id="adminPaymentSection" class="add-payment-section" style="display: none;">
                 <button type="button" class="invoice-collapse-toggle" id="togglePaymentForm" onclick="togglePaymentSection()" aria-expanded="false">
                     <span>Agregar Abono</span>
                     <span class="collapse-icon">+</span>

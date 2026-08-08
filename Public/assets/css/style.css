@@ -166,6 +166,54 @@ body {
             background: rgba(255,255,255,0.35);
         }
 
+        @media (max-width: 768px) {
+            header {
+                padding: 0.7rem 0.5rem;
+            }
+
+            .logo {
+                max-width: 132px;
+            }
+
+            nav {
+                display: grid;
+                grid-template-columns: repeat(var(--mobile-nav-cols, 3), minmax(0, 1fr));
+                gap: 6px;
+                padding: 0.45rem 0.4rem;
+            }
+
+            nav a {
+                font-size: 0.68rem;
+                padding: 5px 6px;
+                border-radius: 12px;
+                justify-content: center;
+            }
+
+            #content-area {
+                padding-top: 1.2rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            header {
+                padding: 0.55rem 0.4rem;
+            }
+
+            .logo {
+                max-width: 118px;
+            }
+
+            nav {
+                gap: 5px;
+                padding: 0.35rem 0.4rem;
+            }
+
+            nav a {
+                font-size: 0.62rem;
+                padding: 4px 5px;
+            }
+        }
+
         /* CONTENEDOR DINÁMICO */
         #content-area {
             min-height: 60vh;
@@ -463,6 +511,7 @@ body {
 .admin-btn-action.btn-edit { background-color: #f3bfc1; color: white; }
 .admin-btn-action.btn-update { background-color: var(--pink-accent); color: white; }
 .admin-btn-action.btn-track { background-color: #f3bfc1; color: white; }
+.admin-btn-action.btn-copy { background-color: #8db8d9; color: white; } /* Azul suave para copiar link */
 .admin-btn-action.btn-invoice { background-color: #a8d8b9; color: white; } /* Verde para facturas */
 .admin-btn-action.btn-delete { background-color: #f5c6cb; color: white; } 
 
@@ -470,6 +519,13 @@ body {
 .admin-btn-action.btn-update:hover,
 .admin-btn-action.btn-invoice:hover,
 .admin-btn-action.btn-track:hover { opacity: 0.85; background-color: var(--pink-accent); }
+
+.admin-btn-action.btn-copy:hover {
+    opacity: 0.9;
+    background-color: #6fa5cd;
+    border-color: #5d95bf;
+    color: white;
+}
 
 /* Colores específicos para acciones comunes */
 .admin-btn-action.btn-delete:hover {
