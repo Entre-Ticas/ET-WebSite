@@ -126,17 +126,20 @@
                         <small class="image-upload-status" id="nuevoImageStatus"></small>
                     </div>
 
-                    <label style="font-weight:bold; font-size:0.9rem;">Nombre del Cliente: *</label>
-                    <input type="text" id="nuevoClientName" placeholder="Ej: Ana Rodriguez"
-                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+                    <div class="floating-field">
+                        <input type="text" id="nuevoClientName" class="floating-input" placeholder=" " autocomplete="off">
+                        <label for="nuevoClientName" class="floating-label">Nombre del Cliente: *</label>
+                    </div>
 
-                    <label style="font-weight:bold; font-size:0.9rem;">Teléfono del Cliente: *</label>
-                    <input type="tel" id="nuevoClientPhone" placeholder="Ej: xxxx7777" maxlength="4"
-                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+                    <div class="floating-field">
+                        <input type="tel" id="nuevoClientPhone" class="floating-input" placeholder=" " maxlength="4" autocomplete="off">
+                        <label for="nuevoClientPhone" class="floating-label">Teléfono del Cliente: *</label>
+                    </div>
 
-                    <label style="font-weight:bold; font-size:0.9rem;">Nombre del Producto: *</label>
-                    <input type="text" id="nuevoProductName" placeholder="Ej: Tenis Nike Air Force 1"
-                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+                    <div class="floating-field">
+                        <input type="text" id="nuevoProductName" class="floating-input" placeholder=" " autocomplete="off">
+                        <label for="nuevoProductName" class="floating-label">Nombre del Producto: *</label>
+                    </div>
 
                     <label style="font-weight:bold; font-size:0.9rem; display:none;">Talla:</label>
                     <input type="text" id="nuevoSize" placeholder="Ej: 7.5"
@@ -149,9 +152,10 @@
                         <button type="button" class="stepper-btn" onclick="updateQuantity('nuevoQuantity', 1)">+</button>
                     </div>
 
-                    <label style="font-weight:bold; font-size:0.9rem;">Precio (₡): *</label>
-                    <input type="number" id="nuevoPrice" placeholder="Ej: 65000"
-                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+                    <div class="floating-field">
+                        <input type="number" id="nuevoPrice" class="floating-input" placeholder=" " min="0" step="any">
+                        <label for="nuevoPrice" class="floating-label">Precio (₡): *</label>
+                    </div>
 
                     <button id="btnGuardarNuevaOrden" onclick="guardarNuevaOrden()"
                         style="width:100%; padding:12px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
