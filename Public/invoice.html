@@ -36,10 +36,13 @@
 
             <!-- Sección para Agregar Abonos (solo visible para admins) -->
             <div id="adminPaymentSection" class="add-payment-section" style="display: none;">
-                <button type="button" class="invoice-collapse-toggle" id="togglePaymentForm" onclick="togglePaymentSection()" aria-expanded="false">
-                    <span>Agregar Abono</span>
-                    <span class="collapse-icon">+</span>
-                </button>
+                <div class="section-header-row" role="button" tabindex="0" onclick="togglePaymentSection()" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); togglePaymentSection(); }">
+                    <span class="section-header-title">Agregar Abono</span>
+                    <div id="paymentFeedback" class="section-feedback" aria-live="polite"></div>
+                    <button type="button" class="invoice-collapse-toggle" id="togglePaymentForm" aria-expanded="false" aria-label="Expandir o colapsar Agregar Abono" title="Expandir o colapsar">
+                        <span class="collapse-icon">+</span>
+                    </button>
+                </div>
                 <div class="payment-form-collapse" id="paymentFormCollapse" style="display: none;">
                     <div class="payment-form-grid">
                         <input type="number" id="paymentAmount" placeholder="Monto del abono (₡)">
@@ -48,6 +51,50 @@
                         <button id="btnGuardarAbono" class="admin-btn-agregar" onclick="guardarNuevoAbono()">+ Agregar Abono</button>
                     </div>
                     <div id="paymentMensaje" class="form-message"></div>
+                </div>
+            </div>
+
+            <div id="adminItemSection" class="add-item-section" style="display: none;">
+                <div class="section-header-row" role="button" tabindex="0" onclick="toggleItemSection()" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleItemSection(); }">
+                    <span class="section-header-title">Agregar Orden</span>
+                    <div id="itemFeedback" class="section-feedback" aria-live="polite"></div>
+                    <button type="button" class="invoice-collapse-toggle" id="toggleItemForm" aria-expanded="false" aria-label="Expandir o colapsar Agregar Orden" title="Expandir o colapsar">
+                        <span class="collapse-icon">+</span>
+                    </button>
+                </div>
+                <div class="item-form-collapse" id="itemFormCollapse" style="display: none;">
+                    <div class="image-upload-container">
+                        <label for="invoiceItemImageUpload">Foto</label>
+                        <div class="image-upload-content">
+                            <div class="image-preview" id="invoiceItemImagePreview">
+                                <img src="https://placehold.co/100x100/E19B9D/FFFFFF?text=?" alt="Vista previa de la imagen">
+                            </div>
+                            <div class="image-upload-buttons">
+                                <button class="admin-btn" onclick="triggerInvoiceItemFileUpload()" title="Subir Archivo"><i class="fas fa-upload"></i></button>
+                                <button class="admin-btn" onclick="triggerInvoiceItemCameraUpload()" title="Tomar Foto"><i class="fas fa-camera"></i></button>
+                            </div>
+                            <div class="image-inline-qty">
+                                <label class="item-qty-label">Cantidad:</label>
+                                <div class="quantity-stepper">
+                                    <button type="button" class="stepper-btn" onclick="updateInvoiceItemQuantity('invoiceItemQuantity', -1)">-</button>
+                                    <input type="number" id="invoiceItemQuantity" value="1" min="1" max="9999">
+                                    <button type="button" class="stepper-btn" onclick="updateInvoiceItemQuantity('invoiceItemQuantity', 1)">+</button>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="file" accept="image/*" id="invoiceItemImageUpload" class="image-upload-input" onchange="handleInvoiceItemImageUpload(event)">
+                        <input type="file" accept="image/*" capture id="invoiceItemCameraUpload" class="image-upload-input" onchange="handleInvoiceItemImageUpload(event)">
+                        <input type="hidden" id="invoiceItemImageUrl">
+                        <small class="image-upload-status" id="invoiceItemImageStatus"></small>
+                    </div>
+
+                    <div class="item-form-grid">
+                        <input type="text" id="invoiceItemProductName" placeholder="Nombre Producto">
+                        
+                        <input type="number" id="invoiceItemPrice" min="1" step="any" placeholder="Precio (₡)">
+                        <button id="btnGuardarArticulo" class="admin-btn-agregar" onclick="guardarNuevoArticulo()">+ Agregar Orden</button>
+                    </div>
+                    <div id="itemMensaje" class="form-message"></div>
                 </div>
             </div>
 

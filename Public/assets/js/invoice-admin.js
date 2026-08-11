@@ -9,6 +9,7 @@ async function initInvoiceAdminPage(invoiceId) {
     currentInvoiceId = invoiceId;
     document.querySelector('.admin-btn-back').onclick = () => history.back();
     setPaymentSectionExpanded(false);
+    setItemSectionExpanded(false);
 
     await loadInvoiceDetails(invoiceId);
 }
@@ -454,12 +455,100 @@ async function guardarNuevoAbono() {
     }
 }
 
+async function guardarNuevoArticulo() {
+    const messageEl = document.getElementById('itemMensaje');
+    const productEl = document.getElementById('invoiceItemProductName');
+    const quantityEl = document.getElementById('invoiceItemQuantity');
+    const priceEl = document.getElementById('invoiceItemPrice');
+    const imageUrlEl = document.getElementById('invoiceItemImageUrl');
+    const imageStatusEl = document.getElementById('invoiceItemImageStatus');
+    const previewImg = document.querySelector('#invoiceItemImagePreview img');
+    const saveBtn = document.getElementById('btnGuardarArticulo');
+
+    if (!currentInvoiceId) {
+        if (messageEl) {
+            messageEl.textContent = '⚠️ No hay una factura activa para agregar la orden.';
+        }
+        return;
+    }
+
+    const productName = productEl?.value.trim() || '';
+    const quantity = Number(quantityEl?.value);
+    const price = Number(priceEl?.value);
+    const imageUrl = imageUrlEl?.value.trim() || null;
+
+    if (!productName) {
+        if (messageEl) messageEl.textContent = '⚠️ El nombre del producto es obligatorio.';
+        return;
+    }
+
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+        if (messageEl) messageEl.textContent = '⚠️ La cantidad debe ser mayor a 0.';
+        return;
+    }
+
+    if (!Number.isFinite(price) || price <= 0) {
+        if (messageEl) messageEl.textContent = '⚠️ El precio debe ser mayor a 0.';
+        return;
+    }
+
+    if (messageEl) messageEl.textContent = 'Guardando orden...';
+    if (saveBtn) saveBtn.disabled = true;
+
+    try {
+        const session = getSession();
+        if (!session) throw new Error('Sesión no válida.');
+
+        const response = await fetch('/.netlify/functions/invoices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-admin-token': session.token },
+            body: JSON.stringify({
+                invoice_id: Number(currentInvoiceId),
+                product_name: productName,
+                quantity: Math.max(1, Math.floor(quantity)),
+                price,
+                image_url: imageUrl
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'No se pudo guardar la orden.');
+        }
+
+        if (productEl) productEl.value = '';
+        if (quantityEl) quantityEl.value = '1';
+        if (priceEl) priceEl.value = '';
+        if (imageUrlEl) imageUrlEl.value = '';
+        if (imageStatusEl) imageStatusEl.textContent = '';
+        if (previewImg) {
+            previewImg.src = 'https://placehold.co/100x100/E19B9D/FFFFFF?text=?';
+        }
+        if (messageEl) messageEl.textContent = '✅ Orden agregada correctamente.';
+
+        await loadInvoiceDetails(currentInvoiceId);
+        setItemSectionExpanded(false);
+    } catch (error) {
+        if (messageEl) messageEl.textContent = `⚠️ ${error.message}`;
+    } finally {
+        if (saveBtn) saveBtn.disabled = false;
+    }
+}
+
 function togglePaymentSection() {
     const collapseEl = document.getElementById('paymentFormCollapse');
     if (!collapseEl) return;
 
     const isExpanded = collapseEl.style.display !== 'none';
     setPaymentSectionExpanded(!isExpanded);
+}
+
+function toggleItemSection() {
+    const collapseEl = document.getElementById('itemFormCollapse');
+    if (!collapseEl) return;
+
+    const isExpanded = collapseEl.style.display !== 'none';
+    setItemSectionExpanded(!isExpanded);
 }
 
 function setPaymentSectionExpanded(isExpanded) {
@@ -472,10 +561,96 @@ function setPaymentSectionExpanded(isExpanded) {
     toggleEl.classList.toggle('is-open', isExpanded);
 }
 
+function setItemSectionExpanded(isExpanded) {
+    const collapseEl = document.getElementById('itemFormCollapse');
+    const toggleEl = document.getElementById('toggleItemForm');
+    if (!collapseEl || !toggleEl) return;
+
+    collapseEl.style.display = isExpanded ? 'block' : 'none';
+    toggleEl.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+    toggleEl.classList.toggle('is-open', isExpanded);
+}
+
+async function handleInvoiceItemImageUpload(event) {
+    const fileInput = event.target;
+    const file = fileInput.files[0];
+    if (!file) return;
+
+    const statusEl = document.getElementById('invoiceItemImageStatus');
+    const previewImg = document.querySelector('#invoiceItemImagePreview img');
+    const urlHiddenInput = document.getElementById('invoiceItemImageUrl');
+
+    if (statusEl) {
+        statusEl.textContent = 'Subiendo imagen...';
+        statusEl.style.color = 'var(--brown-text)';
+    }
+
+    try {
+        const session = getSession();
+        if (!session) throw new Error('Sesión expirada.');
+
+        const response = await fetch('/.netlify/functions/upload-image', {
+            method: 'POST',
+            headers: {
+                'Content-Type': file.type,
+                'x-admin-token': session.token,
+                'x-file-name': file.name
+            },
+            body: file
+        });
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error || 'No se pudo subir la imagen.');
+        }
+
+        const { imageUrl } = await response.json();
+
+        if (urlHiddenInput) urlHiddenInput.value = imageUrl;
+        if (previewImg) previewImg.src = imageUrl;
+        if (statusEl) {
+            statusEl.textContent = '✅ Imagen subida.';
+            statusEl.style.color = '#28a745';
+        }
+    } catch (error) {
+        if (statusEl) {
+            statusEl.textContent = `Error: ${error.message}`;
+            statusEl.style.color = 'red';
+        }
+    }
+}
+
+function triggerInvoiceItemFileUpload() {
+    const input = document.getElementById('invoiceItemImageUpload');
+    if (input) input.click();
+}
+
+function triggerInvoiceItemCameraUpload() {
+    const input = document.getElementById('invoiceItemCameraUpload');
+    if (input) input.click();
+}
+
+function updateInvoiceItemQuantity(inputId, delta) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+
+    const min = Number(input.min) || 1;
+    const max = Number(input.max) || 9999;
+    const currentValue = parseInt(input.value, 10) || min;
+    const nextValue = Math.min(max, Math.max(min, currentValue + delta));
+    input.value = String(nextValue);
+}
+
 function volverAlGrid() {
     history.back();
 }
 
 window.togglePaymentSection = togglePaymentSection;
+window.toggleItemSection = toggleItemSection;
 window.initInvoiceAdminPage = initInvoiceAdminPage;
 window.guardarNuevoAbono = guardarNuevoAbono;
+window.guardarNuevoArticulo = guardarNuevoArticulo;
+window.handleInvoiceItemImageUpload = handleInvoiceItemImageUpload;
+window.triggerInvoiceItemFileUpload = triggerInvoiceItemFileUpload;
+window.triggerInvoiceItemCameraUpload = triggerInvoiceItemCameraUpload;
+window.updateInvoiceItemQuantity = updateInvoiceItemQuantity;
