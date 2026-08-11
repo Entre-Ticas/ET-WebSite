@@ -41,7 +41,7 @@ exports.handler = async (event) => {
         // 2. Usamos argon2 para verificar si la contraseña ingresada coincide con el hash.
         if (await argon2.verify(hashedPasswordFromDB, password)) {
             // ¡Contraseña correcta! Generamos el token de sesión.
-            const expiry = Date.now() + 60 * 60 * 1000; // 1 hora
+            const expiry = Date.now() + 20 * 60 * 1000; // TEMP TEST: 20 minutos
             const token = Buffer.from(`${ADMIN_SECRET}:${userData.id}:${expiry}`).toString('base64');
 
             return {
