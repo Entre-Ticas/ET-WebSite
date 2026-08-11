@@ -1,6 +1,6 @@
 // Autenticación
 
-const INACTIVIDAD_MS = 20 * 60 * 1000; // TEMP TEST: 20 minutos
+const INACTIVIDAD_MS = 20 * 60 * 1000;
 const DEBOUNCE_MS = 30 * 1000; // reiniciar timer máximo cada 30s
 const SESSION_REFRESH_BUFFER_MS = 5 * 60 * 1000; // refrescar si faltan <=5 min
 const SESSION_REFRESH_MIN_ATTEMPT_GAP_MS = 20 * 1000; // evita ráfagas de refresh
