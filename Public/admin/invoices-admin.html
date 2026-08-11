@@ -104,21 +104,25 @@
                 <h3 style="margin:0.5rem 0;">Nueva Factura</h3>
 
                 <div style="text-align:left;">
-                    <label style="font-weight:bold; font-size:0.9rem;">Nombre del Cliente: *</label>
-                    <input type="text" id="newInvoiceClientName" placeholder="Ej: Ana Rodriguez"
-                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+                    <div class="floating-field">
+                        <input type="text" id="newInvoiceClientName" class="floating-input" placeholder=" " autocomplete="off">
+                        <label for="newInvoiceClientName" class="floating-label">Nombre del Cliente: *</label>
+                    </div>
 
-                    <label style="font-weight:bold; font-size:0.9rem;">Telefono del Cliente: *</label>
-                    <input type="text" id="newInvoiceClientPhone" placeholder="Ej: 88887777"
-                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+                    <div class="floating-field">
+                        <input type="text" id="newInvoiceClientPhone" class="floating-input" placeholder=" " autocomplete="off" inputmode="numeric" pattern="[0-9]*">
+                        <label for="newInvoiceClientPhone" class="floating-label">Telefono del Cliente: *</label>
+                    </div>
 
-                    <label style="font-weight:bold; font-size:0.9rem;">Fecha Factura (opcional):</label>
-                    <input type="datetime-local" id="newInvoiceDate"
-                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+                    <div class="floating-field floating-field-datetime">
+                        <input type="datetime-local" id="newInvoiceDate" class="floating-input floating-input-datetime">
+                        <label for="newInvoiceDate" class="floating-label">Fecha Factura (opcional)</label>
+                    </div>
 
-                    <label style="font-weight:bold; font-size:0.9rem;">Estado ID (opcional):</label>
-                    <input type="number" id="newInvoiceStatusId" min="1" step="1" placeholder="1"
-                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.5rem; box-sizing:border-box;">
+                    <div class="floating-field">
+                        <input type="number" id="newInvoiceStatusId" class="floating-input" min="1" step="1" placeholder=" ">
+                        <label for="newInvoiceStatusId" class="floating-label">Estado ID (opcional)</label>
+                    </div>
                     <small style="display:block; color:#777; margin-bottom:0.8rem;">Si lo dejas vacio se usa 1.</small>
 
                     <label class="custom-checkbox-container" style="margin-bottom:1rem; display:flex; align-items:center; gap:8px;">
@@ -147,21 +151,25 @@
                 <h3 style="margin:0.5rem 0;">Editar Factura</h3>
 
                 <div style="text-align:left;">
-                    <label style="font-weight:bold; font-size:0.9rem;">Nombre del Cliente: *</label>
-                    <input type="text" id="editInvoiceClientName" placeholder="Nombre del cliente"
-                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+                    <div class="floating-field">
+                        <input type="text" id="editInvoiceClientName" class="floating-input" placeholder=" " autocomplete="off">
+                        <label for="editInvoiceClientName" class="floating-label">Nombre del Cliente: *</label>
+                    </div>
 
-                    <label style="font-weight:bold; font-size:0.9rem;">Telefono del Cliente: *</label>
-                    <input type="text" id="editInvoiceClientPhone" placeholder="Telefono del cliente" maxlength="4" inputmode="numeric" pattern="[0-9]{1,4}" oninput="this.value = this.value.replace(/\D/g, '').slice(0, 4)"
-                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+                    <div class="floating-field">
+                        <input type="text" id="editInvoiceClientPhone" class="floating-input" placeholder=" " maxlength="4" inputmode="numeric" pattern="[0-9]{1,4}" oninput="this.value = this.value.replace(/\D/g, '').slice(0, 4)">
+                        <label for="editInvoiceClientPhone" class="floating-label">Telefono del Cliente: *</label>
+                    </div>
 
-                    <label style="font-weight:bold; font-size:0.9rem;">Fecha Factura:</label>
-                    <input type="datetime-local" id="editInvoiceDate"
-                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+                    <div class="floating-field floating-field-datetime">
+                        <input type="datetime-local" id="editInvoiceDate" class="floating-input floating-input-datetime">
+                        <label for="editInvoiceDate" class="floating-label">Fecha Factura</label>
+                    </div>
 
-                    <label style="font-weight:bold; font-size:0.9rem;">Estado ID:</label>
-                    <input type="number" id="editInvoiceStatusId" min="1" step="1"
-                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+                    <div class="floating-field">
+                        <input type="number" id="editInvoiceStatusId" class="floating-input" min="1" step="1" placeholder=" ">
+                        <label for="editInvoiceStatusId" class="floating-label">Estado ID</label>
+                    </div>
 
                     <label class="custom-checkbox-container" style="margin-bottom:1rem; display:flex; align-items:center; gap:8px;">
                         <input type="checkbox" id="editInvoicePaid">

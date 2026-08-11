@@ -212,14 +212,26 @@
         transition: top 0.2s ease, transform 0.2s ease, color 0.2s ease, font-size 0.2s ease;
     }
 
+    .floating-field.floating-field-datetime .floating-label {
+        top: 0;
+        transform: translateY(-52%) scale(0.92);
+        background: var(--pink-light);
+        border-radius: 6px;
+        font-size: 0.82rem;
+    }
+
     .floating-input:focus + .floating-label,
-    .floating-input:not(:placeholder-shown) + .floating-label {
+    .floating-input:not(.floating-input-datetime):not(:placeholder-shown) + .floating-label {
         top: 0;
         transform: translateY(-52%) scale(0.92);
         background: var(--pink-light);
         border-radius: 6px;
         color: var(--pink-accent);
         font-size: 0.82rem;
+    }
+
+    .floating-field.floating-field-datetime .floating-input {
+        padding-top: 14px;
     }
 
     .floating-field input[type="number"]::-webkit-outer-spin-button,
