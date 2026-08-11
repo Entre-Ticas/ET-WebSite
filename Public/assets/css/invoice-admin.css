@@ -206,6 +206,7 @@
 .invoice-floating-field {
     position: relative;
     width: 100%;
+    height: 44px;
 }
 
 .invoice-floating-input {
@@ -430,7 +431,6 @@
 .payment-form-grid input[type="number"] {
     appearance: textfield;
     -moz-appearance: textfield;
-    line-height: normal;
 }
 
 .payment-form-grid input[type="number"]::-webkit-outer-spin-button,
