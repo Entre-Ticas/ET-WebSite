@@ -45,9 +45,18 @@
                 </div>
                 <div class="payment-form-collapse" id="paymentFormCollapse" style="display: none;">
                     <div class="payment-form-grid">
-                        <input type="number" id="paymentAmount" placeholder="Monto del abono (₡)">
-                        <input type="text" id="paymentMethod" placeholder="Método (Ej: SINPE)">
-                        <input type="text" id="paymentRef" placeholder="Referencia (Ej: #Comprobante)">
+                        <div class="invoice-floating-field">
+                            <input type="number" id="paymentAmount" class="invoice-floating-input" placeholder=" " min="0.01" step="0.01">
+                            <label for="paymentAmount" class="invoice-floating-label">Monto del abono (₡)</label>
+                        </div>
+                        <div class="invoice-floating-field">
+                            <input type="text" id="paymentMethod" class="invoice-floating-input" placeholder=" " autocomplete="off">
+                            <label for="paymentMethod" class="invoice-floating-label">Método (Ej: SINPE)</label>
+                        </div>
+                        <div class="invoice-floating-field">
+                            <input type="text" id="paymentRef" class="invoice-floating-input" placeholder=" " autocomplete="off">
+                            <label for="paymentRef" class="invoice-floating-label">Referencia (Ej: #Comprobante)</label>
+                        </div>
                         <button id="btnGuardarAbono" class="admin-btn-agregar" onclick="guardarNuevoAbono()">+ Agregar Abono</button>
                     </div>
                     <div id="paymentMensaje" class="form-message"></div>
@@ -89,9 +98,14 @@
                     </div>
 
                     <div class="item-form-grid">
-                        <input type="text" id="invoiceItemProductName" placeholder="Nombre Producto">
-                        
-                        <input type="number" id="invoiceItemPrice" min="1" step="any" placeholder="Precio (₡)">
+                        <div class="invoice-floating-field">
+                            <input type="text" id="invoiceItemProductName" class="invoice-floating-input" placeholder=" " autocomplete="off">
+                            <label for="invoiceItemProductName" class="invoice-floating-label">Nombre Producto</label>
+                        </div>
+                        <div class="invoice-floating-field">
+                            <input type="number" id="invoiceItemPrice" class="invoice-floating-input" min="1" step="any" placeholder=" ">
+                            <label for="invoiceItemPrice" class="invoice-floating-label">Precio (₡)</label>
+                        </div>
                         <button id="btnGuardarArticulo" class="admin-btn-agregar" onclick="guardarNuevoArticulo()">+ Agregar Orden</button>
                     </div>
                     <div id="itemMensaje" class="form-message"></div>

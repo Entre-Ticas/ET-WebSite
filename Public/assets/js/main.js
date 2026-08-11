@@ -210,7 +210,7 @@ async function loadPage(page, param = null) {
                 'admin/order': 'admin/order_items-admin.html', // Nueva ruta estándar
                 'admin/invoices': 'admin/invoices-admin.html',
                 'admin/payments': 'admin/payments-admin.html',
-                'invoice': 'invoice.html',
+                'invoice': 'invoice/invoice.html',
                 'info': 'InformationImg/info.html',
                 'informacion': 'InformationImg/infoImg.html'
             };

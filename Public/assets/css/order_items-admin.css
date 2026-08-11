@@ -247,6 +247,33 @@
         width: 100%;
     }
 
+    .floating-field.floating-field-textarea {
+        margin-bottom: 1rem;
+    }
+
+    .floating-textarea {
+        height: auto;
+        min-height: 92px;
+        padding: 20px 10px 10px;
+        resize: vertical;
+        line-height: 1.35;
+    }
+
+    .floating-field.floating-field-textarea .floating-label {
+        top: 18px;
+        transform: translateY(-50%);
+    }
+
+    .floating-textarea:focus + .floating-label,
+    .floating-textarea:not(:placeholder-shown) + .floating-label {
+        top: 0;
+        transform: translateY(-52%) scale(0.92);
+        background: var(--pink-light);
+        border-radius: 6px;
+        color: var(--pink-accent);
+        font-size: 0.82rem;
+    }
+
     /* Estilos para el stepper de cantidad */
     .quantity-stepper {
         display: flex;
