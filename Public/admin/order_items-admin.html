@@ -147,7 +147,6 @@
                                 +
                             </button>
                         </div>
-                        <p class="bulk-helper-text">Agrega una fila por clienta. Se guarda el mismo producto, foto y precio para todas las filas.</p>
                         <div id="bulkClientEntries"></div>
                     </div>
 
@@ -237,18 +236,18 @@
 <template id="bulkClientEntryTemplate">
     <div class="bulk-client-card">
         <div class="bulk-client-row">
-            <div class="floating-field">
+            <div class="floating-field bulk-compact-field">
                 <input type="text" class="floating-input bulk-client-name" placeholder=" " autocomplete="off">
-                <label class="floating-label">Nombre del Cliente: *</label>
+                <label class="floating-label">Nombre *</label>
             </div>
-            <div class="floating-field">
+            <div class="floating-field bulk-compact-field">
                 <input type="tel" class="floating-input bulk-client-phone" placeholder=" " maxlength="4" autocomplete="off">
-                <label class="floating-label">Teléfono del Cliente: *</label>
+                <label class="floating-label">Teléfono *</label>
             </div>
         </div>
         <div class="bulk-client-row bulk-client-row-actions">
-            <div>
-                <label style="font-weight:bold; font-size:0.9rem;">Cantidad:</label>
+            <div class="bulk-qty-inline">
+                <label class="bulk-qty-label">Cantidad:</label>
                 <div class="quantity-stepper">
                     <button type="button" class="stepper-btn js-bulk-minus">-</button>
                     <input type="number" class="bulk-client-quantity" value="1" min="1" max="9999">
