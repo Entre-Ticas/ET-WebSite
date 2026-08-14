@@ -494,6 +494,38 @@
         height: 38px;
     }
 
+    @media (min-width: 769px) {
+        .bulk-client-card {
+            display: grid;
+            grid-template-columns: minmax(0, 1.55fr) minmax(92px, 0.7fr) auto auto;
+            gap: 0.65rem;
+            align-items: end;
+        }
+
+        .bulk-client-card .bulk-client-row,
+        .bulk-client-card .bulk-client-row-actions {
+            display: contents;
+        }
+
+        .bulk-client-card .bulk-name-field {
+            grid-column: 1;
+        }
+
+        .bulk-client-card .bulk-phone-field {
+            grid-column: 2;
+        }
+
+        .bulk-client-card .bulk-qty-inline {
+            grid-column: 3;
+            align-self: end;
+        }
+
+        .bulk-client-card .bulk-remove-btn {
+            grid-column: 4;
+            align-self: end;
+        }
+    }
+
     @media (max-width: 768px) {
         .bulk-client-header {
             flex-direction: column;
