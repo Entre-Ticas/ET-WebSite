@@ -8,3 +8,5 @@ android/
 
 # Capacitor splash screens generados (iOS, no usados en el sitio)
 Public/assets/icons/apple-splash-*
+SQL/entreticas_data_utf8.sql
+SQL/entreticas_data.sql

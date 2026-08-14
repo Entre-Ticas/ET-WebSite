@@ -6,6 +6,7 @@ let currentPage = 1;
 let rowsPerPage = 10; // Valor por defecto
 let orderItemsSortColumn = null; 
 let orderItemsSortDir = 'asc';   
+const BULK_CLIENT_MAX_ROWS = 25;
 let orderItemsColumnFilters = { 
     client_name: '', client_phone: '', product_name: '', size: '', quantity: '',
     price: '', status_name: '', usa_reviewed: '', invoice_id: ''
@@ -739,9 +740,8 @@ function abrirFormNuevo() {
     document.getElementById('adminGridView').style.display = 'none';
     document.getElementById('adminFormNuevoView').style.display = 'block';
     // Limpiar formulario
-    const ids = ['nuevoClientName', 'nuevoClientPhone', 'nuevoProductName', 'nuevoSize', 'nuevoPrice']; // Aseguramos que 'nuevoClientPhone' esté en la lista.
+    const ids = ['nuevoProductName', 'nuevoSize', 'nuevoPrice'];
     ids.forEach(id => document.getElementById(id).value = '');
-    document.getElementById('nuevoQuantity').value = '1';
     document.getElementById('nuevoMensaje').innerHTML = '';
 
     // Resetear el campo de imagen
@@ -751,6 +751,141 @@ function abrirFormNuevo() {
     document.getElementById('nuevoImageStatus').textContent = '';
     document.getElementById('nuevoImageUpload').value = null;
     document.getElementById('nuevoCameraUpload').value = null;
+
+    resetBulkClientEntries();
+}
+
+function crearBloqueCliente({ client_name = '', client_phone = '', quantity = 1 } = {}) {
+    const template = document.getElementById('bulkClientEntryTemplate');
+    if (!template) return null;
+
+    const fragment = template.content.cloneNode(true);
+    const card = fragment.querySelector('.bulk-client-card');
+    if (!card) return null;
+
+    const inputName = card.querySelector('.bulk-client-name');
+    const inputPhone = card.querySelector('.bulk-client-phone');
+    const inputQuantity = card.querySelector('.bulk-client-quantity');
+    const removeBtn = card.querySelector('.bulk-remove-btn');
+    const plusBtn = card.querySelector('.js-bulk-plus');
+    const minusBtn = card.querySelector('.js-bulk-minus');
+
+    if (inputName) inputName.value = client_name;
+    if (inputPhone) inputPhone.value = client_phone;
+    if (inputQuantity) inputQuantity.value = Number.isFinite(Number(quantity)) ? Math.max(1, parseInt(quantity, 10)) : 1;
+
+    if (plusBtn && inputQuantity) {
+        plusBtn.addEventListener('click', () => updateQuantityForInput(inputQuantity, 1));
+    }
+    if (minusBtn && inputQuantity) {
+        minusBtn.addEventListener('click', () => updateQuantityForInput(inputQuantity, -1));
+    }
+    if (removeBtn) {
+        removeBtn.addEventListener('click', () => {
+            card.remove();
+            refreshBulkClientRowsState();
+        });
+    }
+
+    return card;
+}
+
+function resetBulkClientEntries() {
+    const container = document.getElementById('bulkClientEntries');
+    if (!container) return;
+
+    container.innerHTML = '';
+    const firstCard = crearBloqueCliente();
+    if (firstCard) container.appendChild(firstCard);
+    refreshBulkClientRowsState();
+}
+
+function agregarBloqueCliente() {
+    const container = document.getElementById('bulkClientEntries');
+    const mensajeEl = document.getElementById('nuevoMensaje');
+    if (!container) return;
+
+    if (container.children.length >= BULK_CLIENT_MAX_ROWS) {
+        if (mensajeEl) {
+            mensajeEl.style.color = 'red';
+            mensajeEl.textContent = `Máximo ${BULK_CLIENT_MAX_ROWS} filas por guardado.`;
+        }
+        return;
+    }
+
+    const card = crearBloqueCliente();
+    if (!card) return;
+
+    container.prepend(card);
+    refreshBulkClientRowsState();
+    const inputName = card.querySelector('.bulk-client-name');
+    if (inputName) inputName.focus();
+}
+
+function refreshBulkClientRowsState() {
+    const container = document.getElementById('bulkClientEntries');
+    if (!container) return;
+
+    const cards = Array.from(container.querySelectorAll('.bulk-client-card'));
+    cards.forEach((card, index) => {
+        const removeBtn = card.querySelector('.bulk-remove-btn');
+        if (removeBtn) {
+            removeBtn.style.display = cards.length > 1 ? '' : 'none';
+            removeBtn.title = `Eliminar fila ${index + 1}`;
+        }
+
+        const heading = card.querySelector('.bulk-row-title');
+        if (heading) heading.textContent = `Fila ${index + 1}`;
+    });
+}
+
+function updateQuantityForInput(input, delta) {
+    if (!input) return;
+
+    let currentValue = parseInt(input.value, 10);
+    if (Number.isNaN(currentValue) || currentValue < 1) currentValue = 1;
+
+    const next = Math.max(1, currentValue + delta);
+    input.value = String(next);
+}
+
+function collectBulkClientEntries() {
+    const container = document.getElementById('bulkClientEntries');
+    if (!container) {
+        return { entries: [], error: 'No se encontró la sección de clientes.' };
+    }
+
+    const cards = Array.from(container.querySelectorAll('.bulk-client-card'));
+    if (!cards.length) {
+        return { entries: [], error: 'Debes agregar al menos una fila de cliente.' };
+    }
+
+    const entries = [];
+    for (let i = 0; i < cards.length; i += 1) {
+        const card = cards[i];
+        const clientName = card.querySelector('.bulk-client-name')?.value.trim() || '';
+        const clientPhone = card.querySelector('.bulk-client-phone')?.value.trim() || '';
+        const quantityRaw = card.querySelector('.bulk-client-quantity')?.value;
+        const quantity = parseInt(quantityRaw, 10);
+
+        if (!clientName || !clientPhone) {
+            return { entries: [], error: `Fila ${i + 1}: cliente y teléfono son obligatorios.` };
+        }
+        if (!/^\d{4}$/.test(clientPhone)) {
+            return { entries: [], error: `Fila ${i + 1}: teléfono debe tener 4 dígitos numéricos.` };
+        }
+        if (Number.isNaN(quantity) || quantity < 1) {
+            return { entries: [], error: `Fila ${i + 1}: cantidad inválida.` };
+        }
+
+        entries.push({
+            client_name: clientName,
+            client_phone: clientPhone,
+            quantity
+        });
+    }
+
+    return { entries, error: null };
 }
 
 async function guardarNuevaOrden() {
@@ -758,13 +893,16 @@ async function guardarNuevaOrden() {
     const botonGuardar = document.getElementById('btnGuardarNuevaOrden');
     mensajeEl.style.color = 'red';
     
-    const client_name = document.getElementById('nuevoClientName').value.trim();
-    const client_phone = document.getElementById('nuevoClientPhone').value.trim();
     const product_name = document.getElementById('nuevoProductName').value.trim();
     const price = parseFloat(document.getElementById('nuevoPrice').value);
+    const bulkEntriesResult = collectBulkClientEntries();
     
-    if (!client_name || !client_phone || !product_name || !price) {
-        mensajeEl.textContent = 'Por favor, completa todos los campos obligatorios (*).';
+    if (!product_name || !price) {
+        mensajeEl.textContent = 'Completa nombre de producto y precio.';
+        return;
+    }
+    if (bulkEntriesResult.error) {
+        mensajeEl.textContent = bulkEntriesResult.error;
         return;
     }
     if (isNaN(price) || price <= 0) {
@@ -784,20 +922,21 @@ async function guardarNuevaOrden() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'x-admin-token': session.token },
             body: JSON.stringify({
-                client_name: client_name,
-                client_phone: client_phone,
                 product_name: product_name,
                 size: document.getElementById('nuevoSize').value.trim() || null,
-                quantity: parseInt(document.getElementById('nuevoQuantity').value),
                 price: price,
                 image_url: document.getElementById('nuevoImageUrl').value || null, // Obtener URL del campo oculto
-                id_status: 1 // Por defecto, se crea como 'Pendiente' o 'Activo'
+                id_status: 1, // Por defecto, se crea como 'Pendiente' o 'Activo'
+                client_entries: bulkEntriesResult.entries
             })
         });
 
         if (!response.ok) throw new Error((await response.json()).error || 'No se pudo guardar.');
 
-        mensajeEl.textContent = '✅ ¡Orden guardada con éxito!';
+        const savedPayload = await response.json().catch(() => ({}));
+        const savedCount = savedPayload.inserted_count || bulkEntriesResult.entries.length;
+
+        mensajeEl.textContent = `✅ ¡Se guardaron ${savedCount} órdenes con éxito!`;
         mensajeEl.style.color = '#28a745';
 
         setTimeout(async () => {
@@ -1089,3 +1228,5 @@ function updateQuantity(inputId, delta) {
     }
     input.value = newValue;
 }
+
+window.agregarBloqueCliente = agregarBloqueCliente;
