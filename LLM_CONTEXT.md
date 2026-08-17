@@ -95,9 +95,11 @@ Toda nueva pantalla de formulario, admin o edición debe crearse con el patrón 
 
 *   Usar el patrón existente basado en `floating-field`, `floating-input` y `floating-label`.
 *   No crear inputs con estilo plano o labels estáticos si la pantalla es un formulario nuevo.
+*   Cualquier campo tipo `datetime-local`, `select`, `dropdown` o similar debe aplicarse también con estilo floating desde el inicio, no como campo clásico.
 *   Mantener `placeholder=" "` y la lógica visual del label flotante intacta; el CSS y el comportamiento de focus deben continuar funcionando correctamente.
 *   La protección contra autofill/password managers debe mantenerse, pero sin romper la animación ni la experiencia del floating label.
 *   En formularios con este patrón, los inputs de negocio deben seguir respetando `autocomplete="new-password"` o `autocomplete="off"` cuando no correspondan a login real.
+*   Cuando el control sea un `select` o `datetime-local`, el label debe quedar flotando por defecto con el mismo estilo visual del resto del sistema, usando el mismo patrón `floating-field > control + floating-label`.
 *   Esta regla es independiente de la regla #6 y debe considerarse una directiva de UI/UX y consistencia visual obligatoria para todo desarrollo futuro.
 
 ---

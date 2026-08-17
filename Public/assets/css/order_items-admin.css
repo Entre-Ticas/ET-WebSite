@@ -256,8 +256,17 @@
         font-size: 0.82rem;
     }
 
+    .floating-select {
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        background-image: none;
+    }
+
     .floating-input:focus + .floating-label,
-    .floating-input:not(.floating-input-datetime):not(:placeholder-shown) + .floating-label {
+    .floating-input:not(.floating-input-datetime):not(:placeholder-shown) + .floating-label,
+    .floating-select:focus + .floating-label,
+    .floating-select:invalid + .floating-label {
         top: 0;
         transform: translateY(-52%) scale(0.92);
         background: var(--pink-light);

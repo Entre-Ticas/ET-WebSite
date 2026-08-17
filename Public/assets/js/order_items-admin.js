@@ -500,30 +500,26 @@ function handleOrderMultiEdit() {
         <p style="font-size: 0.9rem; margin-top: 0; color: #777;">
             Introduce los nuevos valores para los campos que deseas actualizar. Los campos que dejes en blanco no se modificarán.
         </p>
-        <div style="text-align: left; margin-bottom: 1rem;">
-            <label style="font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 4px;">Nombre del Cliente:</label>
-            <input type="text" id="multiEditClientName" placeholder="Nuevo nombre para todos"
-                   style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); box-sizing:border-box;">
+        <div class="floating-field" style="margin-bottom: 1rem;">
+            <input type="text" id="multiEditClientName" class="floating-input" placeholder=" " autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true">
+            <label for="multiEditClientName" class="floating-label">Nombre del Cliente</label>
         </div>
-        <div style="text-align: left; margin-bottom: 1rem;">
-            <label style="font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 4px;">Teléfono (últimos 4 dígitos):</label>
-            <input type="tel" id="multiEditClientPhone" placeholder="Nuevo teléfono para todos" maxlength="4"
-                   style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); box-sizing:border-box;">
+        <div class="floating-field" style="margin-bottom: 1rem;">
+            <input type="tel" id="multiEditClientPhone" class="floating-input" placeholder=" " maxlength="4" autocomplete="off" inputmode="numeric" pattern="[0-9]*" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true">
+            <label for="multiEditClientPhone" class="floating-label">Teléfono (últimos 4 dígitos)</label>
             <small id="multiEditPhoneError" style="color: red; display: none; margin-top: 4px;">El teléfono debe ser numérico de 4 dígitos.</small>
         </div>
-        <div style="text-align: left; margin-top: 1rem;">
-            <label style="font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 4px;">Rev USA:</label>
-            <select id="multiEditUsaReviewed"
-                    style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); box-sizing:border-box;">
-                <option value=""> </option>
+        <div class="floating-field" style="margin-top: 1rem;">
+            <select id="multiEditUsaReviewed" class="floating-input floating-select" required>
+                <option value="" selected disabled></option>
                 <option value="true">Marcar como revisado</option>
                 <option value="false">Desmarcar revisado</option>
             </select>
+            <label for="multiEditUsaReviewed" class="floating-label">Rev USA</label>
         </div>
-        <div style="text-align: left;">
-            <label style="font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 4px;">Asignar a Factura (ID):</label>
-            <input type="number" id="multiEditInvoiceId" placeholder="ID de la factura"
-                   style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); box-sizing:border-box;">
+        <div class="floating-field" style="margin-top: 1rem;">
+            <input type="number" id="multiEditInvoiceId" class="floating-input" placeholder=" " min="1" step="1" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true">
+            <label for="multiEditInvoiceId" class="floating-label">Asignar a Factura (ID)</label>
         </div>
         
         <div style="text-align: left;">
@@ -943,7 +939,7 @@ async function guardarNuevaOrden() {
             await loadAdminOrders(); // Recargamos los datos en segundo plano
             abrirFormNuevo();        // Limpiamos el formulario para la siguiente orden
             botonGuardar.disabled = false; // Reactivamos el botón DESPUÉS de limpiar
-        }, 1500);
+        }, 1000);
     } catch (error) {
         mensajeEl.textContent = `Error: ${error.message}`;
         botonGuardar.disabled = false;

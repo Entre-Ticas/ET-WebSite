@@ -188,32 +188,37 @@
                         <small class="image-upload-status" id="editImageStatus"></small>
                     </div>
                     
-                    <label style="font-weight:bold; font-size:0.9rem;">Nombre del Cliente: *</label>
-                    <input type="text" id="editNombre" placeholder="Nombre del cliente"
-                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+                    <div class="floating-field">
+                        <input type="text" id="editNombre" class="floating-input" placeholder=" " autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true">
+                        <label for="editNombre" class="floating-label">Nombre del Cliente: *</label>
+                    </div>
 
-                    <label style="font-weight:bold; font-size:0.9rem;">Teléfono del Cliente: *</label>
-                    <input type="tel" id="editClientPhone" placeholder="Ej: xxxx7777" maxlength="4"
-                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+                    <div class="floating-field">
+                        <input type="tel" id="editClientPhone" class="floating-input" placeholder=" " maxlength="4" autocomplete="off" inputmode="numeric" pattern="[0-9]*" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true">
+                        <label for="editClientPhone" class="floating-label">Teléfono del Cliente: *</label>
+                    </div>
 
-                    <label style="font-weight:bold; font-size:0.9rem;">Nombre del Producto: *</label>
-                    <input type="text" id="editProducto" placeholder="Nombre del producto"
-                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+                    <div class="floating-field">
+                        <input type="text" id="editProducto" class="floating-input" placeholder=" " autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true">
+                        <label for="editProducto" class="floating-label">Nombre del Producto: *</label>
+                    </div>
 
-                    <label style="font-weight:bold; font-size:0.9rem; display:none;">Talla:</label>
-                    <input type="text" id="editTalla" placeholder="Talla del producto"
-                        style="display:none; width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+                    <div class="floating-field" style="display:none;">
+                        <input type="text" id="editTalla" class="floating-input" placeholder=" " autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true">
+                        <label for="editTalla" class="floating-label">Talla</label>
+                    </div>
 
                     <label style="font-weight:bold; font-size:0.9rem;">Cantidad:</label>
                     <div class="quantity-stepper">
                         <button type="button" class="stepper-btn" onclick="updateQuantity('editCantidad', -1)">-</button>
-                        <input type="number" id="editCantidad" placeholder="Cantidad" min="1" max="9999">
+                        <input type="number" id="editCantidad" placeholder="Cantidad" min="1" max="9999" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true">
                         <button type="button" class="stepper-btn" onclick="updateQuantity('editCantidad', 1)">+</button>
                     </div>
 
-                    <label style="font-weight:bold; font-size:0.9rem;">Precio: *</label>
-                    <input type="number" id="editPrecio" placeholder="Precio del producto"
-                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+                    <div class="floating-field">
+                        <input type="number" id="editPrecio" class="floating-input" placeholder=" " min="0" step="any" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true">
+                        <label for="editPrecio" class="floating-label">Precio: *</label>
+                    </div>
                    
                     <label class="custom-checkbox-container">
                         <input type="checkbox" id="editUsaReviewed">
