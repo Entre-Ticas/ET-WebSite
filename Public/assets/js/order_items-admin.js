@@ -1,6 +1,7 @@
 // Gestión de Órdenes (Personal Shopper)
 
 let todasLasOrdenes = [];
+let orderCustomerMemory = [];
 let orderItemsGlobalSearch = ''; 
 let currentPage = 1;
 let rowsPerPage = 10; // Valor por defecto
@@ -42,6 +43,196 @@ function resetOrderItemsViewState() {
     });
     document.querySelectorAll('.admin-filter-row select').forEach(select => {
         select.value = '';
+    });
+}
+
+function normalizeCustomerMemoryText(value) {
+    return String(value ?? '')
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+}
+
+function rebuildOrderCustomerMemory() {
+    const seen = new Map();
+
+    todasLasOrdenes.forEach((orden) => {
+        const clientName = String(orden.client_name ?? '').trim();
+        const clientPhone = String(orden.client_phone ?? '').trim();
+
+        if (!clientName || !clientPhone) return;
+
+        const normalizedName = normalizeCustomerMemoryText(clientName);
+        const normalizedPhone = normalizeCustomerMemoryText(clientPhone).replace(/\D/g, '');
+        const memoryKey = `${normalizedName}|${normalizedPhone}`;
+
+        if (!seen.has(memoryKey)) {
+            seen.set(memoryKey, {
+                name: clientName,
+                phone: clientPhone,
+                nameKey: normalizedName,
+                phoneKey: normalizedPhone
+            });
+        }
+    });
+
+    orderCustomerMemory = Array.from(seen.values()).sort((a, b) => {
+        if (a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }) !== 0) {
+            return a.name.localeCompare(b.name, 'es', { sensitivity: 'base' });
+        }
+        return a.phone.localeCompare(b.phone, 'es', { sensitivity: 'base' });
+    });
+}
+
+function getCustomerSuggestions(queryName = '', queryPhone = '') {
+    const normalizedName = normalizeCustomerMemoryText(queryName);
+    const normalizedPhone = normalizeCustomerMemoryText(queryPhone).replace(/\D/g, '');
+
+    if (!normalizedName && !normalizedPhone) return [];
+
+    const scored = orderCustomerMemory
+        .map((entry) => {
+            let score = 0;
+
+            if (normalizedName) {
+                if (entry.nameKey === normalizedName) score += 100;
+                else if (entry.nameKey.startsWith(normalizedName)) score += 60;
+                else if (entry.nameKey.includes(normalizedName)) score += 30;
+            }
+
+            if (normalizedPhone) {
+                if (entry.phoneKey === normalizedPhone) score += 120;
+                else if (entry.phoneKey.startsWith(normalizedPhone)) score += 70;
+                else if (entry.phoneKey.includes(normalizedPhone)) score += 25;
+            }
+
+            return score > 0 ? { ...entry, score } : null;
+        })
+        .filter(Boolean)
+        .sort((a, b) => {
+            if (b.score !== a.score) return b.score - a.score;
+            const nameCmp = a.name.localeCompare(b.name, 'es', { sensitivity: 'base' });
+            if (nameCmp !== 0) return nameCmp;
+            return a.phone.localeCompare(b.phone, 'es', { sensitivity: 'base' });
+        })
+        .slice(0, 7);
+
+    return scored;
+}
+
+function addCustomerToMemory(name, phone) {
+    const cleanName = String(name ?? '').trim();
+    const cleanPhone = String(phone ?? '').trim();
+
+    if (!cleanName || !cleanPhone || !/^\d{4}$/.test(cleanPhone)) return;
+
+    const normalizedName = normalizeCustomerMemoryText(cleanName);
+    const normalizedPhone = normalizeCustomerMemoryText(cleanPhone).replace(/\D/g, '');
+    const key = `${normalizedName}|${normalizedPhone}`;
+
+    if (orderCustomerMemory.some((entry) => `${entry.nameKey}|${entry.phoneKey}` === key)) return;
+
+    orderCustomerMemory.push({
+        name: cleanName,
+        phone: cleanPhone,
+        nameKey: normalizedName,
+        phoneKey: normalizedPhone
+    });
+
+    orderCustomerMemory.sort((a, b) => {
+        const nameCmp = a.name.localeCompare(b.name, 'es', { sensitivity: 'base' });
+        return nameCmp !== 0 ? nameCmp : a.phone.localeCompare(b.phone, 'es', { sensitivity: 'base' });
+    });
+}
+
+function bindCustomerAutocomplete(card) {
+    const inputName = card.querySelector('.bulk-client-name');
+    const inputPhone = card.querySelector('.bulk-client-phone');
+    if (!inputName || !inputPhone) return;
+
+    const list = document.createElement('div');
+    list.className = 'bulk-client-suggestions hidden';
+    card.appendChild(list);
+
+    const hideSuggestions = () => {
+        list.classList.add('hidden');
+        list.innerHTML = '';
+    };
+
+    const positionSuggestions = () => {
+        const fieldRect = (document.activeElement === inputName || document.activeElement === inputPhone)
+            ? document.activeElement.getBoundingClientRect()
+            : inputName.getBoundingClientRect();
+
+        const cardRect = card.getBoundingClientRect();
+        const maxViewportWidth = Math.max(150, window.innerWidth - 20);
+        const maxCardWidth = Math.max(150, cardRect.width - 8);
+        const listWidth = Math.min(Math.max(fieldRect.width, 180), maxCardWidth, maxViewportWidth);
+        const left = fieldRect.left - cardRect.left;
+        const top = fieldRect.bottom - cardRect.top;
+        const maxLeft = Math.max(0, cardRect.width - listWidth);
+
+        list.style.position = 'absolute';
+        list.style.left = `${Math.min(Math.max(left, 0), maxLeft)}px`;
+        list.style.top = `${Math.max(0, top)}px`;
+        list.style.width = `${listWidth}px`;
+        list.style.maxWidth = `${Math.min(maxCardWidth, maxViewportWidth)}px`;
+        list.style.minWidth = '150px';
+    };
+
+    const renderSuggestions = () => {
+        const suggestions = getCustomerSuggestions(inputName.value, inputPhone.value);
+
+        if (!suggestions.length) {
+            hideSuggestions();
+            return;
+        }
+
+        list.innerHTML = suggestions.map((suggestion) => `
+            <button type="button" class="bulk-client-suggestion" data-name="${suggestion.name}" data-phone="${suggestion.phone}">
+                <span>${suggestion.name}</span>
+                <small> - ${suggestion.phone}</small>
+            </button>
+        `).join('');
+
+        list.classList.remove('hidden');
+
+        list.querySelectorAll('.bulk-client-suggestion').forEach((button) => {
+            button.addEventListener('click', () => {
+                inputName.value = button.dataset.name;
+                inputPhone.value = button.dataset.phone;
+                hideSuggestions();
+            });
+        });
+    };
+
+    inputName.addEventListener('input', () => {
+        if (!inputName.value.trim() && !inputPhone.value.trim()) {
+            hideSuggestions();
+            return;
+        }
+        renderSuggestions();
+        positionSuggestions();
+    });
+
+    inputPhone.addEventListener('input', () => {
+        if (!inputName.value.trim() && !inputPhone.value.trim()) {
+            hideSuggestions();
+            return;
+        }
+        renderSuggestions();
+        positionSuggestions();
+    });
+
+    inputName.addEventListener('focus', positionSuggestions);
+    inputPhone.addEventListener('focus', positionSuggestions);
+    window.addEventListener('resize', positionSuggestions);
+
+    document.addEventListener('click', (event) => {
+        if (!card.contains(event.target)) {
+            hideSuggestions();
+        }
     });
 }
 
@@ -90,6 +281,7 @@ async function loadAdminOrders() {
         if (!response.ok) throw new Error(`Error del servidor: ${response.statusText}`);
 
         todasLasOrdenes = await response.json();
+        rebuildOrderCustomerMemory();
         renderOrders();
 
     } catch (err) {
@@ -770,6 +962,8 @@ function crearBloqueCliente({ client_name = '', client_phone = '', quantity = 1 
     if (inputPhone) inputPhone.value = client_phone;
     if (inputQuantity) inputQuantity.value = Number.isFinite(Number(quantity)) ? Math.max(1, parseInt(quantity, 10)) : 1;
 
+    bindCustomerAutocomplete(card);
+
     if (plusBtn && inputQuantity) {
         plusBtn.addEventListener('click', () => updateQuantityForInput(inputQuantity, 1));
     }
@@ -931,6 +1125,10 @@ async function guardarNuevaOrden() {
 
         const savedPayload = await response.json().catch(() => ({}));
         const savedCount = savedPayload.inserted_count || bulkEntriesResult.entries.length;
+
+        bulkEntriesResult.entries.forEach(({ client_name, client_phone }) => {
+            addCustomerToMemory(client_name, client_phone);
+        });
 
         mensajeEl.textContent = `✅ ¡Se guardaron ${savedCount} órdenes con éxito!`;
         mensajeEl.style.color = '#28a745';
