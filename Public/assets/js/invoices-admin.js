@@ -115,20 +115,19 @@ function renderInvoices() {
     }
 
     const totalRows = lista.length;
+    const totalPages = invoicesRowsPerPage === -1 ? 1 : Math.max(1, Math.ceil(totalRows / invoicesRowsPerPage));
+    if (invoicesCurrentPage > totalPages) invoicesCurrentPage = totalPages;
+    if (invoicesCurrentPage < 1) invoicesCurrentPage = 1;
 
     // 4. Aplicar paginación
     const startIndex = (invoicesCurrentPage - 1) * invoicesRowsPerPage;
     const endIndex = invoicesRowsPerPage === -1 ? totalRows : startIndex + invoicesRowsPerPage;
     const paginatedItems = lista.slice(startIndex, endIndex);
 
-    if (paginatedItems.length === 0) {
-        noResults.style.display = 'block';
-        table.style.display = 'none';
-        tbody.innerHTML = '';
-    } else {
-        noResults.style.display = 'none';
-        table.style.display = '';
-    }
+    const isAnyFilterActive = invoicesGlobalSearch || Object.values(invoicesColumnFilters).some(v => v !== '');
+    noResults.style.display = (lista.length === 0 && isAnyFilterActive) ? 'block' : 'none';
+    table.style.display = '';
+    tbody.innerHTML = '';
     
     const rowsHtml = paginatedItems.map(f => `
             <tr>
