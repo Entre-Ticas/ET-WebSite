@@ -1,6 +1,100 @@
 // Lógica principal y navegación del sitio
 
 let homeContentCache = null;
+let autofillObserver = null;
+
+function ensureAutofillTrap(enabled) {
+    const existing = document.getElementById('browserAutofillTrap');
+
+    if (!enabled) {
+        if (existing) existing.remove();
+        return;
+    }
+
+    if (existing) return;
+
+    const trap = document.createElement('div');
+    trap.id = 'browserAutofillTrap';
+    trap.setAttribute('aria-hidden', 'true');
+    trap.style.position = 'fixed';
+    trap.style.top = '-9999px';
+    trap.style.left = '-9999px';
+    trap.style.width = '1px';
+    trap.style.height = '1px';
+    trap.style.opacity = '0';
+    trap.style.pointerEvents = 'none';
+
+    trap.innerHTML = [
+        '<input type="text" name="username" autocomplete="username" tabindex="-1">',
+        '<input type="password" name="password" autocomplete="current-password" tabindex="-1">'
+    ].join('');
+
+    document.body.appendChild(trap);
+}
+
+function applyGlobalInputHardening(scope = document) {
+    const root = scope && typeof scope.querySelectorAll === 'function' ? scope : document;
+    const inputs = root.querySelectorAll('input[type="text"], input[type="tel"], input[type="number"], input[type="search"]');
+
+    inputs.forEach((input, index) => {
+        if (!input) return;
+        if (input.type === 'hidden' || input.type === 'file') return;
+        if (input.closest('#loginModal')) return;
+        if (input.dataset.allowAutofill === 'true') return;
+
+        const inputType = (input.type || '').toLowerCase();
+        const inputId = (input.id || '').toLowerCase();
+        const isSearchField = inputType === 'search' || inputId.includes('search');
+
+        input.setAttribute('autocomplete', isSearchField ? 'off' : 'new-password');
+        input.setAttribute('autocapitalize', 'off');
+        input.setAttribute('autocorrect', 'off');
+        input.setAttribute('spellcheck', 'false');
+        input.setAttribute('aria-autocomplete', 'none');
+        input.setAttribute('data-lpignore', 'true');
+        input.setAttribute('data-1p-ignore', 'true');
+
+        if (!input.getAttribute('name')) {
+            const fallbackName = input.id ? `field_${input.id}` : `field_${index}`;
+            input.setAttribute('name', fallbackName);
+        }
+
+        if (input.dataset.autofillGuardApplied !== 'true') {
+            input.readOnly = true;
+            const unlockInput = () => {
+                input.readOnly = false;
+            };
+
+            input.addEventListener('focus', unlockInput, { once: true });
+            input.addEventListener('pointerdown', unlockInput, { once: true });
+            input.dataset.autofillGuardApplied = 'true';
+        }
+    });
+}
+
+function initializeAutofillObserver() {
+    const contentArea = document.getElementById('content-area');
+    if (!contentArea || autofillObserver) return;
+
+    autofillObserver = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            mutation.addedNodes.forEach((node) => {
+                if (!(node instanceof HTMLElement)) return;
+
+                if (node.matches?.('input[type="text"], input[type="tel"], input[type="number"], input[type="search"]')) {
+                    applyGlobalInputHardening(node.parentElement || node);
+                    return;
+                }
+
+                applyGlobalInputHardening(node);
+            });
+        });
+    });
+
+    autofillObserver.observe(contentArea, { childList: true, subtree: true });
+}
+
+window.applyGlobalInputHardening = applyGlobalInputHardening;
 
 function getVisibleNavLinkCount() {
     const nav = document.querySelector('nav');
@@ -83,6 +177,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadHeaderImage();
     updateMobileNavColumns();
+    initializeAutofillObserver();
+    applyGlobalInputHardening(document.getElementById('content-area') || document);
 
     const nav = document.querySelector('nav');
     if (nav) {
@@ -190,6 +286,8 @@ async function loadPage(page, param = null) {
             if (page === 'home') {
                 history.pushState({}, '', '/');
                 container.innerHTML = homeContentCache || (await fetch('/index.html').then(r => r.text())).match(/<div id="content-area">([\s\S]*)<\/div>/)[1];
+                ensureAutofillTrap(false);
+                applyGlobalInputHardening(container);
                 
                 container.classList.remove('fade-out');
                 window.scrollTo(0, 0);
@@ -226,6 +324,8 @@ async function loadPage(page, param = null) {
             let html = await response.text();
 
             container.innerHTML = html;
+            ensureAutofillTrap(page !== 'home');
+            applyGlobalInputHardening(container);
 
             // Ejecutamos la limpieza en el siguiente ciclo de eventos,
             // asegurando que el DOM se haya actualizado.
