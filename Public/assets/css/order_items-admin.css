@@ -7,6 +7,42 @@
     gap: 1rem;
     align-items: center;
 }
+
+/* Ajustes locales para formularios de orden: evita que estilos globales de .container/.card rompan el layout */
+#adminFormNuevoView > .container,
+#adminFormEditView > .container {
+    max-width: 760px;
+    margin: 1.25rem auto;
+    padding: 0 0.9rem;
+}
+
+#adminFormNuevoView .card,
+#adminFormEditView .card {
+    border: 1px solid var(--pink-light);
+    border-radius: 14px;
+    padding: 1.25rem;
+}
+
+#adminFormNuevoView .card:hover,
+#adminFormEditView .card:hover {
+    transform: none;
+}
+
+@media (max-width: 768px) {
+    #adminFormNuevoView > .container,
+    #adminFormEditView > .container {
+        max-width: 100%;
+        margin: 0.45rem auto;
+        padding: 0;
+    }
+
+    #adminFormNuevoView .card,
+    #adminFormEditView .card {
+        border-width: 1px;
+        border-radius: 10px;
+        padding: 0.85rem;
+    }
+}
 .admin-card-img {
     width: 80px;
     height: 80px;
@@ -165,6 +201,124 @@
         opacity: 1; 
     }
 
+    /* Floating label para inputs de nueva orden */
+    .floating-field {
+        position: relative;
+        width: 100%;
+        margin-bottom: 0.8rem;
+    }
+
+    .floating-input {
+        display: block;
+        width: 100%;
+        height: 44px;
+        padding: 14px 10px 9px;
+        line-height: 1.2;
+        font: inherit;
+        border-radius: 10px;
+        border: 1px solid var(--pink-light);
+        box-sizing: border-box;
+        background: #fff;
+        color: var(--brown-text);
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .floating-input:focus {
+        outline: none;
+        border-color: var(--pink-accent);
+        box-shadow: 0 0 0 3px rgba(225, 155, 157, 0.18);
+    }
+
+    .floating-label {
+        position: absolute;
+        left: 10px;
+        top: calc(50% + 1px);
+        transform: translateY(-50%);
+        padding: 0 6px;
+        height: 1.05rem;
+        display: inline-flex;
+        align-items: center;
+        line-height: 1.05;
+        background: transparent;
+        color: #8f7b80;
+        font-size: 0.9rem;
+        font-weight: 600;
+        pointer-events: none;
+        transform-origin: left center;
+        transition: top 0.2s ease, transform 0.2s ease, color 0.2s ease, font-size 0.2s ease;
+    }
+
+    .floating-field.floating-field-datetime .floating-label {
+        top: 0;
+        transform: translateY(-52%) scale(0.92);
+        background: var(--pink-light);
+        border-radius: 6px;
+        font-size: 0.82rem;
+    }
+
+    .floating-select {
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        background-image: none;
+    }
+
+    .floating-input:focus + .floating-label,
+    .floating-input:not(.floating-input-datetime):not(:placeholder-shown) + .floating-label,
+    .floating-select:focus + .floating-label,
+    .floating-select:invalid + .floating-label {
+        top: 0;
+        transform: translateY(-52%) scale(0.92);
+        background: var(--pink-light);
+        border-radius: 6px;
+        color: var(--pink-accent);
+        font-size: 0.82rem;
+    }
+
+    .floating-field.floating-field-datetime .floating-input {
+        padding-top: 14px;
+    }
+
+    .floating-field input[type="number"]::-webkit-outer-spin-button,
+    .floating-field input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    .floating-field input[type="number"] {
+        appearance: textfield;
+        -moz-appearance: textfield;
+        text-align: left;
+        width: 100%;
+    }
+
+    .floating-field.floating-field-textarea {
+        margin-bottom: 1rem;
+    }
+
+    .floating-textarea {
+        height: auto;
+        min-height: 92px;
+        padding: 20px 10px 10px;
+        resize: vertical;
+        line-height: 1.35;
+    }
+
+    .floating-field.floating-field-textarea .floating-label {
+        top: 18px;
+        transform: translateY(-50%);
+    }
+
+    .floating-textarea:focus + .floating-label,
+    .floating-textarea:not(:placeholder-shown) + .floating-label {
+        top: 0;
+        transform: translateY(-52%) scale(0.92);
+        background: var(--pink-light);
+        border-radius: 6px;
+        color: var(--pink-accent);
+        font-size: 0.82rem;
+    }
+
     /* Estilos para el stepper de cantidad */
     .quantity-stepper {
         display: flex;
@@ -198,10 +352,262 @@
         border-radius: 0;
         margin-bottom: 0; /* Anular margen global */
         box-sizing: border-box;
+        appearance: textfield;
         -moz-appearance: textfield; /* Firefox */
     }
     .quantity-stepper input[type="number"]::-webkit-outer-spin-button,
     .quantity-stepper input[type="number"]::-webkit-inner-spin-button {
         -webkit-appearance: none;
         margin: 0;
+    }
+
+    .bulk-client-section {
+        margin: 1rem 0;
+        padding: 0.9rem;
+        border: 1px solid var(--pink-light);
+        border-radius: 12px;
+        background: #fff8fb;
+        position: relative;
+    }
+
+    .bulk-client-header {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 0.8rem;
+        margin-bottom: 0.4rem;
+    }
+
+    .bulk-client-header h4 {
+        margin: 0;
+        color: var(--pink-accent);
+        font-size: 1rem;
+    }
+
+    .bulk-helper-text {
+        margin: 0 0 0.8rem;
+        font-size: 0.84rem;
+        color: #7a5d4f;
+    }
+
+    .bulk-add-client-fab {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 36px;
+        height: 36px;
+        border: none;
+        border-radius: 999px;
+        background: var(--pink-accent);
+        color: white;
+        font-size: 1.4rem;
+        font-weight: 700;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 6px 16px rgba(225, 155, 157, 0.45);
+    }
+
+    .bulk-add-client-fab:hover {
+        filter: brightness(0.96);
+    }
+
+    .bulk-add-client-fab:focus-visible {
+        outline: 2px solid var(--brown-text);
+        outline-offset: 2px;
+    }
+
+    #bulkClientEntries {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .bulk-client-card {
+        position: relative;
+        background: white;
+        border: 1px solid #f3d6df;
+        border-radius: 10px;
+        padding: 0.75rem;
+    }
+
+    .bulk-client-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1.55fr) minmax(92px, 0.7fr);
+        gap: 0.7rem;
+        align-items: end;
+    }
+
+    .bulk-client-row + .bulk-client-row {
+        margin-top: 0.6rem;
+    }
+
+    .bulk-client-row-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.8rem;
+    }
+
+    .bulk-qty-inline {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .bulk-qty-label {
+        margin: 0;
+        font-weight: 700;
+        font-size: 0.9rem;
+        white-space: nowrap;
+    }
+
+    .bulk-client-row-actions .quantity-stepper {
+        margin-bottom: 0;
+    }
+
+    .bulk-client-card .bulk-compact-field {
+        margin-bottom: 0;
+    }
+
+    .bulk-client-card .bulk-compact-field .floating-input {
+        height: 38px;
+        padding: 11px 9px 7px;
+        font-size: 0.9rem;
+        border-radius: 8px;
+    }
+
+    .bulk-client-card .bulk-compact-field .floating-label {
+        font-size: 0.8rem;
+    }
+
+    .bulk-client-card .bulk-compact-field .floating-input:focus + .floating-label,
+    .bulk-client-card .bulk-compact-field .floating-input:not(:placeholder-shown) + .floating-label {
+        font-size: 0.72rem;
+    }
+
+    .bulk-client-card .stepper-btn {
+        width: 30px;
+        height: 30px;
+        font-size: 0.95rem;
+    }
+
+    .bulk-client-card .quantity-stepper input[type="number"] {
+        width: 42px;
+        height: 30px;
+        font-size: 0.86rem;
+    }
+
+    .bulk-remove-btn {
+        width: 38px;
+        height: 38px;
+    }
+
+    .bulk-client-suggestions {
+        position: absolute;
+        margin-top: 0;
+        border: 1px solid rgba(225, 155, 157, 0.45);
+        border-radius: 10px;
+        background: #fff;
+        box-shadow: 0 8px 22px rgba(87, 52, 60, 0.18);
+        overflow: hidden;
+        z-index: 25;
+    }
+
+    .bulk-client-suggestions.hidden {
+        display: none;
+    }
+
+    .bulk-client-suggestion {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        border: none;
+        background: transparent;
+        padding: 0.5rem 0.7rem;
+        text-align: left;
+        font: inherit;
+        color: var(--brown-text);
+        cursor: pointer;
+        transition: background 0.15s ease;
+    }
+
+    .bulk-client-suggestion:hover,
+    .bulk-client-suggestion:focus {
+        background: rgba(225, 155, 157, 0.12);
+        outline: none;
+    }
+
+    .bulk-client-suggestion small {
+        color: #7b5e63;
+        font-size: 0.75rem;
+        white-space: nowrap;
+    }
+
+    @media (min-width: 769px) {
+        .bulk-client-card {
+            display: grid;
+            grid-template-columns: minmax(0, 1.55fr) minmax(92px, 0.7fr) auto auto;
+            gap: 0.65rem;
+            align-items: end;
+        }
+
+        .bulk-client-card .bulk-client-row,
+        .bulk-client-card .bulk-client-row-actions {
+            display: contents;
+        }
+
+        .bulk-client-card .bulk-name-field {
+            grid-column: 1;
+        }
+
+        .bulk-client-card .bulk-phone-field {
+            grid-column: 2;
+        }
+
+        .bulk-client-card .bulk-qty-inline {
+            grid-column: 3;
+            align-self: end;
+        }
+
+        .bulk-client-card .bulk-remove-btn {
+            grid-column: 4;
+            align-self: end;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .bulk-client-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .bulk-client-row {
+            grid-template-columns: minmax(0, 1.5fr) minmax(84px, 0.68fr);
+            gap: 0.55rem;
+        }
+
+        .bulk-client-row-actions {
+            flex-direction: row;
+            justify-content: space-between;
+        }
+
+        .bulk-client-card .bulk-compact-field .floating-input {
+            font-size: 0.86rem;
+        }
+
+        .bulk-client-card .stepper-btn {
+            width: 28px;
+            height: 28px;
+        }
+
+        .bulk-client-card .quantity-stepper input[type="number"] {
+            width: 40px;
+            height: 28px;
+            font-size: 0.82rem;
+        }
     }

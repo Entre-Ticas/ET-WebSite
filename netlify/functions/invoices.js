@@ -414,8 +414,16 @@ async function updateInvoice(event) {
 async function createInvoice(event) {
     const body = JSON.parse(event.body || '{}');
 
-    if (body.invoice_id !== undefined || body.amount !== undefined) {
+    const isPaymentRequest = (body.amount !== undefined || body.payment_method !== undefined || body.reference_code !== undefined)
+        && body.product_name === undefined;
+    const isInvoiceItemRequest = body.product_name !== undefined;
+
+    if (isPaymentRequest) {
         return await createPayment(body);
+    }
+
+    if (isInvoiceItemRequest) {
+        return await createInvoiceItem(body);
     }
 
     const {
@@ -458,6 +466,88 @@ async function createInvoice(event) {
         data.public_ref = createInvoiceReference(data);
     }
     return { statusCode: 201, body: JSON.stringify(data) };
+}
+
+async function createInvoiceItem(body) {
+    const invoiceId = Number(body.invoice_id);
+    const productName = String(body.product_name || '').trim();
+    const quantityRaw = Number(body.quantity);
+    const quantity = Number.isFinite(quantityRaw) ? Math.floor(quantityRaw) : 1;
+    const price = Number(body.price);
+    const imageUrl = body.image_url ? String(body.image_url).trim() : null;
+
+    if (!Number.isFinite(invoiceId) || invoiceId <= 0) {
+        return {
+            statusCode: 400,
+            body: JSON.stringify({ error: 'Se requiere un invoice_id válido para agregar la orden.' })
+        };
+    }
+
+    if (!productName) {
+        return {
+            statusCode: 400,
+            body: JSON.stringify({ error: 'El nombre del producto es obligatorio.' })
+        };
+    }
+
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+        return {
+            statusCode: 400,
+            body: JSON.stringify({ error: 'La cantidad debe ser mayor a 0.' })
+        };
+    }
+
+    if (!Number.isFinite(price) || price <= 0) {
+        return {
+            statusCode: 400,
+            body: JSON.stringify({ error: 'El precio debe ser mayor a 0.' })
+        };
+    }
+
+    const invoiceRes = await fetch(`${supabaseUrl}/rest/v1/invoices?id=eq.${invoiceId}&select=id,client_name,client_phone,id_status&limit=1`, {
+        headers: sbHeaders
+    });
+
+    if (!invoiceRes.ok) {
+        throw new Error(`Error validando factura para orden: ${await invoiceRes.text()}`);
+    }
+
+    const invoices = await invoiceRes.json();
+    const invoice = invoices[0];
+
+    if (!invoice) {
+        return {
+            statusCode: 404,
+            body: JSON.stringify({ error: `La factura ${invoiceId} no existe.` })
+        };
+    }
+
+    const itemPayload = {
+        invoice_id: invoiceId,
+        client_name: invoice.client_name,
+        client_phone: invoice.client_phone,
+        product_name: productName,
+        quantity,
+        price,
+        size: null,
+        image_url: imageUrl,
+        id_status: invoice.id_status || 1,
+        usa_reviewed: false
+    };
+
+    const createItemUrl = `${supabaseUrl}/rest/v1/order_items`;
+    const itemRes = await fetch(createItemUrl, {
+        method: 'POST',
+        headers: { ...sbHeaders, 'Prefer': 'return=representation' },
+        body: JSON.stringify(itemPayload)
+    });
+
+    if (!itemRes.ok) {
+        throw new Error(`Error creando orden en factura: ${await itemRes.text()}`);
+    }
+
+    const [item] = await itemRes.json();
+    return { statusCode: 201, body: JSON.stringify(item) };
 }
 
 async function createPayment(body) {

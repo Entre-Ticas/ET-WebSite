@@ -109,7 +109,7 @@
                 <h3 style="margin:0.5rem 0;">Nueva Orden</h3>
 
                 <div style="text-align:left;">
-                        <div class="image-upload-container">
+                    <div class="image-upload-container">
                         <label for="nuevoImageUpload">Imagen del Producto</label>
                         <div class="image-upload-content">
                             <div class="image-preview" id="nuevoImagePreview">
@@ -126,36 +126,33 @@
                         <small class="image-upload-status" id="nuevoImageStatus"></small>
                     </div>
 
-                    <label style="font-weight:bold; font-size:0.9rem;">Nombre del Cliente: *</label>
-                    <input type="text" id="nuevoClientName" placeholder="Ej: Ana Rodriguez"
-                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
-
-                    <label style="font-weight:bold; font-size:0.9rem;">Teléfono del Cliente: *</label>
-                    <input type="tel" id="nuevoClientPhone" placeholder="Ej: xxxx7777" maxlength="4"
-                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
-
-                    <label style="font-weight:bold; font-size:0.9rem;">Nombre del Producto: *</label>
-                    <input type="text" id="nuevoProductName" placeholder="Ej: Tenis Nike Air Force 1"
-                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
-
-                    <label style="font-weight:bold; font-size:0.9rem;">Talla:</label>
-                    <input type="text" id="nuevoSize" placeholder="Ej: 7.5"
-                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
-
-                    <label style="font-weight:bold; font-size:0.9rem;">Cantidad:</label>
-                    <div class="quantity-stepper">
-                        <button type="button" class="stepper-btn" onclick="updateQuantity('nuevoQuantity', -1)">-</button>
-                        <input type="number" id="nuevoQuantity" value="1" min="1" max="9999">
-                        <button type="button" class="stepper-btn" onclick="updateQuantity('nuevoQuantity', 1)">+</button>
+                    <div class="floating-field">
+                        <input type="text" id="nuevoProductName" class="floating-input" placeholder=" " autocomplete="off">
+                        <label for="nuevoProductName" class="floating-label">Nombre del Producto: *</label>
                     </div>
 
-                    <label style="font-weight:bold; font-size:0.9rem;">Precio (₡): *</label>
-                    <input type="number" id="nuevoPrice" placeholder="Ej: 65000"
-                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+                    <label style="font-weight:bold; font-size:0.9rem; display:none;">Talla:</label>
+                    <input type="text" id="nuevoSize" placeholder="Ej: 7.5"
+                        style="display:none; width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+
+                    <div class="floating-field">
+                        <input type="number" id="nuevoPrice" class="floating-input" placeholder=" " min="0" step="any">
+                        <label for="nuevoPrice" class="floating-label">Precio (₡): *</label>
+                    </div>
+
+                    <div class="bulk-client-section">
+                        <div class="bulk-client-header">
+                            <h4>Clientes y Cantidades</h4>
+                            <button type="button" class="bulk-add-client-fab" onclick="agregarBloqueCliente()" title="Agregar Cliente" aria-label="Agregar Cliente">
+                                +
+                            </button>
+                        </div>
+                        <div id="bulkClientEntries"></div>
+                    </div>
 
                     <button id="btnGuardarNuevaOrden" onclick="guardarNuevaOrden()"
                         style="width:100%; padding:12px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
-                        Guardar Orden
+                        Guardar Órdenes
                     </button>
 
                     <div id="nuevoMensaje" style="margin-top:0.8rem; font-weight:bold; text-align:center;"></div>
@@ -191,32 +188,37 @@
                         <small class="image-upload-status" id="editImageStatus"></small>
                     </div>
                     
-                    <label style="font-weight:bold; font-size:0.9rem;">Nombre del Cliente: *</label>
-                    <input type="text" id="editNombre" placeholder="Nombre del cliente"
-                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+                    <div class="floating-field">
+                        <input type="text" id="editNombre" class="floating-input" placeholder=" " autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true">
+                        <label for="editNombre" class="floating-label">Nombre del Cliente: *</label>
+                    </div>
 
-                    <label style="font-weight:bold; font-size:0.9rem;">Teléfono del Cliente: *</label>
-                    <input type="tel" id="editClientPhone" placeholder="Ej: xxxx7777" maxlength="4"
-                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+                    <div class="floating-field">
+                        <input type="tel" id="editClientPhone" class="floating-input" placeholder=" " maxlength="4" autocomplete="off" inputmode="numeric" pattern="[0-9]*" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true">
+                        <label for="editClientPhone" class="floating-label">Teléfono del Cliente: *</label>
+                    </div>
 
-                    <label style="font-weight:bold; font-size:0.9rem;">Nombre del Producto: *</label>
-                    <input type="text" id="editProducto" placeholder="Nombre del producto"
-                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+                    <div class="floating-field">
+                        <input type="text" id="editProducto" class="floating-input" placeholder=" " autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true">
+                        <label for="editProducto" class="floating-label">Nombre del Producto: *</label>
+                    </div>
 
-                    <label style="font-weight:bold; font-size:0.9rem;">Talla:</label>
-                    <input type="text" id="editTalla" placeholder="Talla del producto"
-                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+                    <div class="floating-field" style="display:none;">
+                        <input type="text" id="editTalla" class="floating-input" placeholder=" " autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true">
+                        <label for="editTalla" class="floating-label">Talla</label>
+                    </div>
 
                     <label style="font-weight:bold; font-size:0.9rem;">Cantidad:</label>
                     <div class="quantity-stepper">
                         <button type="button" class="stepper-btn" onclick="updateQuantity('editCantidad', -1)">-</button>
-                        <input type="number" id="editCantidad" placeholder="Cantidad" min="1" max="9999">
+                        <input type="number" id="editCantidad" placeholder="Cantidad" min="1" max="9999" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true">
                         <button type="button" class="stepper-btn" onclick="updateQuantity('editCantidad', 1)">+</button>
                     </div>
 
-                    <label style="font-weight:bold; font-size:0.9rem;">Precio: *</label>
-                    <input type="number" id="editPrecio" placeholder="Precio del producto"
-                        style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); margin-bottom:0.8rem; box-sizing:border-box;">
+                    <div class="floating-field">
+                        <input type="number" id="editPrecio" class="floating-input" placeholder=" " min="0" step="any" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true">
+                        <label for="editPrecio" class="floating-label">Precio: *</label>
+                    </div>
                    
                     <label class="custom-checkbox-container">
                         <input type="checkbox" id="editUsaReviewed">
@@ -235,3 +237,31 @@
     </div>
 
 </div>
+
+<template id="bulkClientEntryTemplate">
+    <div class="bulk-client-card">
+        <div class="bulk-client-row">
+            <div class="floating-field bulk-compact-field bulk-name-field">
+                <input type="text" class="floating-input bulk-client-name" placeholder=" " autocomplete="off">
+                <label class="floating-label">Nombre *</label>
+            </div>
+            <div class="floating-field bulk-compact-field bulk-phone-field">
+                <input type="tel" class="floating-input bulk-client-phone" placeholder=" " maxlength="4" autocomplete="off">
+                <label class="floating-label">Teléfono *</label>
+            </div>
+        </div>
+        <div class="bulk-client-row bulk-client-row-actions">
+            <div class="bulk-qty-inline">
+                <label class="bulk-qty-label">Cantidad:</label>
+                <div class="quantity-stepper">
+                    <button type="button" class="stepper-btn js-bulk-minus">-</button>
+                    <input type="number" class="bulk-client-quantity" value="1" min="1" max="9999">
+                    <button type="button" class="stepper-btn js-bulk-plus">+</button>
+                </div>
+            </div>
+            <button type="button" class="admin-btn-action btn-delete bulk-remove-btn" title="Eliminar fila">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
+    </div>
+</template>

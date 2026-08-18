@@ -73,7 +73,79 @@ async function getOrderItems(event) {
 async function createOrderItem(event) {
     const body = JSON.parse(event.body);
 
-    const { client_phone, client_name, product_name, quantity, price, size, image_url } = body;
+    const { client_phone, client_name, product_name, quantity, price, size, image_url, client_entries } = body;
+
+    const hasBulkEntries = Array.isArray(client_entries) && client_entries.length > 0;
+
+    if (hasBulkEntries) {
+        if (!product_name || !price) {
+            return {
+                statusCode: 400,
+                body: JSON.stringify({ error: 'Faltan campos obligatorios para carga masiva: product_name, price.' })
+            };
+        }
+
+        const parsedPrice = Number(price);
+        if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
+            return { statusCode: 400, body: JSON.stringify({ error: 'El precio debe ser mayor a cero.' }) };
+        }
+
+        const normalizedEntries = [];
+        for (let i = 0; i < client_entries.length; i += 1) {
+            const entry = client_entries[i] || {};
+            const entryName = String(entry.client_name || '').trim();
+            const entryPhone = String(entry.client_phone || '').trim();
+            const entryQty = parseInt(entry.quantity, 10);
+
+            if (!entryName || !entryPhone) {
+                return {
+                    statusCode: 400,
+                    body: JSON.stringify({ error: `Fila ${i + 1}: client_name y client_phone son obligatorios.` })
+                };
+            }
+
+            if (!/^\d{4}$/.test(entryPhone)) {
+                return {
+                    statusCode: 400,
+                    body: JSON.stringify({ error: `Fila ${i + 1}: client_phone debe tener 4 dígitos.` })
+                };
+            }
+
+            normalizedEntries.push({
+                client_name: entryName,
+                client_phone: entryPhone,
+                quantity: Number.isFinite(entryQty) && entryQty > 0 ? entryQty : 1
+            });
+        }
+
+        const insertedRows = [];
+        for (const entry of normalizedEntries) {
+            const invoiceId = await findOrCreateOpenInvoice(entry.client_phone, entry.client_name);
+            const itemToInsert = {
+                client_phone: entry.client_phone,
+                client_name: entry.client_name,
+                product_name,
+                quantity: entry.quantity,
+                price: parsedPrice,
+                size,
+                image_url,
+                invoice_id: invoiceId,
+                id_status: STATUS_ABIERTA,
+                usa_reviewed: false
+            };
+
+            const createdItem = await insertOrderItem(itemToInsert);
+            insertedRows.push(createdItem);
+        }
+
+        return {
+            statusCode: 201,
+            body: JSON.stringify({
+                inserted_count: insertedRows.length,
+                items: insertedRows
+            })
+        };
+    }
 
     if (!client_phone || !client_name || !product_name || !price) { // Mantenemos la validación original
         console.error("Validación fallida: Faltan campos obligatorios.");
@@ -82,42 +154,7 @@ async function createOrderItem(event) {
 
     // --- INICIA LA NUEVA LÓGICA ---
 
-    // 1. Buscar una factura "abierta" para ese cliente.
-    const findInvoiceUrl = `${supabaseUrl}/rest/v1/invoices?select=id&client_phone=eq.${client_phone}&id_status=eq.${STATUS_ABIERTA}&limit=1`;
-    const findResponse = await fetch(findInvoiceUrl, { headers: sbHeaders });
-
-    if (!findResponse.ok) throw new Error(`Error buscando factura: ${await findResponse.text()}`);
-
-    const open_invoices = await findResponse.json();
-    const open_invoice = open_invoices[0] || null;
-
-    let invoiceId;
-
-    // 2. Decidir si crear una nueva factura o usar la existente.
-    if (open_invoice) {
-        invoiceId = open_invoice.id;
-    } else {
-        const createInvoiceUrl = `${supabaseUrl}/rest/v1/invoices`;
-        const createResponse = await fetch(createInvoiceUrl, {
-            method: 'POST',
-            headers: { ...sbHeaders, 'Prefer': 'return=representation' },
-            body: JSON.stringify({
-                client_phone: client_phone,
-                client_name: client_name,
-                id_status: STATUS_ABIERTA,
-                paid: false
-            })
-        });
-
-        if (!createResponse.ok) {
-            const errorText = await createResponse.text();
-            console.error("¡ERROR FATAL al crear la factura! Abortando.", errorText);
-            throw new Error(`Error creando factura: ${errorText}`);
-        }
-
-        const [new_invoice] = await createResponse.json();
-        invoiceId = new_invoice.id;
-    }
+    const invoiceId = await findOrCreateOpenInvoice(client_phone, client_name);
 
     // 3. Insertar el nuevo order_item asignándole el invoiceId.
     const itemToInsert = {
@@ -134,6 +171,45 @@ async function createOrderItem(event) {
     };
 
 
+    const new_item = await insertOrderItem(itemToInsert);
+
+    return { statusCode: 201, body: JSON.stringify(new_item) };
+}
+
+async function findOrCreateOpenInvoice(clientPhone, clientName) {
+    const findInvoiceUrl = `${supabaseUrl}/rest/v1/invoices?select=id&client_phone=eq.${clientPhone}&id_status=eq.${STATUS_ABIERTA}&limit=1`;
+    const findResponse = await fetch(findInvoiceUrl, { headers: sbHeaders });
+
+    if (!findResponse.ok) throw new Error(`Error buscando factura: ${await findResponse.text()}`);
+
+    const openInvoices = await findResponse.json();
+    const openInvoice = openInvoices[0] || null;
+
+    if (openInvoice) return openInvoice.id;
+
+    const createInvoiceUrl = `${supabaseUrl}/rest/v1/invoices`;
+    const createResponse = await fetch(createInvoiceUrl, {
+        method: 'POST',
+        headers: { ...sbHeaders, 'Prefer': 'return=representation' },
+        body: JSON.stringify({
+            client_phone: clientPhone,
+            client_name: clientName,
+            id_status: STATUS_ABIERTA,
+            paid: false
+        })
+    });
+
+    if (!createResponse.ok) {
+        const errorText = await createResponse.text();
+        console.error('Error al crear la factura.', errorText);
+        throw new Error(`Error creando factura: ${errorText}`);
+    }
+
+    const [newInvoice] = await createResponse.json();
+    return newInvoice.id;
+}
+
+async function insertOrderItem(itemToInsert) {
     const createItemUrl = `${supabaseUrl}/rest/v1/order_items`;
     const itemResponse = await fetch(createItemUrl, {
         method: 'POST',
@@ -143,13 +219,12 @@ async function createOrderItem(event) {
 
     if (!itemResponse.ok) {
         const errorText = await itemResponse.text();
-        console.error("¡ERROR FATAL al insertar el order_item! Abortando.", errorText);
+        console.error('Error al insertar order_item.', errorText);
         throw new Error(`Error insertando item: ${errorText}`);
     }
 
-    const [new_item] = await itemResponse.json();
-
-    return { statusCode: 201, body: JSON.stringify(new_item) };
+    const [newItem] = await itemResponse.json();
+    return newItem;
 }
 
 async function updateOrderItem(event) {

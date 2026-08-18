@@ -77,7 +77,31 @@ d:/WORK/Mike/git/ET-WebSite/
     └── Structure.sql
 ```
 ---
+
+## 6. Reglas para inputs de negocio y compatibilidad con password managers
+Los inputs de texto, teléfono, número o búsqueda del frontend NO deben ser tratados como credenciales ni como formularios de login. Chrome, Edge y otros navegadores usan heurísticas de autofill/password managers para detectar campos tipo `username`, `password`, `current-password`, etc. Por eso, cualquier campo de negocio (cliente, teléfono, producto, búsqueda, cantidad, filtros, etc.) debe respetar estas reglas:
+
+*   Usar `autocomplete="off"` o mejor aún `autocomplete="new-password"` en campos de negocio que no sean login.
+*   Añadir atributos de compatibilidad: `autocapitalize="off"`, `autocorrect="off"`, `spellcheck="false"`, `data-lpignore="true"`, `data-1p-ignore="true"`.
+*   En páginas cargadas dinámicamente dentro de `Public/assets/js/main.js`, usar la función global `applyGlobalInputHardening()` y el `MutationObserver` para reforzar automáticamente todos los inputs nuevos.
+*   No reutilizar nombres como `username`, `password`, `login`, `user`, `email` para campos de negocio si no corresponden a una autenticación real.
+*   Si el sistema usa formularios de admin, hay que preservar el patrón global centralizado en `Public/assets/js/main.js`, en vez de repetir cambios manuales por cada HTML/JS.
+Este patrón es obligatorio para evitar popup de "ingresa tu contraseña" en formularios de gestión, búsquedas y filtros, y debe mantenerse en futuras modificaciones.
+
 ---
 
+## 7. Regla de diseño obligatoria: floating labels en nuevas pantallas de formulario
+Toda nueva pantalla de formulario, admin o edición debe crearse con el patrón de floating labels ya existente en el proyecto. Esto aplica a pantallas como Nueva Factura, Editar Factura, Agregar Orden, filtros, alta de registros y otros formularios de gestión.
+
+*   Usar el patrón existente basado en `floating-field`, `floating-input` y `floating-label`.
+*   No crear inputs con estilo plano o labels estáticos si la pantalla es un formulario nuevo.
+*   Cualquier campo tipo `datetime-local`, `select`, `dropdown` o similar debe aplicarse también con estilo floating desde el inicio, no como campo clásico.
+*   Mantener `placeholder=" "` y la lógica visual del label flotante intacta; el CSS y el comportamiento de focus deben continuar funcionando correctamente.
+*   La protección contra autofill/password managers debe mantenerse, pero sin romper la animación ni la experiencia del floating label.
+*   En formularios con este patrón, los inputs de negocio deben seguir respetando `autocomplete="new-password"` o `autocomplete="off"` cuando no correspondan a login real.
+*   Cuando el control sea un `select` o `datetime-local`, el label debe quedar flotando por defecto con el mismo estilo visual del resto del sistema, usando el mismo patrón `floating-field > control + floating-label`.
+*   Esta regla es independiente de la regla #6 y debe considerarse una directiva de UI/UX y consistencia visual obligatoria para todo desarrollo futuro.
+
+---
 
 
