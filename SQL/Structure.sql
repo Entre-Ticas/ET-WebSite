@@ -9,7 +9,7 @@
     "Script SQL Completo": "-- ==========================================\n-- TABLA: order_items\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.order_items (\n  created_at timestamp with time zone NOT NULL,\n  client_name text NOT NULL,\n  client_phone text NOT NULL,\n  image_url text,\n  id bigint NOT NULL,\n  size text,\n  product_name text NOT NULL,\n  quantity integer,\n  price numeric NOT NULL,\n  usa_reviewed boolean NOT NULL,\n  id_status bigint NOT NULL,\n  invoice_id bigint\n);\n"
   },
   {
-    "Script SQL Completo": "-- ==========================================\n-- TABLA: payments\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.payments (\n  payment_date timestamp with time zone NOT NULL,\n  amount numeric NOT NULL,\n  created_at timestamp with time zone NOT NULL,\n  reference_code text,\n  id bigint NOT NULL,\n  invoice_id bigint NOT NULL,\n  payment_method text,\n  notes text\n);\n"
+    "Script SQL Completo": "-- ==========================================\n-- TABLA: payments\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.payments (\n  payment_date timestamp with time zone NOT NULL,\n  amount numeric NOT NULL,\n  created_at timestamp with time zone NOT NULL,\n  reference_code text,\n  id bigint NOT NULL,\n  invoice_id bigint NOT NULL,\n  payment_method text,\n  notes text,\n  bank_reviewed boolean NOT NULL\n);\n"
   },
   {
     "Script SQL Completo": "-- ==========================================\n-- TABLA: product_category\n-- ==========================================\nCREATE TABLE IF NOT EXISTS public.product_category (\n  id_status bigint,\n  id_category bigint NOT NULL,\n  category_name character varying(100) NOT NULL\n);\n"

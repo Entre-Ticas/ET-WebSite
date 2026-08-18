@@ -50,7 +50,7 @@ exports.handler = async (event) => {
 async function getPayments(event) {
     const paymentId = event.queryStringParameters?.id;
 
-    const select = 'id,invoice_id,amount,payment_method,reference_code,notes,payment_date,created_at';
+    const select = 'id,invoice_id,amount,payment_method,reference_code,notes,payment_date,created_at,bank_reviewed';
     const baseUrl = `${supabaseUrl}/rest/v1/payments?select=${encodeURIComponent(select)}&order=payment_date.desc`;
     const url = paymentId ? `${baseUrl}&id=eq.${paymentId}` : baseUrl;
 
@@ -82,7 +82,8 @@ async function getPayments(event) {
             client_name: invoice.client_name || null,
             client_phone: invoice.client_phone || null,
             invoice_status_id: invoice.id_status || null,
-            invoice_paid: typeof invoice.paid === 'boolean' ? invoice.paid : null
+            invoice_paid: typeof invoice.paid === 'boolean' ? invoice.paid : null,
+            bank_reviewed: typeof payment.bank_reviewed === 'boolean' ? payment.bank_reviewed : false
         };
     });
 
@@ -119,7 +120,8 @@ async function createPayment(event) {
         payment_method: body.payment_method ? String(body.payment_method).trim() : null,
         reference_code: body.reference_code ? String(body.reference_code).trim() : null,
         notes: body.notes ? String(body.notes).trim() : null,
-        payment_date: body.payment_date || new Date().toISOString()
+        payment_date: body.payment_date || new Date().toISOString(),
+        bank_reviewed: typeof body.bank_reviewed === 'boolean' ? body.bank_reviewed : false
     };
 
     const res = await fetch(`${supabaseUrl}/rest/v1/payments`, {
@@ -178,6 +180,9 @@ async function updatePayment(event) {
     }
     if (updateData.notes !== undefined) {
         updateData.notes = updateData.notes ? String(updateData.notes).trim() : null;
+    }
+    if (updateData.bank_reviewed !== undefined) {
+        updateData.bank_reviewed = Boolean(updateData.bank_reviewed);
     }
 
     const res = await fetch(`${supabaseUrl}/rest/v1/payments?id=eq.${paymentId}`, {
