@@ -590,7 +590,8 @@ async function createPayment(body) {
         payment_method: body.payment_method ? String(body.payment_method).trim() : null,
         reference_code: body.reference_code ? String(body.reference_code).trim() : null,
         notes: body.notes ? String(body.notes).trim() : null,
-        payment_date: body.payment_date || new Date().toISOString()
+        payment_date: body.payment_date || new Date().toISOString(),
+        bank_reviewed: typeof body.bank_reviewed === 'boolean' ? body.bank_reviewed : false
     };
 
     const createPaymentUrl = `${supabaseUrl}/rest/v1/payments`;

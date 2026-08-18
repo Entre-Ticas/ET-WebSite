@@ -427,6 +427,7 @@ async function guardarNuevoAbono() {
     const amountEl = document.getElementById('paymentAmount');
     const methodEl = document.getElementById('paymentMethod');
     const refEl = document.getElementById('paymentRef');
+    const bankReviewedEl = document.getElementById('paymentBankReviewed');
     const saveBtn = document.getElementById('btnGuardarAbono');
 
     if (!currentInvoiceNumericId) {
@@ -464,7 +465,8 @@ async function guardarNuevoAbono() {
                 invoice_id: Number(currentInvoiceNumericId),
                 amount,
                 payment_method: paymentMethod,
-                reference_code: referenceCode
+                reference_code: referenceCode,
+                bank_reviewed: !!bankReviewedEl?.checked
             })
         });
 
@@ -476,6 +478,7 @@ async function guardarNuevoAbono() {
         if (amountEl) amountEl.value = '';
         if (methodEl) methodEl.value = '';
         if (refEl) refEl.value = '';
+        if (bankReviewedEl) bankReviewedEl.checked = false;
 
         if (messageEl) messageEl.textContent = '✅ Abono agregado correctamente.';
         setSectionFeedback('payment', '✅ Abono agregado correctamente.', 'success', 2000);
