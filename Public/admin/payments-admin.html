@@ -30,6 +30,7 @@
                         <th class="sortable" onclick="sortPaymentsBy('payment_method')" data-col="payment_method">Método <span class="sort-arrow">↕</span></th>
                         <th class="sortable" onclick="sortPaymentsBy('reference_code')" data-col="reference_code">Referencia <span class="sort-arrow">↕</span></th>
                         <th class="sortable" onclick="sortPaymentsBy('payment_date')" data-col="payment_date">Fecha <span class="sort-arrow">↕</span></th>
+                        <th>Rev. Banco</th>
                         <th>Acciones</th>
                     </tr>
                     <tr class="admin-filter-row">
@@ -41,6 +42,7 @@
                         <td><input type="text" placeholder="Filtrar..." oninput="setPaymentColumnFilter('payment_method', this.value)" /></td>
                         <td><input type="text" placeholder="Filtrar..." oninput="setPaymentColumnFilter('reference_code', this.value)" /></td>
                         <td><input type="text" placeholder="Filtrar..." oninput="setPaymentColumnFilter('payment_date', this.value)" /></td>
+                        <td></td>
                         <td></td>
                     </tr>
                 </thead>
@@ -108,6 +110,11 @@
                         <label for="newPaymentDate" class="floating-label">Fecha Abono</label>
                     </div>
 
+                    <label class="custom-checkbox-container">
+                        <input type="checkbox" id="newPaymentBankReviewed">
+                        <span class="checkbox-label">Revisado en banco</span>
+                    </label>
+
                     <div class="floating-field floating-field-textarea">
                         <textarea id="newPaymentNotes" class="floating-input floating-textarea" rows="3" placeholder=" "></textarea>
                         <label for="newPaymentNotes" class="floating-label">Notas</label>
@@ -156,6 +163,11 @@
                         <input type="datetime-local" id="editPaymentDate" class="floating-input floating-input-datetime">
                         <label for="editPaymentDate" class="floating-label">Fecha Abono</label>
                     </div>
+
+                    <label class="custom-checkbox-container">
+                        <input type="checkbox" id="editPaymentBankReviewed">
+                        <span class="checkbox-label">Revisado en banco</span>
+                    </label>
 
                     <div class="floating-field floating-field-textarea">
                         <textarea id="editPaymentNotes" class="floating-input floating-textarea" rows="3" placeholder=" "></textarea>

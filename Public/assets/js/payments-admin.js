@@ -127,6 +127,7 @@ function renderPayments() {
             <td>${p.payment_method || '—'}</td>
             <td>${p.reference_code || '—'}</td>
             <td>${p.payment_date ? new Date(p.payment_date).toLocaleDateString('es-CR') : 'N/A'}</td>
+            <td style="text-align:center;"><input type="checkbox" id="bankrev-cb-${p.id}" onclick="confirmTogglePaymentBank(${p.id}, this)" ${p.bank_reviewed ? 'checked' : ''}></td>
             <td class="admin-actions-cell">
                 <button class="admin-btn-action btn-edit" onclick="openPaymentEditForm(${p.id})" title="Editar Abono"><i class="fas fa-pencil-alt"></i></button>
                 <button class="admin-btn-action btn-delete" onclick="deletePayment(${p.id})" title="Eliminar Abono"><i class="fas fa-trash-alt"></i></button>
@@ -197,6 +198,7 @@ function openNewPaymentForm() {
     document.getElementById('newPaymentMethod').value = '';
     document.getElementById('newPaymentRef').value = '';
     document.getElementById('newPaymentDate').value = '';
+    document.getElementById('newPaymentBankReviewed').checked = false;
     document.getElementById('newPaymentNotes').value = '';
     const err = document.getElementById('newPaymentError');
     err.textContent = '';
@@ -229,7 +231,8 @@ async function saveNewPayment() {
             amount: Number(amount),
             payment_method: document.getElementById('newPaymentMethod').value.trim() || null,
             reference_code: document.getElementById('newPaymentRef').value.trim() || null,
-            notes: document.getElementById('newPaymentNotes').value.trim() || null
+            notes: document.getElementById('newPaymentNotes').value.trim() || null,
+            bank_reviewed: document.getElementById('newPaymentBankReviewed').checked
         };
 
         const dateVal = document.getElementById('newPaymentDate').value;
@@ -274,6 +277,7 @@ function openPaymentEditForm(paymentId) {
     document.getElementById('editPaymentMethod').value = payment.payment_method || '';
     document.getElementById('editPaymentRef').value = payment.reference_code || '';
     document.getElementById('editPaymentDate').value = toLocalDateTimeInputValue(payment.payment_date);
+    document.getElementById('editPaymentBankReviewed').checked = !!payment.bank_reviewed;
     document.getElementById('editPaymentNotes').value = payment.notes || '';
 
     const err = document.getElementById('editPaymentError');
@@ -314,7 +318,8 @@ async function savePaymentEdit() {
             amount: Number(amount),
             payment_method: document.getElementById('editPaymentMethod').value.trim() || null,
             reference_code: document.getElementById('editPaymentRef').value.trim() || null,
-            notes: document.getElementById('editPaymentNotes').value.trim() || null
+            notes: document.getElementById('editPaymentNotes').value.trim() || null,
+            bank_reviewed: document.getElementById('editPaymentBankReviewed').checked
         };
 
         const dateVal = document.getElementById('editPaymentDate').value;
@@ -379,6 +384,60 @@ function filterPayments() {
     paymentsCurrentPage = 1;
     paymentsGlobalSearch = document.getElementById('paymentsSearchInput').value.toLowerCase().trim();
     renderPayments();
+}
+
+function confirmTogglePaymentBank(paymentId, checkbox) {
+    const marking = checkbox.checked;
+    checkbox.checked = !marking;
+
+    const body = marking
+        ? `<p>¿Está seguro de marcar el abono <strong>#${paymentId}</strong> como <strong>revisado en banco</strong>?</p>`
+        : `<p>¿Está seguro de desmarcar el abono <strong>#${paymentId}</strong> como revisado en banco?</p>`;
+    const label = marking ? 'Sí, Confirmar' : 'Sí, Desmarcar';
+    const footer = `
+        <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
+        <button class="btn btn-danger" onclick="closeGenericModal(); doTogglePaymentBank(${paymentId}, ${marking})">${label}</button>
+    `;
+    openGenericModal('Confirmar revisión en banco', body, footer);
+}
+
+async function doTogglePaymentBank(paymentId, marking) {
+    const checkbox = document.getElementById(`bankrev-cb-${paymentId}`);
+    if (!checkbox) return;
+    checkbox.checked = marking;
+    await togglePaymentReviewStatus(paymentId, 'bank_reviewed', checkbox);
+}
+
+async function togglePaymentReviewStatus(paymentId, field, checkbox) {
+    const isChecked = checkbox.checked;
+    const payment = todosLosPayments.find(p => Number(p.id) === Number(paymentId));
+    if (payment) {
+        payment[field] = isChecked;
+    } else {
+        alert(`Error interno: No se encontró el abono con ID ${paymentId} para actualizar.`);
+        checkbox.checked = !isChecked;
+        return;
+    }
+
+    try {
+        const session = getSession();
+        if (!session) throw new Error('Sesión expirada.');
+
+        const response = await fetch('/.netlify/functions/payments', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'x-admin-token': session.token },
+            body: JSON.stringify({ id: paymentId, [field]: isChecked })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Respuesta de error no es JSON.' }));
+            throw new Error(errorData.error || `Error ${response.status}: No se pudo actualizar el estado.`);
+        }
+    } catch (error) {
+        alert(`Error al actualizar: ${error.message}`);
+        checkbox.checked = !isChecked;
+        if (payment) payment[field] = !isChecked;
+    }
 }
 function deletePayment(id) {
     const title = 'Confirmar Eliminación';
