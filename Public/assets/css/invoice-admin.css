@@ -681,6 +681,91 @@
     font-style: italic;
 }
 
+.invoice-payment-review-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.35rem;
+    font-size: 0.73rem;
+    font-weight: 700;
+    color: var(--brown-text);
+    cursor: pointer;
+}
+
+.invoice-payment-review-toggle input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    accent-color: #1b6b45;
+    margin: 0;
+}
+
+.invoice-payment-review-toggle.in-amount {
+    display: flex;
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+    margin-top: 0.22rem;
+    font-size: 0.66rem;
+    gap: 0.22rem;
+}
+
+.invoice-payment-review-toggle.in-amount input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.invoice-payment-review-toggle.in-amount span {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    padding-left: 0.95rem;
+    color: #7d6871;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+}
+
+.invoice-payment-review-toggle.in-amount span::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 11px;
+    height: 11px;
+    border: 1.6px solid var(--pink-accent);
+    border-radius: 3px;
+    background: #fff;
+    transition: all 0.18s ease;
+}
+
+.invoice-payment-review-toggle.in-amount span::after {
+    content: '';
+    position: absolute;
+    left: 3px;
+    top: 50%;
+    width: 3px;
+    height: 6px;
+    border: solid #fff;
+    border-width: 0 1.6px 1.6px 0;
+    transform: translateY(-62%) rotate(45deg);
+    opacity: 0;
+    transition: opacity 0.18s ease;
+}
+
+.invoice-payment-review-toggle.in-amount input[type="checkbox"]:checked + span::before {
+    background: var(--pink-accent);
+    border-color: var(--pink-accent);
+}
+
+.invoice-payment-review-toggle.in-amount input[type="checkbox"]:checked + span::after {
+    opacity: 1;
+}
+
+.invoice-payment-review-toggle.in-amount input[type="checkbox"]:focus-visible + span::before {
+    box-shadow: 0 0 0 2px rgba(225, 155, 157, 0.25);
+}
+
 .invoice-empty-row td {
     text-align: center;
     color: #7a7a7a;
