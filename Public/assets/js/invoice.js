@@ -67,6 +67,7 @@ async function loadInvoiceDetails(invoiceRef) {
 function renderInvoice(payload) {
     const { invoice, items, payments } = normalizeInvoiceData(payload);
     currentInvoiceNumericId = invoice?.id || currentInvoiceNumericId;
+    const isAdmin = Boolean(getSession());
 
     if (!invoice || (!invoice.id && !currentInvoiceRef)) {
         throw new Error('La factura no contiene datos válidos.');
@@ -95,7 +96,7 @@ function renderInvoice(payload) {
     document.getElementById('inv-balance-due').textContent = formatCurrency(balanceDue);
     updateInvoiceGridFooter(totalAmount, totalPaid, balanceDue);
 
-    renderInvoiceDetails(items, payments);
+    renderInvoiceDetails(items, payments, isAdmin);
 }
 
 function updateInvoiceGridFooter(totalAmount, totalPaid, balanceDue) {
@@ -110,7 +111,7 @@ function updateInvoiceGridFooter(totalAmount, totalPaid, balanceDue) {
     balanceEl.textContent = formatCurrency(balanceDue);
 }
 
-function renderInvoiceDetails(items, payments) {
+function renderInvoiceDetails(items, payments, isAdmin) {
     const tbody = document.querySelector('#invoiceDetailsTable tbody');
     const rowTemplate = document.getElementById('invoiceItemRowTemplate');
     const entries = buildInvoiceEntries(items, payments);
@@ -140,6 +141,7 @@ function renderInvoiceDetails(items, payments) {
             renderItemDetail(detailCell, entry);
         } else {
             renderPaymentDetail(detailCell, entry);
+            renderPaymentReviewInAmount(amountCell, entry, isAdmin);
         }
 
         tbody.appendChild(clone);
@@ -162,10 +164,12 @@ function buildInvoiceEntries(items, payments) {
     const paymentEntries = payments.map(payment => ({
         kind: 'payment',
         kindLabel: 'Abono',
+        id: payment.id,
         title: payment.payment_method || 'Abono',
         reference: payment.reference_code,
         notes: payment.notes,
         date: payment.payment_date,
+        bankReviewed: Boolean(payment.bank_reviewed),
         quantityLabel: '—',
         unitPriceLabel: '—',
         amount: payment.amount
@@ -225,6 +229,73 @@ function renderPaymentDetail(cell, entry) {
     badge.className = 'invoice-entry-badge is-payment';
     badge.textContent = entry.kindLabel || 'Abono';
     cell.appendChild(badge);
+}
+
+function renderPaymentReviewInAmount(cell, entry, isAdmin) {
+    if (!isAdmin || !entry.id) return;
+
+    cell.appendChild(document.createElement('br'));
+
+    const reviewWrap = document.createElement('label');
+    reviewWrap.className = 'invoice-payment-review-toggle in-amount';
+
+    const reviewCheckbox = document.createElement('input');
+    reviewCheckbox.type = 'checkbox';
+    reviewCheckbox.id = `inv-bankrev-cb-${entry.id}`;
+    reviewCheckbox.checked = Boolean(entry.bankReviewed);
+    reviewCheckbox.addEventListener('change', () => confirmToggleInvoicePaymentBank(entry.id, reviewCheckbox));
+
+    const reviewText = document.createElement('span');
+    reviewText.textContent = 'Rev.';
+
+    reviewWrap.appendChild(reviewCheckbox);
+    reviewWrap.appendChild(reviewText);
+    cell.appendChild(reviewWrap);
+}
+
+function confirmToggleInvoicePaymentBank(paymentId, checkbox) {
+    const marking = checkbox.checked;
+    checkbox.checked = !marking;
+
+    const body = marking
+        ? `<p>¿Está seguro de marcar el abono <strong>#${paymentId}</strong> como <strong>revisado en banco</strong>?</p>`
+        : `<p>¿Está seguro de desmarcar el abono <strong>#${paymentId}</strong> como revisado en banco?</p>`;
+    const label = marking ? 'Sí, Confirmar' : 'Sí, Desmarcar';
+    const footer = `
+        <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
+        <button class="btn btn-danger" onclick="closeGenericModal(); doToggleInvoicePaymentBank(${Number(paymentId)}, ${marking})">${label}</button>
+    `;
+    openGenericModal('Confirmar revisión en banco', body, footer);
+}
+
+async function doToggleInvoicePaymentBank(paymentId, marking) {
+    const checkbox = document.getElementById(`inv-bankrev-cb-${paymentId}`);
+    if (!checkbox) return;
+    checkbox.checked = marking;
+    await toggleInvoicePaymentReviewStatus(paymentId, checkbox);
+}
+
+async function toggleInvoicePaymentReviewStatus(paymentId, checkbox) {
+    const isChecked = checkbox.checked;
+
+    try {
+        const session = getSession();
+        if (!session) throw new Error('Sesión expirada.');
+
+        const response = await fetch('/.netlify/functions/payments', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'x-admin-token': session.token },
+            body: JSON.stringify({ id: Number(paymentId), bank_reviewed: isChecked })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Respuesta de error no es JSON.' }));
+            throw new Error(errorData.error || `Error ${response.status}: No se pudo actualizar el estado.`);
+        }
+    } catch (error) {
+        checkbox.checked = !isChecked;
+        alert(`Error al actualizar: ${error.message}`);
+    }
 }
 
 function createEmptyRow(message, colspan) {
@@ -330,7 +401,8 @@ function extractPaymentFields(source) {
         amount: toNullableNumber(pickFirst(source, ['amount', 'monto'])),
         payment_method: pickFirst(source, ['payment_method', 'metodo_pago']),
         reference_code: pickFirst(source, ['reference_code', 'referencia']),
-        notes: pickFirst(source, ['notes', 'nota'])
+        notes: pickFirst(source, ['notes', 'nota']),
+        bank_reviewed: toBoolean(pickFirst(source, ['bank_reviewed', 'revisado_banco', 'reviewed_in_bank']))
     };
 }
 
@@ -339,7 +411,13 @@ function hasMeaningfulItem(item) {
 }
 
 function hasMeaningfulPayment(payment) {
-    return Boolean(payment.payment_date || payment.amount !== null || payment.reference_code || payment.payment_method);
+    return Boolean(
+        payment.payment_date ||
+        payment.amount !== null ||
+        payment.reference_code ||
+        payment.payment_method ||
+        payment.bank_reviewed === true
+    );
 }
 
 function coerceArray(value) {
@@ -695,5 +773,6 @@ window.handleInvoiceItemImageUpload = handleInvoiceItemImageUpload;
 window.triggerInvoiceItemFileUpload = triggerInvoiceItemFileUpload;
 window.triggerInvoiceItemCameraUpload = triggerInvoiceItemCameraUpload;
 window.updateInvoiceItemQuantity = updateInvoiceItemQuantity;
+window.doToggleInvoicePaymentBank = doToggleInvoicePaymentBank;
 window.initInvoicePage = initInvoicePage;
 })();
