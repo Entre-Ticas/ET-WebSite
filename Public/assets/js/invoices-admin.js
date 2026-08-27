@@ -540,16 +540,17 @@ function updateInvoiceMultiSelectActions() {
 }
 
 function confirmTogglePaid(invoiceId, checkbox) {
-    const marking = checkbox.checked;
-    checkbox.checked = !marking;
-    const body = marking
+    const currentState = checkbox.checked;
+    const nextState = !currentState;
+    checkbox.checked = nextState;
+    const body = nextState
         ? `<p>¿Está seguro que desea marcar la factura <strong>#${invoiceId}</strong> como <strong>Pagada</strong>?</p>
            <p style="color:#c0392b; margin-top:8px;"><strong>⚠ Esta acción no puede revertirse.</strong><br>La factura dejará de estar disponible para modificaciones.</p>`
         : `<p>¿Está seguro que desea <strong>desmarcar</strong> la factura <strong>#${invoiceId}</strong> como Pagada?</p>`;
-    const label = marking ? 'Sí, Marcar como Pagada' : 'Sí, Desmarcar';
+    const label = nextState ? 'Sí, Marcar como Pagada' : 'Sí, Desmarcar';
     const footer = `
         <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
-        <button class="btn btn-danger" onclick="closeGenericModal(); confirmPaidAction(${invoiceId}, ${marking})">${label}</button>
+        <button class="btn btn-danger" onclick="closeGenericModal(); confirmPaidAction(${invoiceId}, ${nextState})">${label}</button>
     `;
     openGenericModal('Confirmar cambio de estado', body, footer);
 }

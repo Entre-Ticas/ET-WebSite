@@ -70,6 +70,8 @@ function renderInvoice(payload) {
     statusBadge.classList.toggle('is-paid', Boolean(invoice.paid));
     statusBadge.classList.toggle('is-pending', !invoice.paid);
 
+    updateInvoiceActionButtons(invoice);
+
     document.getElementById('inv-total-amount').textContent = formatCurrency(totalAmount);
     document.getElementById('inv-total-paid').textContent = formatCurrency(totalPaid);
     document.getElementById('inv-balance-due').textContent = formatCurrency(balanceDue);
@@ -77,6 +79,86 @@ function renderInvoice(payload) {
 
     renderInvoiceDetails(items, payments);
 }
+
+function updateInvoiceActionButtons(invoice) {
+    const copyBtn = document.getElementById('btnCopyInvoiceLink');
+    const paidBtn = document.getElementById('btnToggleInvoicePaid');
+    const paidCheckbox = document.getElementById('detailPaidCheckbox');
+    const isPaid = Boolean(invoice?.paid);
+
+    if (copyBtn) {
+        copyBtn.onclick = () => copiarLinkFactura(copyBtn, currentInvoiceId);
+    }
+
+    let cb = null;
+    if (paidCheckbox) {
+        paidCheckbox.id = `paid-cb-${currentInvoiceId}`;
+        paidCheckbox.checked = isPaid;
+        cb = paidCheckbox;
+    } else {
+        cb = document.getElementById(`paid-cb-${currentInvoiceId}`);
+    }
+
+    if (paidBtn) {
+        paidBtn.classList.toggle('is-paid', isPaid);
+        paidBtn.innerHTML = `<i class="fas ${isPaid ? 'fa-undo-alt' : 'fa-check-circle'}"></i> ${isPaid ? 'Marcar como pendiente' : 'Marcar como pagada'}`;
+        paidBtn.title = isPaid ? 'Marcar como pendiente' : 'Marcar como pagada';
+        paidBtn.onclick = () => {
+            const checkbox = document.getElementById(`paid-cb-${currentInvoiceId}`) || cb;
+            if (checkbox) {
+                checkbox.checked = Boolean(invoice?.paid);
+                confirmTogglePaid(currentInvoiceId, checkbox);
+            }
+        };
+    }
+}
+
+window.confirmTogglePaid = window.confirmTogglePaid || function confirmTogglePaid(invoiceId, checkbox) {
+    const currentState = checkbox.checked;
+    const nextState = !currentState;
+    checkbox.checked = nextState;
+    const body = nextState
+        ? `<p>¿Está seguro que desea marcar la factura <strong>#${invoiceId}</strong> como <strong>Pagada</strong>?</p>
+           <p style="color:#c0392b; margin-top:8px;"><strong>⚠ Esta acción no puede revertirse.</strong><br>La factura dejará de estar disponible para modificaciones.</p>`
+        : `<p>¿Está seguro que desea <strong>desmarcar</strong> la factura <strong>#${invoiceId}</strong> como Pagada?</p>`;
+    const label = nextState ? 'Sí, Marcar como Pagada' : 'Sí, Desmarcar';
+    const footer = `
+        <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
+        <button class="btn btn-danger" onclick="closeGenericModal(); confirmPaidAction(${invoiceId}, ${nextState})">${label}</button>
+    `;
+    openGenericModal('Confirmar cambio de estado', body, footer);
+};
+
+window.togglePaidStatus = window.togglePaidStatus || async function togglePaidStatus(invoiceId, checkbox) {
+    const isChecked = checkbox.checked;
+    try {
+        const session = getSession();
+        if (!session) throw new Error('Sesión expirada.');
+
+        const response = await fetch('/.netlify/functions/invoices', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'x-admin-token': session.token },
+            body: JSON.stringify({ id: invoiceId, paid: isChecked })
+        });
+
+        if (!response.ok) throw new Error('No se pudo actualizar el estado de pago.');
+        return true;
+    } catch (error) {
+        alert(`Error: ${error.message}`);
+        checkbox.checked = !isChecked;
+        return false;
+    }
+};
+
+window.confirmPaidAction = async function(invoiceId, marking) {
+    const cb = document.getElementById(`paid-cb-${invoiceId}`);
+    if (!cb) return;
+    cb.checked = marking;
+    const ok = await window.togglePaidStatus(invoiceId, cb);
+    if (ok && currentInvoiceId === invoiceId) {
+        await loadInvoiceDetails(invoiceId);
+    }
+};
 
 function updateInvoiceGridFooter(totalAmount, totalPaid, balanceDue) {
     const totalEl = document.getElementById('inv-grid-total-amount');
@@ -395,16 +477,12 @@ function showInvoiceError(message) {
 }
 
 async function guardarNuevoAbono() {
-    const messageEl = document.getElementById('paymentMensaje');
     const amountEl = document.getElementById('paymentAmount');
     const methodEl = document.getElementById('paymentMethod');
     const refEl = document.getElementById('paymentRef');
     const saveBtn = document.getElementById('btnGuardarAbono');
 
     if (!currentInvoiceId) {
-        if (messageEl) {
-            messageEl.textContent = '⚠️ No hay una factura activa para registrar el abono.';
-        }
         return;
     }
 
@@ -413,11 +491,9 @@ async function guardarNuevoAbono() {
     const referenceCode = refEl?.value.trim() || null;
 
     if (!Number.isFinite(amount) || amount <= 0) {
-        if (messageEl) messageEl.textContent = '⚠️ El monto debe ser mayor a 0.';
         return;
     }
 
-    if (messageEl) messageEl.textContent = 'Guardando abono...';
     if (saveBtn) saveBtn.disabled = true;
 
     try {
@@ -444,12 +520,10 @@ async function guardarNuevoAbono() {
         if (methodEl) methodEl.value = '';
         if (refEl) refEl.value = '';
 
-        if (messageEl) messageEl.textContent = '✅ Abono agregado correctamente.';
-
         await loadInvoiceDetails(currentInvoiceId);
         setPaymentSectionExpanded(false);
     } catch (error) {
-        if (messageEl) messageEl.textContent = `⚠️ ${error.message}`;
+        // Se omite el toast/feedback visual del éxito porque el bloque está colapsado.
     } finally {
         if (saveBtn) saveBtn.disabled = false;
     }
@@ -643,6 +717,36 @@ function updateInvoiceItemQuantity(inputId, delta) {
 
 function volverAlGrid() {
     history.back();
+}
+
+if (!window.openGenericModal) {
+    window.openGenericModal = function(title, bodyHtml, footerHtml = '') {
+        const titleEl = document.getElementById('genericModalTitle');
+        const bodyEl = document.getElementById('genericModalBody');
+        const footerEl = document.getElementById('genericModalFooter');
+        const modalEl = document.getElementById('genericModal');
+
+        if (!titleEl || !bodyEl || !footerEl || !modalEl) {
+            alert(title);
+            return;
+        }
+
+        titleEl.textContent = title;
+        bodyEl.innerHTML = bodyHtml;
+
+        if (footerHtml) {
+            footerEl.innerHTML = footerHtml;
+        }
+
+        modalEl.classList.add('active');
+    };
+}
+
+if (!window.closeGenericModal) {
+    window.closeGenericModal = function() {
+        const modalEl = document.getElementById('genericModal');
+        if (modalEl) modalEl.classList.remove('active');
+    };
 }
 
 window.togglePaymentSection = togglePaymentSection;

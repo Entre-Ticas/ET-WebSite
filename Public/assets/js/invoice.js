@@ -91,12 +91,110 @@ function renderInvoice(payload) {
     statusBadge.classList.toggle('is-paid', Boolean(invoice.paid));
     statusBadge.classList.toggle('is-pending', !invoice.paid);
 
+    updateInvoiceActionButtons(invoice, isAdmin);
+
     document.getElementById('inv-total-amount').textContent = formatCurrency(totalAmount);
     document.getElementById('inv-total-paid').textContent = formatCurrency(totalPaid);
     document.getElementById('inv-balance-due').textContent = formatCurrency(balanceDue);
     updateInvoiceGridFooter(totalAmount, totalPaid, balanceDue);
 
     renderInvoiceDetails(items, payments, isAdmin);
+}
+
+function updateInvoiceActionButtons(invoice, isAdmin) {
+    const copyBtn = document.getElementById('btnCopyInvoiceLink');
+    const paidBtn = document.getElementById('btnToggleInvoicePaid');
+    const paidCheckbox = document.getElementById('detailPaidCheckbox');
+
+    if (!isAdmin) {
+        if (copyBtn) copyBtn.style.display = 'none';
+        if (paidBtn) paidBtn.style.display = 'none';
+        return;
+    }
+
+    if (copyBtn) {
+        copyBtn.style.display = 'inline-flex';
+        copyBtn.onclick = () => {
+            console.log('DEBUG click copiar link', currentInvoiceNumericId);
+            return copiarLinkFactura(copyBtn, currentInvoiceNumericId);
+        };
+    }
+
+    if (paidCheckbox) {
+        paidCheckbox.id = `paid-cb-${currentInvoiceNumericId}`;
+        paidCheckbox.checked = Boolean(invoice?.paid);
+    }
+
+    if (paidBtn) {
+        paidBtn.style.display = 'inline-flex';
+        paidBtn.classList.toggle('is-paid', Boolean(invoice?.paid));
+        paidBtn.innerHTML = `<i class="fas ${Boolean(invoice?.paid) ? 'fa-undo-alt' : 'fa-check-circle'}"></i> ${Boolean(invoice?.paid) ? 'Marcar como pendiente' : 'Marcar como pagada'}`;
+        paidBtn.title = Boolean(invoice?.paid) ? 'Marcar como pendiente' : 'Marcar como pagada';
+        paidBtn.onclick = () => {
+            const checkbox = document.getElementById(`paid-cb-${currentInvoiceNumericId}`) || paidCheckbox;
+            console.log('DEBUG click paidButton', { currentInvoiceNumericId, checkbox, checked: checkbox?.checked, invoicePaid: invoice?.paid });
+            if (checkbox) {
+                checkbox.checked = Boolean(invoice?.paid);
+                confirmTogglePaid(currentInvoiceNumericId, checkbox);
+            }
+        };
+    }
+}
+
+function confirmTogglePaid(invoiceId, checkbox) {
+    const currentState = checkbox.checked;
+    const nextState = !currentState;
+    checkbox.checked = nextState;
+    const body = nextState
+        ? `<p>¿Está seguro que desea marcar la factura <strong>#${invoiceId}</strong> como <strong>Pagada</strong>?</p>
+           <p style="color:#c0392b; margin-top:8px;"><strong>⚠ Esta acción no puede revertirse.</strong><br>La factura dejará de estar disponible para modificaciones.</p>`
+        : `<p>¿Está seguro que desea <strong>desmarcar</strong> la factura <strong>#${invoiceId}</strong> como Pagada?</p>`;
+    const label = nextState ? 'Sí, Marcar como Pagada' : 'Sí, Desmarcar';
+    const footer = `
+        <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
+        <button class="btn btn-danger" onclick="closeGenericModal(); confirmPaidAction(${invoiceId}, ${nextState})">${label}</button>
+    `;
+    console.log('DEBUG confirmTogglePaid', { invoiceId, currentState, nextState, checkboxChecked: checkbox.checked });
+    openGenericModal('Confirmar cambio de estado', body, footer);
+}
+
+async function confirmPaidAction(invoiceId, marking) {
+    const cb = document.getElementById(`paid-cb-${invoiceId}`);
+    if (!cb) return;
+    cb.checked = marking;
+    console.log('DEBUG confirmPaidAction', { invoiceId, marking });
+    const ok = await togglePaidStatus(invoiceId, cb);
+    if (ok && currentInvoiceNumericId === invoiceId) {
+        await loadInvoiceDetails(currentInvoiceRef);
+    }
+}
+
+async function togglePaidStatus(invoiceId, checkbox) {
+    const isChecked = checkbox.checked;
+    console.log('DEBUG togglePaidStatus start', { invoiceId, isChecked });
+    try {
+        const session = getSession();
+        if (!session) throw new Error('Sesión expirada.');
+
+        const response = await fetch('/.netlify/functions/invoices', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'x-admin-token': session.token },
+            body: JSON.stringify({ id: invoiceId, paid: isChecked })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'No se pudo actualizar el estado de pago.');
+        }
+
+        console.log('DEBUG togglePaidStatus ok', { invoiceId, isChecked });
+        return true;
+    } catch (error) {
+        console.error('DEBUG togglePaidStatus error', error);
+        alert(`Error: ${error.message}`);
+        checkbox.checked = !isChecked;
+        return false;
+    }
 }
 
 function updateInvoiceGridFooter(totalAmount, totalPaid, balanceDue) {
