@@ -1137,7 +1137,7 @@ async function guardarNuevaOrden() {
             await loadAdminOrders(); // Recargamos los datos en segundo plano
             abrirFormNuevo();        // Limpiamos el formulario para la siguiente orden
             botonGuardar.disabled = false; // Reactivamos el botón DESPUÉS de limpiar
-        }, 1000);
+        }, 600);
     } catch (error) {
         mensajeEl.textContent = `Error: ${error.message}`;
         botonGuardar.disabled = false;
@@ -1236,7 +1236,7 @@ async function guardarEdicion() {
             await loadAdminOrders();
             volverAlGrid();
             botonGuardar.disabled = false; // Reactivamos el botón DESPUÉS de volver al grid
-        }, 1500);
+        }, 600);
 
     } catch (error) {
         mensajeEl.textContent = `Error: ${error.message}`;
