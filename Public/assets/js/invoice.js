@@ -1,7 +1,4 @@
 (() => {
-const hasAdminSession = !!(window.getSession && window.getSession());
-if (hasAdminSession) return;
-
 let currentInvoiceRef = null;
 let currentInvoiceNumericId = null;
 const feedbackHideTimers = {
@@ -138,13 +135,13 @@ function updateInvoiceActionButtons(invoice, isAdmin) {
             const checkbox = document.getElementById(`paid-cb-${currentInvoiceNumericId}`) || paidCheckbox;
             if (checkbox) {
                 checkbox.dataset.paid = String(Boolean(invoice?.paid));
-                confirmTogglePaid(currentInvoiceNumericId, checkbox);
+                confirmInvoiceDetailTogglePaid(currentInvoiceNumericId, checkbox);
             }
         };
     }
 }
 
-function confirmTogglePaid(invoiceId, checkbox) {
+function confirmInvoiceDetailTogglePaid(invoiceId, checkbox) {
     const currentState = checkbox.dataset.paid !== undefined ? checkbox.dataset.paid === 'true' : checkbox.checked;
     const nextState = !currentState;
     const body = nextState
@@ -154,23 +151,23 @@ function confirmTogglePaid(invoiceId, checkbox) {
     const label = nextState ? 'Sí, Marcar como Pagada' : 'Sí, Desmarcar';
     const footer = `
         <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
-        <button class="btn btn-danger" onclick="closeGenericModal(); confirmPaidAction(${invoiceId}, ${nextState})">${label}</button>
+        <button class="btn btn-danger" onclick="closeGenericModal(); confirmInvoiceDetailPaidAction(${invoiceId}, ${nextState})">${label}</button>
     `;
     openGenericModal('Confirmar cambio de estado', body, footer);
 }
 
-async function confirmPaidAction(invoiceId, marking) {
+async function confirmInvoiceDetailPaidAction(invoiceId, marking) {
     const cb = document.getElementById(`paid-cb-${invoiceId}`);
     if (!cb) return;
     cb.dataset.paid = String(Boolean(marking));
     cb.checked = marking;
-    const ok = await togglePaidStatus(invoiceId, cb);
+    const ok = await toggleInvoiceDetailPaidStatus(invoiceId, cb);
     if (ok && currentInvoiceNumericId === invoiceId) {
         await loadInvoiceDetails(currentInvoiceRef);
     }
 }
 
-async function togglePaidStatus(invoiceId, checkbox) {
+async function toggleInvoiceDetailPaidStatus(invoiceId, checkbox) {
     const isChecked = checkbox.checked;
     try {
         const session = getSession();
@@ -873,4 +870,7 @@ window.triggerInvoiceItemCameraUpload = triggerInvoiceItemCameraUpload;
 window.updateInvoiceItemQuantity = updateInvoiceItemQuantity;
 window.doToggleInvoicePaymentBank = doToggleInvoicePaymentBank;
 window.initInvoicePage = initInvoicePage;
+window.confirmInvoiceDetailTogglePaid = confirmInvoiceDetailTogglePaid;
+window.confirmInvoiceDetailPaidAction = confirmInvoiceDetailPaidAction;
+window.toggleInvoiceDetailPaidStatus = toggleInvoiceDetailPaidStatus;
 })();
