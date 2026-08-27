@@ -87,7 +87,8 @@ function renderInvoice(payload) {
     document.getElementById('inv-date').textContent = formatDate(invoice.invoice_date);
 
     const statusBadge = document.getElementById('inv-status');
-    statusBadge.textContent = invoice.status_name || (invoice.paid ? 'Pagada' : 'Pendiente');
+    const displayStatus = invoice.paid ? 'Pagada' : 'Pendiente';
+    statusBadge.textContent = displayStatus;
     statusBadge.classList.toggle('is-paid', Boolean(invoice.paid));
     statusBadge.classList.toggle('is-pending', !invoice.paid);
 
@@ -463,13 +464,19 @@ function normalizeFlattenedInvoiceRows(rows) {
 }
 
 function extractInvoiceFields(source) {
+    const paidValue = toBoolean(pickFirst(source, ['paid', 'is_paid', 'pagada']));
+    const rawStatusName = pickFirst(source, ['status_name', 'estado', 'invoice_status']);
+    const normalizedStatusName = rawStatusName && ['Enabled', 'Disabled', 'enabled', 'disabled'].includes(String(rawStatusName).trim())
+        ? null
+        : rawStatusName;
+
     return {
         id: pickFirst(source, ['invoice_id', 'id']),
         client_name: pickFirst(source, ['client_name', 'cliente']),
         client_phone: pickFirst(source, ['client_phone', 'telefono']),
         invoice_date: pickFirst(source, ['invoice_date', 'fecha_factura', 'created_at']),
-        paid: toBoolean(pickFirst(source, ['paid', 'is_paid', 'pagada'])),
-        status_name: pickFirst(source, ['status_name', 'estado', 'invoice_status']),
+        paid: paidValue,
+        status_name: normalizedStatusName || (paidValue ? 'Pagada' : 'Pendiente'),
         total_amount: toNullableNumber(pickFirst(source, ['total_amount', 'invoice_total', 'items_total'])),
         total_paid: toNullableNumber(pickFirst(source, ['total_paid', 'payments_total', 'paid_amount'])),
         balance_due: toNullableNumber(pickFirst(source, ['balance_due', 'pending_balance', 'saldo_pendiente']))

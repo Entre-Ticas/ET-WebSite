@@ -129,14 +129,16 @@ function renderInvoices() {
     table.style.display = '';
     tbody.innerHTML = '';
     
-    const rowsHtml = paginatedItems.map(f => `
+    const rowsHtml = paginatedItems.map(f => {
+        const statusText = Boolean(f.paid) ? 'Pagada' : 'Pendiente';
+        return `
             <tr>
                 <td class="col-select" style="display: none;"><input type="checkbox" class="row-selector" data-id="${f.id}" onchange="updateInvoiceMultiSelectActions()"></td>
                 <td>${f.id}</td>
                 <td>${f.client_name || ''}</td>
                 <td>${f.client_phone || ''}</td>
                 <td>${f.invoice_date ? new Date(f.invoice_date).toLocaleDateString('es-CR') : 'N/A'}</td>
-                <td>${f.status_name || 'N/A'}</td>
+                <td>${statusText}</td>
                 <td style="text-align: center;">${f.items_count || '0'}</td>
                 <td style="text-align: center;">
                     <input
@@ -151,8 +153,8 @@ function renderInvoices() {
                     <button class="admin-btn-action btn-invoice" onclick="viewInvoiceDetail('${f.public_ref || ''}', ${f.id})" title="Ver Detalle de Factura"><i class="fas fa-file-invoice-dollar"></i></button>
                     <button class="admin-btn-action btn-delete" onclick="eliminarFactura(${f.id})" title="Eliminar Factura"><i class="fas fa-trash-alt"></i></button>
                 </td>
-            </tr>`
-    ).join('');
+            </tr>`;
+    }).join('');
 
     tbody.innerHTML = rowsHtml;
     updateInvoiceSortIcons();
