@@ -1,6 +1,10 @@
-let currentInvoiceId = null;
+(() => {
+    const hasAdminSession = !!(window.getSession && window.getSession());
+    if (!hasAdminSession) return;
 
-async function initInvoiceAdminPage(invoiceId) {
+    let currentInvoiceId = null;
+
+    async function initInvoiceAdminPage(invoiceId) {
     if (!invoiceId) {
         showInvoiceError('No se especificó un ID de factura.');
         return;
@@ -94,9 +98,11 @@ function updateInvoiceActionButtons(invoice) {
     if (paidCheckbox) {
         paidCheckbox.id = `paid-cb-${currentInvoiceId}`;
         paidCheckbox.checked = isPaid;
+        paidCheckbox.dataset.paid = String(Boolean(isPaid));
         cb = paidCheckbox;
     } else {
         cb = document.getElementById(`paid-cb-${currentInvoiceId}`);
+        if (cb) cb.dataset.paid = String(Boolean(isPaid));
     }
 
     if (paidBtn) {
@@ -106,7 +112,7 @@ function updateInvoiceActionButtons(invoice) {
         paidBtn.onclick = () => {
             const checkbox = document.getElementById(`paid-cb-${currentInvoiceId}`) || cb;
             if (checkbox) {
-                checkbox.checked = Boolean(invoice?.paid);
+                checkbox.dataset.paid = String(Boolean(invoice?.paid));
                 confirmTogglePaid(currentInvoiceId, checkbox);
             }
         };
@@ -114,9 +120,8 @@ function updateInvoiceActionButtons(invoice) {
 }
 
 window.confirmTogglePaid = window.confirmTogglePaid || function confirmTogglePaid(invoiceId, checkbox) {
-    const currentState = checkbox.checked;
+    const currentState = checkbox.dataset.paid !== undefined ? checkbox.dataset.paid === 'true' : checkbox.checked;
     const nextState = !currentState;
-    checkbox.checked = nextState;
     const body = nextState
         ? `<p>¿Está seguro que desea marcar la factura <strong>#${invoiceId}</strong> como <strong>Pagada</strong>?</p>
            <p style="color:#c0392b; margin-top:8px;"><strong>⚠ Esta acción no puede revertirse.</strong><br>La factura dejará de estar disponible para modificaciones.</p>`
@@ -142,10 +147,12 @@ window.togglePaidStatus = window.togglePaidStatus || async function togglePaidSt
         });
 
         if (!response.ok) throw new Error('No se pudo actualizar el estado de pago.');
+        checkbox.dataset.paid = String(Boolean(isChecked));
         return true;
     } catch (error) {
         alert(`Error: ${error.message}`);
         checkbox.checked = !isChecked;
+        checkbox.dataset.paid = String(Boolean(!isChecked));
         return false;
     }
 };
@@ -153,6 +160,7 @@ window.togglePaidStatus = window.togglePaidStatus || async function togglePaidSt
 window.confirmPaidAction = async function(invoiceId, marking) {
     const cb = document.getElementById(`paid-cb-${invoiceId}`);
     if (!cb) return;
+    cb.dataset.paid = String(Boolean(marking));
     cb.checked = marking;
     const ok = await window.togglePaidStatus(invoiceId, cb);
     if (ok && currentInvoiceId === invoiceId) {
@@ -758,3 +766,4 @@ window.handleInvoiceItemImageUpload = handleInvoiceItemImageUpload;
 window.triggerInvoiceItemFileUpload = triggerInvoiceItemFileUpload;
 window.triggerInvoiceItemCameraUpload = triggerInvoiceItemCameraUpload;
 window.updateInvoiceItemQuantity = updateInvoiceItemQuantity;
+})();

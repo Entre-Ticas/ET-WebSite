@@ -1,4 +1,7 @@
 (() => {
+const hasAdminSession = !!(window.getSession && window.getSession());
+if (hasAdminSession) return;
+
 let currentInvoiceRef = null;
 let currentInvoiceNumericId = null;
 const feedbackHideTimers = {
@@ -123,6 +126,7 @@ function updateInvoiceActionButtons(invoice, isAdmin) {
     if (paidCheckbox) {
         paidCheckbox.id = `paid-cb-${currentInvoiceNumericId}`;
         paidCheckbox.checked = Boolean(invoice?.paid);
+        paidCheckbox.dataset.paid = String(Boolean(invoice?.paid));
     }
 
     if (paidBtn) {
@@ -132,9 +136,8 @@ function updateInvoiceActionButtons(invoice, isAdmin) {
         paidBtn.title = Boolean(invoice?.paid) ? 'Marcar como pendiente' : 'Marcar como pagada';
         paidBtn.onclick = () => {
             const checkbox = document.getElementById(`paid-cb-${currentInvoiceNumericId}`) || paidCheckbox;
-            console.log('DEBUG click paidButton', { currentInvoiceNumericId, checkbox, checked: checkbox?.checked, invoicePaid: invoice?.paid });
             if (checkbox) {
-                checkbox.checked = Boolean(invoice?.paid);
+                checkbox.dataset.paid = String(Boolean(invoice?.paid));
                 confirmTogglePaid(currentInvoiceNumericId, checkbox);
             }
         };
@@ -142,9 +145,8 @@ function updateInvoiceActionButtons(invoice, isAdmin) {
 }
 
 function confirmTogglePaid(invoiceId, checkbox) {
-    const currentState = checkbox.checked;
+    const currentState = checkbox.dataset.paid !== undefined ? checkbox.dataset.paid === 'true' : checkbox.checked;
     const nextState = !currentState;
-    checkbox.checked = nextState;
     const body = nextState
         ? `<p>¿Está seguro que desea marcar la factura <strong>#${invoiceId}</strong> como <strong>Pagada</strong>?</p>
            <p style="color:#c0392b; margin-top:8px;"><strong>⚠ Esta acción no puede revertirse.</strong><br>La factura dejará de estar disponible para modificaciones.</p>`
@@ -154,15 +156,14 @@ function confirmTogglePaid(invoiceId, checkbox) {
         <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
         <button class="btn btn-danger" onclick="closeGenericModal(); confirmPaidAction(${invoiceId}, ${nextState})">${label}</button>
     `;
-    console.log('DEBUG confirmTogglePaid', { invoiceId, currentState, nextState, checkboxChecked: checkbox.checked });
     openGenericModal('Confirmar cambio de estado', body, footer);
 }
 
 async function confirmPaidAction(invoiceId, marking) {
     const cb = document.getElementById(`paid-cb-${invoiceId}`);
     if (!cb) return;
+    cb.dataset.paid = String(Boolean(marking));
     cb.checked = marking;
-    console.log('DEBUG confirmPaidAction', { invoiceId, marking });
     const ok = await togglePaidStatus(invoiceId, cb);
     if (ok && currentInvoiceNumericId === invoiceId) {
         await loadInvoiceDetails(currentInvoiceRef);
@@ -171,7 +172,6 @@ async function confirmPaidAction(invoiceId, marking) {
 
 async function togglePaidStatus(invoiceId, checkbox) {
     const isChecked = checkbox.checked;
-    console.log('DEBUG togglePaidStatus start', { invoiceId, isChecked });
     try {
         const session = getSession();
         if (!session) throw new Error('Sesión expirada.');
@@ -187,12 +187,12 @@ async function togglePaidStatus(invoiceId, checkbox) {
             throw new Error(errorData.error || 'No se pudo actualizar el estado de pago.');
         }
 
-        console.log('DEBUG togglePaidStatus ok', { invoiceId, isChecked });
+        checkbox.dataset.paid = String(Boolean(isChecked));
         return true;
     } catch (error) {
-        console.error('DEBUG togglePaidStatus error', error);
         alert(`Error: ${error.message}`);
         checkbox.checked = !isChecked;
+        checkbox.dataset.paid = String(Boolean(!isChecked));
         return false;
     }
 }
