@@ -1,0 +1,12 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^cd 'd:\\\\WORK\\\\Mike\\\\git\\\\ET-WebSite'; node --check Public/assets/js/payments-admin\\.js$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^node --check Public/assets/js/invoice\\.js ; node --check Public/assets/js/invoice-admin\\.js ; node --check Public/assets/js/invoices-admin\\.js$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

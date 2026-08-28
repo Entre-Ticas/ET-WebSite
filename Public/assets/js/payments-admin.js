@@ -1,4 +1,5 @@
 let todosLosPayments = [];
+let activeUnpaidInvoices = [];
 let paymentsGlobalSearch = '';
 let paymentsCurrentPage = 1;
 let paymentsRowsPerPage = 10;
@@ -8,6 +9,135 @@ let editingPaymentId = null;
 let paymentsColumnFilters = {
     id: '', invoice_id: '', client_name: '', client_phone: '', amount: '', payment_method: '', reference_code: '', payment_date: ''
 };
+
+function normalizeInvoiceSearchText(value) {
+    return String(value ?? '')
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+}
+
+function getActiveUnpaidInvoiceSuggestions(query = '') {
+    const normalizedQuery = normalizeInvoiceSearchText(query);
+
+    if (!normalizedQuery) {
+        return activeUnpaidInvoices.slice(0, 8);
+    }
+
+    return activeUnpaidInvoices
+        .filter((invoice) => {
+            const idText = String(invoice.id ?? '');
+            const nameText = String(invoice.client_name ?? '');
+            const phoneText = String(invoice.client_phone ?? '');
+            const haystack = `${idText} ${nameText} ${phoneText}`.toLowerCase();
+            return haystack.includes(normalizedQuery);
+        })
+        .slice(0, 8);
+}
+
+function bindInvoiceIdAutocomplete(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+
+    const wrapper = input.parentElement;
+    const list = document.createElement('div');
+    list.className = 'bulk-client-suggestions hidden';
+    wrapper.appendChild(list);
+
+    const hideSuggestions = () => {
+        list.classList.add('hidden');
+        list.innerHTML = '';
+    };
+
+    const renderSuggestions = () => {
+        const suggestions = getActiveUnpaidInvoiceSuggestions(input.value);
+
+        if (!suggestions.length) {
+            hideSuggestions();
+            return;
+        }
+
+        list.innerHTML = suggestions.map((invoice) => `
+            <button type="button" class="bulk-client-suggestion" data-id="${invoice.id}">
+                <span>#${invoice.id}</span>
+                <small>${invoice.client_name || 'Sin nombre'}</small>
+                <small>${invoice.client_phone || 'Sin teléfono'}</small>
+            </button>
+        `).join('');
+
+        list.classList.remove('hidden');
+
+        list.querySelectorAll('.bulk-client-suggestion').forEach((button) => {
+            button.addEventListener('click', () => {
+                input.value = button.dataset.id;
+                hideSuggestions();
+            });
+        });
+    };
+
+    const positionSuggestions = () => {
+        const rect = input.getBoundingClientRect();
+        const wrapperRect = wrapper.getBoundingClientRect();
+        const width = Math.max(220, Math.min(360, rect.width));
+        list.style.position = 'absolute';
+        list.style.left = '0px';
+        list.style.top = `${rect.height + 8}px`;
+        list.style.width = `${width}px`;
+        list.style.maxWidth = `${Math.max(220, wrapperRect.width)}px`;
+        list.style.zIndex = '30';
+    };
+
+    input.addEventListener('input', () => {
+        if (!input.value.trim()) {
+            hideSuggestions();
+            return;
+        }
+        renderSuggestions();
+        positionSuggestions();
+    });
+
+    input.addEventListener('focus', () => {
+        if (input.value.trim()) {
+            renderSuggestions();
+            positionSuggestions();
+        }
+    });
+
+    input.addEventListener('blur', () => {
+        setTimeout(hideSuggestions, 180);
+    });
+}
+
+async function loadActiveUnpaidInvoices() {
+    try {
+        const session = getSession();
+        if (!session) return;
+
+        const response = await fetch('/.netlify/functions/invoices', {
+            headers: { 'x-admin-token': session.token }
+        });
+
+        if (!response.ok) {
+            throw new Error('No se pudieron cargar las facturas activas.');
+        }
+
+        const invoices = await response.json();
+        activeUnpaidInvoices = Array.isArray(invoices)
+            ? invoices
+                .filter(invoice => invoice && invoice.paid === false)
+                .map(invoice => ({
+                    id: Number(invoice.id),
+                    client_name: invoice.client_name || 'Sin nombre',
+                    client_phone: invoice.client_phone || ''
+                }))
+                .filter(invoice => Number.isFinite(invoice.id) && invoice.id > 0)
+            : [];
+    } catch (error) {
+        console.warn('Warning: loadActiveUnpaidInvoices', error.message);
+        activeUnpaidInvoices = [];
+    }
+}
 
 function resetPaymentsViewState() {
     paymentsGlobalSearch = '';
@@ -35,6 +165,8 @@ async function loadAdminPayments() {
     try {
         const session = getSession();
         if (!session) throw new Error('Sesión no válida');
+
+        await loadActiveUnpaidInvoices();
 
         const response = await fetch('/.netlify/functions/payments', {
             headers: { 'x-admin-token': session.token }
@@ -200,6 +332,7 @@ function openNewPaymentForm() {
     document.getElementById('newPaymentDate').value = '';
     document.getElementById('newPaymentBankReviewed').checked = false;
     document.getElementById('newPaymentNotes').value = '';
+    bindInvoiceIdAutocomplete('newPaymentInvoiceId');
     const err = document.getElementById('newPaymentError');
     err.textContent = '';
     err.style.color = 'red';
@@ -218,6 +351,20 @@ async function saveNewPayment() {
         return;
     }
 
+    const parsedInvoiceId = Number(invoiceId);
+    if (!Number.isFinite(parsedInvoiceId) || parsedInvoiceId <= 0) {
+        err.textContent = 'Factura ID inválido.';
+        err.style.color = 'red';
+        return;
+    }
+
+    const invoiceLookup = activeUnpaidInvoices.find(invoice => Number(invoice.id) === parsedInvoiceId);
+    if (!invoiceLookup) {
+        err.textContent = 'La factura no existe o ya está pagada.';
+        err.style.color = 'red';
+        return;
+    }
+
     err.textContent = 'Guardando...';
     err.style.color = 'var(--brown-text)';
     btn.disabled = true;
@@ -227,7 +374,7 @@ async function saveNewPayment() {
         if (!session) throw new Error('Sesión expirada.');
 
         const payload = {
-            invoice_id: Number(invoiceId),
+            invoice_id: parsedInvoiceId,
             amount: Number(amount),
             payment_method: document.getElementById('newPaymentMethod').value.trim() || null,
             reference_code: document.getElementById('newPaymentRef').value.trim() || null,
@@ -279,6 +426,7 @@ function openPaymentEditForm(paymentId) {
     document.getElementById('editPaymentDate').value = toLocalDateTimeInputValue(payment.payment_date);
     document.getElementById('editPaymentBankReviewed').checked = !!payment.bank_reviewed;
     document.getElementById('editPaymentNotes').value = payment.notes || '';
+    bindInvoiceIdAutocomplete('editPaymentInvoiceId');
 
     const err = document.getElementById('editPaymentError');
     err.textContent = '';
@@ -304,6 +452,20 @@ async function savePaymentEdit() {
         return;
     }
 
+    const parsedInvoiceId = Number(invoiceId);
+    if (!Number.isFinite(parsedInvoiceId) || parsedInvoiceId <= 0) {
+        err.textContent = 'Factura ID inválido.';
+        err.style.color = 'red';
+        return;
+    }
+
+    const invoiceLookup = activeUnpaidInvoices.find(invoice => Number(invoice.id) === parsedInvoiceId);
+    if (!invoiceLookup && Number(document.getElementById('editPaymentInvoiceId').value) !== Number(editingPaymentId)) {
+        err.textContent = 'La factura no existe o ya está pagada.';
+        err.style.color = 'red';
+        return;
+    }
+
     err.textContent = 'Guardando...';
     err.style.color = 'var(--brown-text)';
     btn.disabled = true;
@@ -314,7 +476,7 @@ async function savePaymentEdit() {
 
         const payload = {
             id: editingPaymentId,
-            invoice_id: Number(invoiceId),
+            invoice_id: parsedInvoiceId,
             amount: Number(amount),
             payment_method: document.getElementById('editPaymentMethod').value.trim() || null,
             reference_code: document.getElementById('editPaymentRef').value.trim() || null,

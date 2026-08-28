@@ -1,6 +1,10 @@
-let currentInvoiceId = null;
+(() => {
+    const hasAdminSession = !!(window.getSession && window.getSession());
+    if (!hasAdminSession) return;
 
-async function initInvoiceAdminPage(invoiceId) {
+    let currentInvoiceId = null;
+
+    async function initInvoiceAdminPage(invoiceId) {
     if (!invoiceId) {
         showInvoiceError('No se especificó un ID de factura.');
         return;
@@ -66,9 +70,12 @@ function renderInvoice(payload) {
     document.getElementById('inv-date').textContent = formatDate(invoice.invoice_date);
 
     const statusBadge = document.getElementById('inv-status');
-    statusBadge.textContent = invoice.status_name || (invoice.paid ? 'Pagada' : 'Pendiente');
+    const displayStatus = invoice.paid ? 'Pagada' : 'Pendiente';
+    statusBadge.textContent = displayStatus;
     statusBadge.classList.toggle('is-paid', Boolean(invoice.paid));
     statusBadge.classList.toggle('is-pending', !invoice.paid);
+
+    updateInvoiceActionButtons(invoice);
 
     document.getElementById('inv-total-amount').textContent = formatCurrency(totalAmount);
     document.getElementById('inv-total-paid').textContent = formatCurrency(totalPaid);
@@ -77,6 +84,90 @@ function renderInvoice(payload) {
 
     renderInvoiceDetails(items, payments);
 }
+
+function updateInvoiceActionButtons(invoice) {
+    const copyBtn = document.getElementById('btnCopyInvoiceLink');
+    const paidBtn = document.getElementById('btnToggleInvoicePaid');
+    const paidCheckbox = document.getElementById('detailPaidCheckbox');
+    const isPaid = Boolean(invoice?.paid);
+
+    if (copyBtn) {
+        copyBtn.onclick = () => copiarLinkFactura(copyBtn, currentInvoiceId);
+    }
+
+    let cb = null;
+    if (paidCheckbox) {
+        paidCheckbox.id = `paid-cb-${currentInvoiceId}`;
+        paidCheckbox.checked = isPaid;
+        paidCheckbox.dataset.paid = String(Boolean(isPaid));
+        cb = paidCheckbox;
+    } else {
+        cb = document.getElementById(`paid-cb-${currentInvoiceId}`);
+        if (cb) cb.dataset.paid = String(Boolean(isPaid));
+    }
+
+    if (paidBtn) {
+        paidBtn.classList.toggle('is-paid', isPaid);
+        paidBtn.innerHTML = `<i class="fas ${isPaid ? 'fa-undo-alt' : 'fa-check-circle'}"></i> ${isPaid ? 'Marcar como pendiente' : 'Marcar como pagada'}`;
+        paidBtn.title = isPaid ? 'Marcar como pendiente' : 'Marcar como pagada';
+        paidBtn.onclick = () => {
+            const checkbox = document.getElementById(`paid-cb-${currentInvoiceId}`) || cb;
+            if (checkbox) {
+                checkbox.dataset.paid = String(Boolean(invoice?.paid));
+                confirmTogglePaid(currentInvoiceId, checkbox);
+            }
+        };
+    }
+}
+
+window.confirmTogglePaid = window.confirmTogglePaid || function confirmTogglePaid(invoiceId, checkbox) {
+    const currentState = checkbox.dataset.paid !== undefined ? checkbox.dataset.paid === 'true' : checkbox.checked;
+    const nextState = !currentState;
+    const body = nextState
+        ? `<p>¿Está seguro que desea marcar la factura <strong>#${invoiceId}</strong> como <strong>Pagada</strong>?</p>
+           <p style="color:#c0392b; margin-top:8px;"><strong>⚠ Esta acción no puede revertirse.</strong><br>La factura dejará de estar disponible para modificaciones.</p>`
+        : `<p>¿Está seguro que desea <strong>desmarcar</strong> la factura <strong>#${invoiceId}</strong> como Pagada?</p>`;
+    const label = nextState ? 'Sí, Marcar como Pagada' : 'Sí, Desmarcar';
+    const footer = `
+        <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
+        <button class="btn btn-danger" onclick="closeGenericModal(); confirmPaidAction(${invoiceId}, ${nextState})">${label}</button>
+    `;
+    openGenericModal('Confirmar cambio de estado', body, footer);
+};
+
+window.togglePaidStatus = window.togglePaidStatus || async function togglePaidStatus(invoiceId, checkbox) {
+    const isChecked = checkbox.checked;
+    try {
+        const session = getSession();
+        if (!session) throw new Error('Sesión expirada.');
+
+        const response = await fetch('/.netlify/functions/invoices', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'x-admin-token': session.token },
+            body: JSON.stringify({ id: invoiceId, paid: isChecked })
+        });
+
+        if (!response.ok) throw new Error('No se pudo actualizar el estado de pago.');
+        checkbox.dataset.paid = String(Boolean(isChecked));
+        return true;
+    } catch (error) {
+        alert(`Error: ${error.message}`);
+        checkbox.checked = !isChecked;
+        checkbox.dataset.paid = String(Boolean(!isChecked));
+        return false;
+    }
+};
+
+window.confirmPaidAction = async function(invoiceId, marking) {
+    const cb = document.getElementById(`paid-cb-${invoiceId}`);
+    if (!cb) return;
+    cb.dataset.paid = String(Boolean(marking));
+    cb.checked = marking;
+    const ok = await window.togglePaidStatus(invoiceId, cb);
+    if (ok && currentInvoiceId === invoiceId) {
+        await loadInvoiceDetails(invoiceId);
+    }
+};
 
 function updateInvoiceGridFooter(totalAmount, totalPaid, balanceDue) {
     const totalEl = document.getElementById('inv-grid-total-amount');
@@ -287,13 +378,19 @@ function normalizeFlattenedInvoiceRows(rows) {
 }
 
 function extractInvoiceFields(source) {
+    const paidValue = toBoolean(pickFirst(source, ['paid', 'is_paid', 'pagada']));
+    const rawStatusName = pickFirst(source, ['status_name', 'estado', 'invoice_status']);
+    const normalizedStatusName = rawStatusName && ['Enabled', 'Disabled', 'enabled', 'disabled'].includes(String(rawStatusName).trim())
+        ? null
+        : rawStatusName;
+
     return {
         id: pickFirst(source, ['invoice_id', 'id']),
         client_name: pickFirst(source, ['client_name', 'cliente']),
         client_phone: pickFirst(source, ['client_phone', 'telefono']),
         invoice_date: pickFirst(source, ['invoice_date', 'fecha_factura', 'created_at']),
-        paid: toBoolean(pickFirst(source, ['paid', 'is_paid', 'pagada'])),
-        status_name: pickFirst(source, ['status_name', 'estado', 'invoice_status']),
+        paid: paidValue,
+        status_name: normalizedStatusName || (paidValue ? 'Pagada' : 'Pendiente'),
         total_amount: toNullableNumber(pickFirst(source, ['total_amount', 'invoice_total', 'items_total'])),
         total_paid: toNullableNumber(pickFirst(source, ['total_paid', 'payments_total', 'paid_amount'])),
         balance_due: toNullableNumber(pickFirst(source, ['balance_due', 'pending_balance', 'saldo_pendiente']))
@@ -395,16 +492,12 @@ function showInvoiceError(message) {
 }
 
 async function guardarNuevoAbono() {
-    const messageEl = document.getElementById('paymentMensaje');
     const amountEl = document.getElementById('paymentAmount');
     const methodEl = document.getElementById('paymentMethod');
     const refEl = document.getElementById('paymentRef');
     const saveBtn = document.getElementById('btnGuardarAbono');
 
     if (!currentInvoiceId) {
-        if (messageEl) {
-            messageEl.textContent = '⚠️ No hay una factura activa para registrar el abono.';
-        }
         return;
     }
 
@@ -413,11 +506,9 @@ async function guardarNuevoAbono() {
     const referenceCode = refEl?.value.trim() || null;
 
     if (!Number.isFinite(amount) || amount <= 0) {
-        if (messageEl) messageEl.textContent = '⚠️ El monto debe ser mayor a 0.';
         return;
     }
 
-    if (messageEl) messageEl.textContent = 'Guardando abono...';
     if (saveBtn) saveBtn.disabled = true;
 
     try {
@@ -444,12 +535,10 @@ async function guardarNuevoAbono() {
         if (methodEl) methodEl.value = '';
         if (refEl) refEl.value = '';
 
-        if (messageEl) messageEl.textContent = '✅ Abono agregado correctamente.';
-
         await loadInvoiceDetails(currentInvoiceId);
         setPaymentSectionExpanded(false);
     } catch (error) {
-        if (messageEl) messageEl.textContent = `⚠️ ${error.message}`;
+        // Se omite el toast/feedback visual del éxito porque el bloque está colapsado.
     } finally {
         if (saveBtn) saveBtn.disabled = false;
     }
@@ -645,6 +734,36 @@ function volverAlGrid() {
     history.back();
 }
 
+if (!window.openGenericModal) {
+    window.openGenericModal = function(title, bodyHtml, footerHtml = '') {
+        const titleEl = document.getElementById('genericModalTitle');
+        const bodyEl = document.getElementById('genericModalBody');
+        const footerEl = document.getElementById('genericModalFooter');
+        const modalEl = document.getElementById('genericModal');
+
+        if (!titleEl || !bodyEl || !footerEl || !modalEl) {
+            alert(title);
+            return;
+        }
+
+        titleEl.textContent = title;
+        bodyEl.innerHTML = bodyHtml;
+
+        if (footerHtml) {
+            footerEl.innerHTML = footerHtml;
+        }
+
+        modalEl.classList.add('active');
+    };
+}
+
+if (!window.closeGenericModal) {
+    window.closeGenericModal = function() {
+        const modalEl = document.getElementById('genericModal');
+        if (modalEl) modalEl.classList.remove('active');
+    };
+}
+
 window.togglePaymentSection = togglePaymentSection;
 window.toggleItemSection = toggleItemSection;
 window.initInvoiceAdminPage = initInvoiceAdminPage;
@@ -654,3 +773,4 @@ window.handleInvoiceItemImageUpload = handleInvoiceItemImageUpload;
 window.triggerInvoiceItemFileUpload = triggerInvoiceItemFileUpload;
 window.triggerInvoiceItemCameraUpload = triggerInvoiceItemCameraUpload;
 window.updateInvoiceItemQuantity = updateInvoiceItemQuantity;
+})();

@@ -8,6 +8,20 @@
             <p>Aquí puedes ver todos los artículos y abonos de tu factura.</p>
         </div>
 
+        <div id="genericModal" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 id="genericModalTitle" class="modal-title"></h5>
+                    <button onclick="closeGenericModal()" class="close-btn" type="button">&times;</button>
+                </div>
+                <div id="genericModalBody" class="modal-body"></div>
+                <div id="genericModalFooter" class="modal-footer">
+                    <button class="btn btn-secondary" onclick="closeGenericModal()" type="button">Cancelar</button>
+                    <button class="btn btn-primary" onclick="closeGenericModal()" type="button">OK</button>
+                </div>
+            </div>
+        </div>
+
         <div id="adminStatus" class="catalog-status">
             <div class="spinner"></div>
             <p>Cargando factura...</p>
@@ -23,7 +37,18 @@
                         <p><strong>Teléfono:</strong> <span id="inv-client-phone">--</span></p>
                         <p><strong>Factura #:</strong> <span id="inv-id">--</span></p>
                         <p><strong>Fecha:</strong> <span id="inv-date">--</span></p>
+                    </div>
+                    <div class="summary-status-row">
                         <p class="summary-status-line"><strong>Estado:</strong> <span id="inv-status" class="invoice-status-badge">--</span></p>
+                        <div class="summary-actions">
+                            <button id="btnCopyInvoiceLink" class="admin-btn-action btn-copy" type="button" title="Copiar Link de Factura">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                            <button id="btnToggleInvoicePaid" class="admin-btn-action btn-paid" type="button" title="Marcar como pagada">
+                                <i class="fas fa-check-circle"></i> Marcar como pagada
+                            </button>
+                            <input type="checkbox" id="detailPaidCheckbox" hidden>
+                        </div>
                     </div>
                 </div>
                 <div class="summary-card">
@@ -63,7 +88,6 @@
                         </div>
                         <button id="btnGuardarAbono" class="admin-btn-agregar" onclick="guardarNuevoAbono()">+ Agregar Abono</button>
                     </div>
-                    <div id="paymentMensaje" class="form-message"></div>
                 </div>
             </div>
 

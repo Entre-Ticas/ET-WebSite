@@ -87,9 +87,12 @@ function renderInvoice(payload) {
     document.getElementById('inv-date').textContent = formatDate(invoice.invoice_date);
 
     const statusBadge = document.getElementById('inv-status');
-    statusBadge.textContent = invoice.status_name || (invoice.paid ? 'Pagada' : 'Pendiente');
+    const displayStatus = invoice.paid ? 'Pagada' : 'Pendiente';
+    statusBadge.textContent = displayStatus;
     statusBadge.classList.toggle('is-paid', Boolean(invoice.paid));
     statusBadge.classList.toggle('is-pending', !invoice.paid);
+
+    updateInvoiceActionButtons(invoice, isAdmin);
 
     document.getElementById('inv-total-amount').textContent = formatCurrency(totalAmount);
     document.getElementById('inv-total-paid').textContent = formatCurrency(totalPaid);
@@ -97,6 +100,99 @@ function renderInvoice(payload) {
     updateInvoiceGridFooter(totalAmount, totalPaid, balanceDue);
 
     renderInvoiceDetails(items, payments, isAdmin);
+}
+
+function updateInvoiceActionButtons(invoice, isAdmin) {
+    const copyBtn = document.getElementById('btnCopyInvoiceLink');
+    const paidBtn = document.getElementById('btnToggleInvoicePaid');
+    const paidCheckbox = document.getElementById('detailPaidCheckbox');
+
+    if (!isAdmin) {
+        if (copyBtn) copyBtn.style.display = 'none';
+        if (paidBtn) paidBtn.style.display = 'none';
+        return;
+    }
+
+    if (copyBtn) {
+        copyBtn.style.display = 'inline-flex';
+        copyBtn.onclick = () => {
+            console.log('DEBUG click copiar link', currentInvoiceNumericId);
+            return copiarLinkFactura(copyBtn, currentInvoiceNumericId);
+        };
+    }
+
+    if (paidCheckbox) {
+        paidCheckbox.id = `paid-cb-${currentInvoiceNumericId}`;
+        paidCheckbox.checked = Boolean(invoice?.paid);
+        paidCheckbox.dataset.paid = String(Boolean(invoice?.paid));
+    }
+
+    if (paidBtn) {
+        paidBtn.style.display = 'inline-flex';
+        paidBtn.classList.toggle('is-paid', Boolean(invoice?.paid));
+        paidBtn.innerHTML = `<i class="fas ${Boolean(invoice?.paid) ? 'fa-undo-alt' : 'fa-check-circle'}"></i> ${Boolean(invoice?.paid) ? 'Marcar como pendiente' : 'Marcar como pagada'}`;
+        paidBtn.title = Boolean(invoice?.paid) ? 'Marcar como pendiente' : 'Marcar como pagada';
+        paidBtn.onclick = () => {
+            const checkbox = document.getElementById(`paid-cb-${currentInvoiceNumericId}`) || paidCheckbox;
+            if (checkbox) {
+                checkbox.dataset.paid = String(Boolean(invoice?.paid));
+                confirmInvoiceDetailTogglePaid(currentInvoiceNumericId, checkbox);
+            }
+        };
+    }
+}
+
+function confirmInvoiceDetailTogglePaid(invoiceId, checkbox) {
+    const currentState = checkbox.dataset.paid !== undefined ? checkbox.dataset.paid === 'true' : checkbox.checked;
+    const nextState = !currentState;
+    const body = nextState
+        ? `<p>¿Está seguro que desea marcar la factura <strong>#${invoiceId}</strong> como <strong>Pagada</strong>?</p>
+           <p style="color:#c0392b; margin-top:8px;"><strong>⚠ Esta acción no puede revertirse.</strong><br>La factura dejará de estar disponible para modificaciones.</p>`
+        : `<p>¿Está seguro que desea <strong>desmarcar</strong> la factura <strong>#${invoiceId}</strong> como Pagada?</p>`;
+    const label = nextState ? 'Sí, Marcar como Pagada' : 'Sí, Desmarcar';
+    const footer = `
+        <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
+        <button class="btn btn-danger" onclick="closeGenericModal(); confirmInvoiceDetailPaidAction(${invoiceId}, ${nextState})">${label}</button>
+    `;
+    openGenericModal('Confirmar cambio de estado', body, footer);
+}
+
+async function confirmInvoiceDetailPaidAction(invoiceId, marking) {
+    const cb = document.getElementById(`paid-cb-${invoiceId}`);
+    if (!cb) return;
+    cb.dataset.paid = String(Boolean(marking));
+    cb.checked = marking;
+    const ok = await toggleInvoiceDetailPaidStatus(invoiceId, cb);
+    if (ok && currentInvoiceNumericId === invoiceId) {
+        await loadInvoiceDetails(currentInvoiceRef);
+    }
+}
+
+async function toggleInvoiceDetailPaidStatus(invoiceId, checkbox) {
+    const isChecked = checkbox.checked;
+    try {
+        const session = getSession();
+        if (!session) throw new Error('Sesión expirada.');
+
+        const response = await fetch('/.netlify/functions/invoices', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'x-admin-token': session.token },
+            body: JSON.stringify({ id: invoiceId, paid: isChecked })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'No se pudo actualizar el estado de pago.');
+        }
+
+        checkbox.dataset.paid = String(Boolean(isChecked));
+        return true;
+    } catch (error) {
+        alert(`Error: ${error.message}`);
+        checkbox.checked = !isChecked;
+        checkbox.dataset.paid = String(Boolean(!isChecked));
+        return false;
+    }
 }
 
 function updateInvoiceGridFooter(totalAmount, totalPaid, balanceDue) {
@@ -368,13 +464,19 @@ function normalizeFlattenedInvoiceRows(rows) {
 }
 
 function extractInvoiceFields(source) {
+    const paidValue = toBoolean(pickFirst(source, ['paid', 'is_paid', 'pagada']));
+    const rawStatusName = pickFirst(source, ['status_name', 'estado', 'invoice_status']);
+    const normalizedStatusName = rawStatusName && ['Enabled', 'Disabled', 'enabled', 'disabled'].includes(String(rawStatusName).trim())
+        ? null
+        : rawStatusName;
+
     return {
         id: pickFirst(source, ['invoice_id', 'id']),
         client_name: pickFirst(source, ['client_name', 'cliente']),
         client_phone: pickFirst(source, ['client_phone', 'telefono']),
         invoice_date: pickFirst(source, ['invoice_date', 'fecha_factura', 'created_at']),
-        paid: toBoolean(pickFirst(source, ['paid', 'is_paid', 'pagada'])),
-        status_name: pickFirst(source, ['status_name', 'estado', 'invoice_status']),
+        paid: paidValue,
+        status_name: normalizedStatusName || (paidValue ? 'Pagada' : 'Pendiente'),
         total_amount: toNullableNumber(pickFirst(source, ['total_amount', 'invoice_total', 'items_total'])),
         total_paid: toNullableNumber(pickFirst(source, ['total_paid', 'payments_total', 'paid_amount'])),
         balance_due: toNullableNumber(pickFirst(source, ['balance_due', 'pending_balance', 'saldo_pendiente']))
@@ -775,4 +877,7 @@ window.triggerInvoiceItemCameraUpload = triggerInvoiceItemCameraUpload;
 window.updateInvoiceItemQuantity = updateInvoiceItemQuantity;
 window.doToggleInvoicePaymentBank = doToggleInvoicePaymentBank;
 window.initInvoicePage = initInvoicePage;
+window.confirmInvoiceDetailTogglePaid = confirmInvoiceDetailTogglePaid;
+window.confirmInvoiceDetailPaidAction = confirmInvoiceDetailPaidAction;
+window.toggleInvoiceDetailPaidStatus = toggleInvoiceDetailPaidStatus;
 })();

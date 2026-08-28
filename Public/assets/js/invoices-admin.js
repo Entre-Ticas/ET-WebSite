@@ -129,23 +129,32 @@ function renderInvoices() {
     table.style.display = '';
     tbody.innerHTML = '';
     
-    const rowsHtml = paginatedItems.map(f => `
+    const rowsHtml = paginatedItems.map(f => {
+        const statusText = Boolean(f.paid) ? 'Pagada' : 'Pendiente';
+        return `
             <tr>
                 <td class="col-select" style="display: none;"><input type="checkbox" class="row-selector" data-id="${f.id}" onchange="updateInvoiceMultiSelectActions()"></td>
                 <td>${f.id}</td>
                 <td>${f.client_name || ''}</td>
                 <td>${f.client_phone || ''}</td>
                 <td>${f.invoice_date ? new Date(f.invoice_date).toLocaleDateString('es-CR') : 'N/A'}</td>
-                <td>${f.status_name || 'N/A'}</td>
+                <td>${statusText}</td>
                 <td style="text-align: center;">${f.items_count || '0'}</td>
-                <td style="text-align: center;"><input type="checkbox" id="paid-cb-${f.id}" onclick="confirmTogglePaid(${f.id}, this)" ${f.paid ? 'checked' : ''}></td>
+                <td style="text-align: center;">
+                    <input
+                        type="checkbox"
+                        id="paid-cb-${f.id}"
+                        data-paid="${String(Boolean(f.paid))}"
+                        onclick="confirmTogglePaid(${f.id}, this)"
+                        ${f.paid ? 'checked' : ''}>
+                </td>
                 <td class="admin-actions-cell">
                     <button class="admin-btn-action btn-edit" onclick="openInvoiceEditForm(${f.id})" title="Editar Factura"><i class="fas fa-pencil-alt"></i></button>
                     <button class="admin-btn-action btn-invoice" onclick="viewInvoiceDetail('${f.public_ref || ''}', ${f.id})" title="Ver Detalle de Factura"><i class="fas fa-file-invoice-dollar"></i></button>
                     <button class="admin-btn-action btn-delete" onclick="eliminarFactura(${f.id})" title="Eliminar Factura"><i class="fas fa-trash-alt"></i></button>
                 </td>
-            </tr>`
-    ).join('');
+            </tr>`;
+    }).join('');
 
     tbody.innerHTML = rowsHtml;
     updateInvoiceSortIcons();
@@ -540,31 +549,42 @@ function updateInvoiceMultiSelectActions() {
 }
 
 function confirmTogglePaid(invoiceId, checkbox) {
-    const marking = checkbox.checked;
-    checkbox.checked = !marking;
-    const body = marking
+    const currentState = checkbox.dataset.paid === 'true';
+    const nextState = !currentState;
+
+    const body = nextState
         ? `<p>¿Está seguro que desea marcar la factura <strong>#${invoiceId}</strong> como <strong>Pagada</strong>?</p>
            <p style="color:#c0392b; margin-top:8px;"><strong>⚠ Esta acción no puede revertirse.</strong><br>La factura dejará de estar disponible para modificaciones.</p>`
         : `<p>¿Está seguro que desea <strong>desmarcar</strong> la factura <strong>#${invoiceId}</strong> como Pagada?</p>`;
-    const label = marking ? 'Sí, Marcar como Pagada' : 'Sí, Desmarcar';
+    const label = nextState ? 'Sí, Marcar como Pagada' : 'Sí, Desmarcar';
     const footer = `
         <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
-        <button class="btn btn-danger" onclick="closeGenericModal(); confirmPaidAction(${invoiceId}, ${marking})">${label}</button>
+        <button class="btn btn-danger" onclick="closeGenericModal(); confirmPaidAction(${invoiceId}, ${nextState})">${label}</button>
     `;
+
+    checkbox.checked = currentState;
+    checkbox.dataset.paid = String(Boolean(currentState));
     openGenericModal('Confirmar cambio de estado', body, footer);
 }
 
 async function confirmPaidAction(invoiceId, marking) {
     const cb = document.getElementById(`paid-cb-${invoiceId}`);
     if (!cb) return;
+
+    cb.dataset.paid = String(Boolean(marking));
     cb.checked = marking;
-    await togglePaidStatus(invoiceId, cb);
+
+    const ok = await togglePaidStatus(invoiceId, cb);
+    if (ok) {
+        const factura = todasLasFacturas.find(f => Number(f.id) === Number(invoiceId));
+        if (factura) factura.paid = Boolean(marking);
+        renderInvoices();
+    }
 }
 
 async function togglePaidStatus(invoiceId, checkbox) {
     const isChecked = checkbox.checked;
-    const factura = todasLasFacturas.find(f => f.id === invoiceId);
-    if (factura) factura.paid = isChecked;
+    const factura = todasLasFacturas.find(f => Number(f.id) === Number(invoiceId));
 
     try {
         const session = getSession();
@@ -576,12 +596,20 @@ async function togglePaidStatus(invoiceId, checkbox) {
             body: JSON.stringify({ id: invoiceId, paid: isChecked })
         });
 
-        if (!response.ok) throw new Error('No se pudo actualizar el estado de pago.');
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'No se pudo actualizar el estado de pago.');
+        }
 
+        checkbox.dataset.paid = String(Boolean(isChecked));
+        if (factura) factura.paid = isChecked;
+        return true;
     } catch (error) {
         alert(`Error: ${error.message}`);
         if (factura) factura.paid = !isChecked;
         checkbox.checked = !isChecked;
+        checkbox.dataset.paid = String(Boolean(!isChecked));
+        return false;
     }
 }
 
