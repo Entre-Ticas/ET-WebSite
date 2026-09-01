@@ -177,8 +177,18 @@ async function createOrderItem(event) {
 }
 
 async function findOrCreateOpenInvoice(clientPhone, clientName) {
-    const findInvoiceUrl = `${supabaseUrl}/rest/v1/invoices?select=id&client_phone=eq.${clientPhone}&id_status=eq.${STATUS_ABIERTA}&limit=1`;
-    const findResponse = await fetch(findInvoiceUrl, { headers: sbHeaders });
+    const normalizedPhone = String(clientPhone || '').trim();
+    const normalizedName = String(clientName || '').trim();
+    const findInvoiceUrl = new URL(`${supabaseUrl}/rest/v1/invoices`);
+    findInvoiceUrl.searchParams.set('select', 'id');
+    findInvoiceUrl.searchParams.set('client_phone', `eq.${normalizedPhone}`);
+    findInvoiceUrl.searchParams.set('client_name', `eq.${normalizedName}`);
+    findInvoiceUrl.searchParams.set('id_status', `eq.${STATUS_ABIERTA}`);
+    findInvoiceUrl.searchParams.set('paid', 'eq.false');
+    // Si existen varias facturas abiertas válidas, reutilizamos la más reciente.
+    findInvoiceUrl.searchParams.set('order', 'created_at.desc,id.desc');
+    findInvoiceUrl.searchParams.set('limit', '1');
+    const findResponse = await fetch(findInvoiceUrl.toString(), { headers: sbHeaders });
 
     if (!findResponse.ok) throw new Error(`Error buscando factura: ${await findResponse.text()}`);
 
@@ -192,8 +202,8 @@ async function findOrCreateOpenInvoice(clientPhone, clientName) {
         method: 'POST',
         headers: { ...sbHeaders, 'Prefer': 'return=representation' },
         body: JSON.stringify({
-            client_phone: clientPhone,
-            client_name: clientName,
+            client_phone: normalizedPhone,
+            client_name: normalizedName,
             id_status: STATUS_ABIERTA,
             paid: false
         })

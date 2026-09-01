@@ -356,7 +356,10 @@ function renderPaymentDetail(cell, entry, isAdmin) {
     wrapper.className = 'invoice-detail-cell';
 
     if (isAdmin && entry.id) {
-        wrapper.appendChild(createInvoiceEntryEditButton(entry));
+        const editBtn = createInvoiceEntryEditButton(entry);
+        editBtn.dataset.paymentEditButton = 'true';
+        editBtn.style.display = entry.bankReviewed ? 'none' : 'inline-flex';
+        wrapper.appendChild(editBtn);
     }
 
     const badge = document.createElement('span');
@@ -399,17 +402,20 @@ function openInvoiceEntryEditModal(entry) {
 function buildInvoiceItemEditModalBody(entry) {
     return `
         <div class="invoice-edit-form-grid">
-            <label>Producto</label>
-            <input id="invEditItemProduct" type="text" value="${escapeHtml(entry.title || '')}">
+            <div class="invoice-floating-field">
+                <input id="invEditItemProduct" class="invoice-floating-input" type="text" placeholder=" " value="${escapeHtml(entry.title || '')}">
+                <label for="invEditItemProduct" class="invoice-floating-label">Producto</label>
+            </div>
 
-            <label>Cantidad</label>
-            <input id="invEditItemQuantity" type="number" min="1" step="1" value="${Math.max(1, Math.floor(toNumber(entry.quantity || 1)))}">
+            <div class="invoice-floating-field">
+                <input id="invEditItemQuantity" class="invoice-floating-input" type="number" min="1" step="1" placeholder=" " value="${Math.max(1, Math.floor(toNumber(entry.quantity || 1)))}">
+                <label for="invEditItemQuantity" class="invoice-floating-label">Cantidad</label>
+            </div>
 
-            <label>Precio</label>
-            <input id="invEditItemPrice" type="number" min="0.01" step="any" value="${toNumber(entry.unitPrice)}">
-
-            <label>Talla</label>
-            <input id="invEditItemSize" type="text" value="${escapeHtml(entry.size || '')}">
+            <div class="invoice-floating-field">
+                <input id="invEditItemPrice" class="invoice-floating-input" type="number" min="0.01" step="any" placeholder=" " value="${toNumber(entry.unitPrice)}">
+                <label for="invEditItemPrice" class="invoice-floating-label">Precio</label>
+            </div>
         </div>
     `;
 }
@@ -417,17 +423,20 @@ function buildInvoiceItemEditModalBody(entry) {
 function buildInvoicePaymentEditModalBody(entry) {
     return `
         <div class="invoice-edit-form-grid">
-            <label>Monto</label>
-            <input id="invEditPaymentAmount" type="number" min="0.01" step="any" value="${toNumber(entry.amountRaw)}">
+            <div class="invoice-floating-field">
+                <input id="invEditPaymentAmount" class="invoice-floating-input" type="number" min="0.01" step="any" placeholder=" " value="${toNumber(entry.amountRaw)}">
+                <label for="invEditPaymentAmount" class="invoice-floating-label">Monto</label>
+            </div>
 
-            <label>Método</label>
-            <input id="invEditPaymentMethod" type="text" value="${escapeHtml(entry.title || '')}">
+            <div class="invoice-floating-field">
+                <input id="invEditPaymentMethod" class="invoice-floating-input" type="text" placeholder=" " value="${escapeHtml(entry.title || '')}">
+                <label for="invEditPaymentMethod" class="invoice-floating-label">Método</label>
+            </div>
 
-            <label>Referencia</label>
-            <input id="invEditPaymentRef" type="text" value="${escapeHtml(entry.reference || '')}">
-
-            <label>Notas</label>
-            <input id="invEditPaymentNotes" type="text" value="${escapeHtml(entry.notes || '')}">
+            <div class="invoice-floating-field">
+                <input id="invEditPaymentRef" class="invoice-floating-input" type="text" placeholder=" " value="${escapeHtml(entry.reference || '')}">
+                <label for="invEditPaymentRef" class="invoice-floating-label">Referencia</label>
+            </div>
         </div>
     `;
 }
@@ -449,7 +458,6 @@ async function saveInvoiceEntryEdit() {
             const productName = String(document.getElementById('invEditItemProduct')?.value || '').trim();
             const quantity = Number(document.getElementById('invEditItemQuantity')?.value);
             const price = Number(document.getElementById('invEditItemPrice')?.value);
-            const size = String(document.getElementById('invEditItemSize')?.value || '').trim();
 
             if (!productName) throw new Error('El nombre del producto es obligatorio.');
             if (!Number.isFinite(quantity) || quantity <= 0) throw new Error('La cantidad debe ser mayor a 0.');
@@ -462,8 +470,7 @@ async function saveInvoiceEntryEdit() {
                     id: Number(currentEditingInvoiceEntry.id),
                     product_name: productName,
                     quantity: Math.max(1, Math.floor(quantity)),
-                    price,
-                    size: size || null
+                    price
                 })
             });
 
@@ -475,7 +482,6 @@ async function saveInvoiceEntryEdit() {
             const amount = Number(document.getElementById('invEditPaymentAmount')?.value);
             const paymentMethod = String(document.getElementById('invEditPaymentMethod')?.value || '').trim();
             const referenceCode = String(document.getElementById('invEditPaymentRef')?.value || '').trim();
-            const notes = String(document.getElementById('invEditPaymentNotes')?.value || '').trim();
 
             if (!Number.isFinite(amount) || amount <= 0) throw new Error('El monto debe ser mayor a 0.');
 
@@ -486,8 +492,7 @@ async function saveInvoiceEntryEdit() {
                     id: Number(currentEditingInvoiceEntry.id),
                     amount,
                     payment_method: paymentMethod || null,
-                    reference_code: referenceCode || null,
-                    notes: notes || null
+                    reference_code: referenceCode || null
                 })
             });
 
@@ -559,6 +564,8 @@ async function doToggleInvoicePaymentBank(paymentId, marking) {
 
 async function toggleInvoicePaymentReviewStatus(paymentId, checkbox) {
     const isChecked = checkbox.checked;
+    const row = checkbox.closest('tr');
+    const editBtn = row?.querySelector('[data-payment-edit-button="true"]');
 
     try {
         const session = getSession();
@@ -573,6 +580,10 @@ async function toggleInvoicePaymentReviewStatus(paymentId, checkbox) {
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ error: 'Respuesta de error no es JSON.' }));
             throw new Error(errorData.error || `Error ${response.status}: No se pudo actualizar el estado.`);
+        }
+
+        if (editBtn) {
+            editBtn.style.display = isChecked ? 'none' : 'inline-flex';
         }
     } catch (error) {
         checkbox.checked = !isChecked;
