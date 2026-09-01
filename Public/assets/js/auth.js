@@ -86,11 +86,14 @@ function actualizarNavUser() {
     const adminLinks = document.querySelectorAll('.navAdminLink');
     const floatBtn = document.getElementById('floatingLoginBtn');
 
-    // Itera sobre todos los enlaces de administrador y los muestra o esconde.
-    adminLinks.forEach(link => {
-        // Usamos 'inline-block' o 'inline' para que se muestren en la barra de navegación.
-        link.style.display = session ? 'inline-block' : 'none';
-    });
+    // Si no hay sesión admin, removemos enlaces del DOM para que no queden expuestos en inspector.
+    if (!session) {
+        adminLinks.forEach(link => link.remove());
+    } else {
+        adminLinks.forEach(link => {
+            link.style.display = 'inline-block';
+        });
+    }
 
     if (floatBtn) {
         if (session) {
@@ -145,6 +148,7 @@ async function iniciarSesion() {
         programarAutoLogout();
         iniciarDeteccionActividad();
         await refreshBackendSession(true);
+        window.location.reload();
 
     } catch {
         errorEl.innerHTML = 'Error de conexión.';

@@ -34,6 +34,7 @@ function resetOrderItemsViewState() {
 
     const rowsSelector = document.getElementById('rowsPerPageSelector');
     if (rowsSelector) rowsSelector.value = '10';
+    syncOrderRowsPerPageDropdown();
 
     const multiSelectToggle = document.getElementById('multiSelectToggle');
     if (multiSelectToggle) multiSelectToggle.checked = false;
@@ -378,10 +379,16 @@ function renderOrders() {
     table.style.display = '';
     tbody.innerHTML = ''; // Limpiamos el cuerpo antes de renderizar
 
-    const rowsHtml = paginatedItems.map(o => `
+    const rowsHtml = paginatedItems.map(o => {
+        const encodedImageUrl = encodeURIComponent(String(o.image_url || ''));
+        const imageButton = o.image_url
+            ? `<button type="button" class="admin-table-img-btn" title="Ver imagen" onclick="openOrderImageModal('${encodedImageUrl}')"><i class="fas fa-camera"></i></button>`
+            : '';
+
+        return `
             <tr>
                 <td class="col-select" style="display: none;"><input type="checkbox" class="row-selector" data-id="${o.id}" onchange="updateOrderMultiSelectActions()"></td>
-                <td><img src="${o.image_url || 'https://placehold.co/40x40/E19B9D/FFFFFF?text=?'}" class="admin-table-img" alt="Producto" onclick="openImageModal('${o.image_url || ''}')"></td>
+                <td>${imageButton}</td>
                 <td>${o.client_name || ''}</td>
                 <td>${o.client_phone || ''}</td>
                 <td>${o.product_name || ''}</td>
@@ -396,8 +403,8 @@ function renderOrders() {
                     <button class="admin-btn-action btn-invoice" onclick="verFactura(${o.invoice_id ?? 'null'})" title="Ir a Factura"><i class="fas fa-file-invoice-dollar"></i></button>
                     <button class="admin-btn-action btn-delete" onclick="eliminarOrden(${o.id})" title="Eliminar Orden"><i class="fas fa-trash-alt"></i></button>
                 </td>
-            </tr>`
-    ).join('');
+            </tr>`;
+    }).join('');
 
     tbody.innerHTML = rowsHtml;
     actualizarIconosOrden();
@@ -437,6 +444,7 @@ function renderOrderPagination(totalRows) {
     }
     if (selectorEl) {
         selectorEl.value = rowsPerPage;
+        syncOrderRowsPerPageDropdown();
     }
     if (navEl) {
         navEl.innerHTML = `
@@ -456,6 +464,101 @@ function changeOrderRowsPerPage(value) {
     rowsPerPage = parseInt(value, 10);
     currentPage = 1; // Volver a la primera página
     renderOrders();
+}
+
+function closeOrderRowsPerPageDropdown() {
+    const dropdown = document.getElementById('orderRowsDropdown');
+    const trigger = document.getElementById('rowsPerPageTrigger');
+    const menu = document.getElementById('rowsPerPageMenu');
+    if (!dropdown || !trigger) return;
+    dropdown.classList.remove('open');
+    trigger.setAttribute('aria-expanded', 'false');
+    if (menu) {
+        menu.style.top = '';
+        menu.style.left = '';
+        menu.style.minWidth = '';
+    }
+}
+
+function positionOrderRowsPerPageMenu() {
+    const dropdown = document.getElementById('orderRowsDropdown');
+    const trigger = document.getElementById('rowsPerPageTrigger');
+    const menu = document.getElementById('rowsPerPageMenu');
+    if (!dropdown || !trigger || !menu || !dropdown.classList.contains('open')) return;
+
+    const rect = trigger.getBoundingClientRect();
+    const viewportPadding = 8;
+
+    menu.style.minWidth = `${Math.max(88, Math.round(rect.width))}px`;
+
+    const menuHeight = menu.offsetHeight || 180;
+    let top = rect.bottom + 6;
+
+    if (top + menuHeight > window.innerHeight - viewportPadding) {
+        top = Math.max(viewportPadding, rect.top - menuHeight - 6);
+    }
+
+    let left = rect.right - menu.offsetWidth;
+    if (left < viewportPadding) left = viewportPadding;
+    if (left + menu.offsetWidth > window.innerWidth - viewportPadding) {
+        left = Math.max(viewportPadding, window.innerWidth - menu.offsetWidth - viewportPadding);
+    }
+
+    menu.style.top = `${Math.round(top)}px`;
+    menu.style.left = `${Math.round(left)}px`;
+}
+
+function toggleOrderRowsPerPageDropdown(event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
+    const dropdown = document.getElementById('orderRowsDropdown');
+    const trigger = document.getElementById('rowsPerPageTrigger');
+    if (!dropdown || !trigger) return;
+
+    const shouldOpen = !dropdown.classList.contains('open');
+    closeOrderRowsPerPageDropdown();
+
+    if (shouldOpen) {
+        dropdown.classList.add('open');
+        trigger.setAttribute('aria-expanded', 'true');
+        requestAnimationFrame(positionOrderRowsPerPageMenu);
+    }
+}
+
+function selectOrderRowsPerPage(value) {
+    const selector = document.getElementById('rowsPerPageSelector');
+    if (!selector) return;
+
+    selector.value = String(value);
+    syncOrderRowsPerPageDropdown();
+    closeOrderRowsPerPageDropdown();
+    changeOrderRowsPerPage(value);
+}
+
+function syncOrderRowsPerPageDropdown() {
+    const selector = document.getElementById('rowsPerPageSelector');
+    const selectedLabel = document.getElementById('rowsPerPageSelectedLabel');
+    const menu = document.getElementById('rowsPerPageMenu');
+    if (!selector || !selectedLabel || !menu) return;
+
+    const selectedValue = String(selector.value || rowsPerPage);
+    const selectedOption = selector.querySelector(`option[value="${selectedValue}"]`);
+    selectedLabel.textContent = selectedOption ? selectedOption.textContent : selectedValue;
+
+    menu.querySelectorAll('button[data-value]').forEach((button) => {
+        const isActive = button.getAttribute('data-value') === selectedValue;
+        button.classList.toggle('is-active', isActive);
+        button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+}
+
+function openOrderImageModal(encodedSrc) {
+    const src = decodeURIComponent(String(encodedSrc || ''));
+    if (!src) return;
+    openImageModal(src);
 }
 
 function copyTextToClipboard(text) {
@@ -1408,6 +1511,19 @@ function initOrderItemsAdminPage() {
 }
 
 window.initOrderItemsAdminPage = initOrderItemsAdminPage;
+window.toggleOrderRowsPerPageDropdown = toggleOrderRowsPerPageDropdown;
+window.selectOrderRowsPerPage = selectOrderRowsPerPage;
+
+document.addEventListener('click', (event) => {
+    const dropdown = document.getElementById('orderRowsDropdown');
+    if (!dropdown) return;
+    if (!dropdown.contains(event.target)) {
+        closeOrderRowsPerPageDropdown();
+    }
+});
+
+window.addEventListener('resize', positionOrderRowsPerPageMenu);
+window.addEventListener('scroll', positionOrderRowsPerPageMenu, true);
 
 function updateQuantity(inputId, delta) {
     const input = document.getElementById(inputId);

@@ -1,6 +1,8 @@
 (() => {
 let currentInvoiceRef = null;
 let currentInvoiceNumericId = null;
+let isInvoiceAdmin = false;
+let currentEditingInvoiceEntry = null;
 const feedbackHideTimers = {
     payment: null,
     item: null
@@ -30,6 +32,7 @@ async function loadInvoiceDetails(invoiceRef) {
     noResultsEl.style.display = 'none';
 
     try {
+        isInvoiceAdmin = await resolveInvoiceAdminMode();
         const response = await fetch(`/.netlify/functions/invoice?ref=${encodeURIComponent(invoiceRef)}`);
 
         if (!response.ok) {
@@ -38,36 +41,68 @@ async function loadInvoiceDetails(invoiceRef) {
             throw new Error(`Error del servidor: ${response.statusText}`);
         }
 
-        renderInvoice(await response.json());
+        renderInvoice(await response.json(), isInvoiceAdmin);
 
         statusEl.style.display = 'none';
         contentEl.style.display = 'block';
-
-        const adminSection = document.getElementById('adminPaymentSection');
-        const adminItemSection = document.getElementById('adminItemSection');
-        if (adminSection) {
-            if (getSession()) {
-                adminSection.style.display = 'block';
-            } else {
-                adminSection.remove();
-            }
-        }
-        if (adminItemSection) {
-            if (getSession()) {
-                adminItemSection.style.display = 'block';
-            } else {
-                adminItemSection.remove();
-            }
-        }
+        applyInvoiceAdminMode(isInvoiceAdmin);
     } catch (error) {
         showInvoiceError(error.message);
     }
 }
 
-function renderInvoice(payload) {
+async function resolveInvoiceAdminMode() {
+    const session = getSession();
+    if (!session?.token) return false;
+
+    try {
+        const response = await fetch('/.netlify/functions/session-refresh', {
+            method: 'POST',
+            headers: { 'x-admin-token': session.token }
+        });
+
+        if (!response.ok) {
+            return false;
+        }
+
+        const data = await response.json().catch(() => null);
+        if (data?.token && data?.expiry) {
+            localStorage.setItem('et_token', data.token);
+            localStorage.setItem('et_expiry', String(data.expiry));
+        }
+
+        return true;
+    } catch (_error) {
+        return false;
+    }
+}
+
+function applyInvoiceAdminMode(isAdmin) {
+    const adminSection = document.getElementById('adminPaymentSection');
+    const adminItemSection = document.getElementById('adminItemSection');
+    const copyBtn = document.getElementById('btnCopyInvoiceLink');
+    const paidBtn = document.getElementById('btnToggleInvoicePaid');
+    const paidCheckbox = document.getElementById('detailPaidCheckbox');
+
+    if (isAdmin) {
+        if (adminSection) adminSection.style.display = 'block';
+        if (adminItemSection) adminItemSection.style.display = 'block';
+        if (copyBtn) copyBtn.style.display = 'inline-flex';
+        if (paidBtn) paidBtn.style.display = 'inline-flex';
+        return;
+    }
+
+    // Hard-remove admin UI from DOM for non-admin viewers.
+    if (adminSection) adminSection.remove();
+    if (adminItemSection) adminItemSection.remove();
+    if (copyBtn) copyBtn.remove();
+    if (paidBtn) paidBtn.remove();
+    if (paidCheckbox) paidCheckbox.remove();
+}
+
+function renderInvoice(payload, isAdmin) {
     const { invoice, items, payments } = normalizeInvoiceData(payload);
     currentInvoiceNumericId = invoice?.id || currentInvoiceNumericId;
-    const isAdmin = Boolean(getSession());
 
     if (!invoice || (!invoice.id && !currentInvoiceRef)) {
         throw new Error('La factura no contiene datos válidos.');
@@ -130,8 +165,8 @@ function updateInvoiceActionButtons(invoice, isAdmin) {
     if (paidBtn) {
         paidBtn.style.display = 'inline-flex';
         paidBtn.classList.toggle('is-paid', Boolean(invoice?.paid));
-        paidBtn.innerHTML = `<i class="fas ${Boolean(invoice?.paid) ? 'fa-undo-alt' : 'fa-check-circle'}"></i> ${Boolean(invoice?.paid) ? 'Marcar como pendiente' : 'Marcar como pagada'}`;
-        paidBtn.title = Boolean(invoice?.paid) ? 'Marcar como pendiente' : 'Marcar como pagada';
+        paidBtn.innerHTML = `<i class="fas ${Boolean(invoice?.paid) ? 'fa-undo-alt' : 'fa-check-circle'}"></i> ${Boolean(invoice?.paid) ? 'Pendiente' : 'Pagada'}`;
+        paidBtn.title = Boolean(invoice?.paid) ? 'Cambiar estado a pendiente' : 'Cambiar estado a pagada';
         paidBtn.onclick = () => {
             const checkbox = document.getElementById(`paid-cb-${currentInvoiceNumericId}`) || paidCheckbox;
             if (checkbox) {
@@ -234,9 +269,9 @@ function renderInvoiceDetails(items, payments, isAdmin) {
         amountCell.classList.toggle('invoice-amount-negative', entry.kind === 'payment');
 
         if (entry.kind === 'item') {
-            renderItemDetail(detailCell, entry);
+            renderItemDetail(detailCell, entry, isAdmin);
         } else {
-            renderPaymentDetail(detailCell, entry);
+            renderPaymentDetail(detailCell, entry, isAdmin);
             renderPaymentReviewInAmount(amountCell, entry, isAdmin);
         }
 
@@ -247,14 +282,17 @@ function renderInvoiceDetails(items, payments, isAdmin) {
 function buildInvoiceEntries(items, payments) {
     const itemEntries = items.map(item => ({
         kind: 'item',
+        id: item.id,
         kindLabel: 'Artículo',
         title: item.product_name || '—',
         imageUrl: item.image_url,
+        size: item.size,
         date: item.created_at,
+        quantity: Math.max(1, Math.floor(toNumber(item.quantity || 1))),
         quantityLabel: toNumber(item.quantity || 1).toLocaleString('es-CR'),
         unitPriceLabel: formatCurrency(item.price),
         amount: item.subtotal ?? (toNumber(item.price) * toNumber(item.quantity || 1)),
-        unitPrice: item.price
+        unitPrice: toNumber(item.price)
     }));
 
     const paymentEntries = payments.map(payment => ({
@@ -266,6 +304,7 @@ function buildInvoiceEntries(items, payments) {
         notes: payment.notes,
         date: payment.payment_date,
         bankReviewed: Boolean(payment.bank_reviewed),
+        amountRaw: toNumber(payment.amount),
         quantityLabel: '—',
         unitPriceLabel: '—',
         amount: payment.amount
@@ -279,10 +318,14 @@ function buildInvoiceEntries(items, payments) {
     });
 }
 
-function renderItemDetail(cell, entry) {
+function renderItemDetail(cell, entry, isAdmin) {
     cell.innerHTML = '';
     const wrapper = document.createElement('div');
     wrapper.className = 'invoice-detail-cell';
+
+    if (isAdmin && entry.id) {
+        wrapper.appendChild(createInvoiceEntryEditButton(entry));
+    }
 
     const textBlock = document.createElement('div');
     const title = document.createElement('strong');
@@ -306,31 +349,179 @@ function renderItemDetail(cell, entry) {
     cell.appendChild(wrapper);
 }
 
-function renderPaymentDetail(cell, entry) {
+function renderPaymentDetail(cell, entry, isAdmin) {
     cell.innerHTML = '';
 
-    const title = document.createElement('strong');
-    title.textContent = entry.title;
-    cell.appendChild(title);
+    const wrapper = document.createElement('div');
+    wrapper.className = 'invoice-detail-cell';
 
-    if (entry.reference) {
-        appendSecondaryText(cell, `Referencia: ${entry.reference}`);
-    }
-    if (entry.notes) {
-        appendSecondaryText(cell, entry.notes);
+    if (isAdmin && entry.id) {
+        const editBtn = createInvoiceEntryEditButton(entry);
+        editBtn.dataset.paymentEditButton = 'true';
+        editBtn.style.display = entry.bankReviewed ? 'none' : 'inline-flex';
+        wrapper.appendChild(editBtn);
     }
 
-    cell.appendChild(document.createElement('br'));
     const badge = document.createElement('span');
     badge.className = 'invoice-entry-badge is-payment';
     badge.textContent = entry.kindLabel || 'Abono';
-    cell.appendChild(badge);
+    wrapper.appendChild(badge);
+
+    cell.appendChild(wrapper);
+
+    if (entry.reference) {
+        appendSecondaryText(cell, `Referencia: ${entry.reference}`, { prependBreak: false });
+    }
+}
+
+function createInvoiceEntryEditButton(entry) {
+    const editBtn = document.createElement('button');
+    editBtn.type = 'button';
+    editBtn.className = 'admin-btn-action btn-edit invoice-entry-edit-btn';
+    editBtn.title = entry.kind === 'item' ? 'Editar orden' : 'Editar abono';
+    editBtn.innerHTML = '<i class="fas fa-pencil-alt"></i>';
+    editBtn.onclick = () => openInvoiceEntryEditModal(entry);
+    return editBtn;
+}
+
+function openInvoiceEntryEditModal(entry) {
+    if (!isInvoiceAdmin) return;
+    currentEditingInvoiceEntry = { ...entry };
+
+    const isItem = entry.kind === 'item';
+    const title = isItem ? `Editar orden #${entry.id}` : `Editar abono #${entry.id}`;
+    const body = isItem ? buildInvoiceItemEditModalBody(entry) : buildInvoicePaymentEditModalBody(entry);
+    const footer = `
+        <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
+        <button id="btnSaveInvoiceEntryEdit" class="btn btn-primary" onclick="saveInvoiceEntryEdit()">Guardar</button>
+    `;
+
+    openGenericModal(title, body, footer);
+}
+
+function buildInvoiceItemEditModalBody(entry) {
+    return `
+        <div class="invoice-edit-form-grid">
+            <div class="invoice-floating-field">
+                <input id="invEditItemProduct" class="invoice-floating-input" type="text" placeholder=" " value="${escapeHtml(entry.title || '')}">
+                <label for="invEditItemProduct" class="invoice-floating-label">Producto</label>
+            </div>
+
+            <div class="invoice-floating-field">
+                <input id="invEditItemQuantity" class="invoice-floating-input" type="number" min="1" step="1" placeholder=" " value="${Math.max(1, Math.floor(toNumber(entry.quantity || 1)))}">
+                <label for="invEditItemQuantity" class="invoice-floating-label">Cantidad</label>
+            </div>
+
+            <div class="invoice-floating-field">
+                <input id="invEditItemPrice" class="invoice-floating-input" type="number" min="0.01" step="any" placeholder=" " value="${toNumber(entry.unitPrice)}">
+                <label for="invEditItemPrice" class="invoice-floating-label">Precio</label>
+            </div>
+        </div>
+    `;
+}
+
+function buildInvoicePaymentEditModalBody(entry) {
+    return `
+        <div class="invoice-edit-form-grid">
+            <div class="invoice-floating-field">
+                <input id="invEditPaymentAmount" class="invoice-floating-input" type="number" min="0.01" step="any" placeholder=" " value="${toNumber(entry.amountRaw)}">
+                <label for="invEditPaymentAmount" class="invoice-floating-label">Monto</label>
+            </div>
+
+            <div class="invoice-floating-field">
+                <input id="invEditPaymentMethod" class="invoice-floating-input" type="text" placeholder=" " value="${escapeHtml(entry.title || '')}">
+                <label for="invEditPaymentMethod" class="invoice-floating-label">Método</label>
+            </div>
+
+            <div class="invoice-floating-field">
+                <input id="invEditPaymentRef" class="invoice-floating-input" type="text" placeholder=" " value="${escapeHtml(entry.reference || '')}">
+                <label for="invEditPaymentRef" class="invoice-floating-label">Referencia</label>
+            </div>
+        </div>
+    `;
+}
+
+async function saveInvoiceEntryEdit() {
+    if (!isInvoiceAdmin || !currentEditingInvoiceEntry?.id) return;
+
+    const session = getSession();
+    if (!session) {
+        alert('Sesión expirada. Inicia sesión de nuevo.');
+        return;
+    }
+
+    const saveBtn = document.getElementById('btnSaveInvoiceEntryEdit');
+    if (saveBtn) saveBtn.disabled = true;
+
+    try {
+        if (currentEditingInvoiceEntry.kind === 'item') {
+            const productName = String(document.getElementById('invEditItemProduct')?.value || '').trim();
+            const quantity = Number(document.getElementById('invEditItemQuantity')?.value);
+            const price = Number(document.getElementById('invEditItemPrice')?.value);
+
+            if (!productName) throw new Error('El nombre del producto es obligatorio.');
+            if (!Number.isFinite(quantity) || quantity <= 0) throw new Error('La cantidad debe ser mayor a 0.');
+            if (!Number.isFinite(price) || price <= 0) throw new Error('El precio debe ser mayor a 0.');
+
+            const response = await fetch('/.netlify/functions/order-items', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'x-admin-token': session.token },
+                body: JSON.stringify({
+                    id: Number(currentEditingInvoiceEntry.id),
+                    product_name: productName,
+                    quantity: Math.max(1, Math.floor(quantity)),
+                    price
+                })
+            });
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.error || 'No se pudo actualizar la orden.');
+            }
+        } else {
+            const amount = Number(document.getElementById('invEditPaymentAmount')?.value);
+            const paymentMethod = String(document.getElementById('invEditPaymentMethod')?.value || '').trim();
+            const referenceCode = String(document.getElementById('invEditPaymentRef')?.value || '').trim();
+
+            if (!Number.isFinite(amount) || amount <= 0) throw new Error('El monto debe ser mayor a 0.');
+
+            const response = await fetch('/.netlify/functions/payments', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'x-admin-token': session.token },
+                body: JSON.stringify({
+                    id: Number(currentEditingInvoiceEntry.id),
+                    amount,
+                    payment_method: paymentMethod || null,
+                    reference_code: referenceCode || null
+                })
+            });
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.error || 'No se pudo actualizar el abono.');
+            }
+        }
+
+        closeGenericModal();
+        await loadInvoiceDetails(currentInvoiceRef);
+    } catch (error) {
+        alert(`Error: ${error.message}`);
+    } finally {
+        if (saveBtn) saveBtn.disabled = false;
+    }
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 function renderPaymentReviewInAmount(cell, entry, isAdmin) {
     if (!isAdmin || !entry.id) return;
-
-    cell.appendChild(document.createElement('br'));
 
     const reviewWrap = document.createElement('label');
     reviewWrap.className = 'invoice-payment-review-toggle in-amount';
@@ -373,6 +564,8 @@ async function doToggleInvoicePaymentBank(paymentId, marking) {
 
 async function toggleInvoicePaymentReviewStatus(paymentId, checkbox) {
     const isChecked = checkbox.checked;
+    const row = checkbox.closest('tr');
+    const editBtn = row?.querySelector('[data-payment-edit-button="true"]');
 
     try {
         const session = getSession();
@@ -387,6 +580,10 @@ async function toggleInvoicePaymentReviewStatus(paymentId, checkbox) {
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ error: 'Respuesta de error no es JSON.' }));
             throw new Error(errorData.error || `Error ${response.status}: No se pudo actualizar el estado.`);
+        }
+
+        if (editBtn) {
+            editBtn.style.display = isChecked ? 'none' : 'inline-flex';
         }
     } catch (error) {
         checkbox.checked = !isChecked;
@@ -404,11 +601,14 @@ function createEmptyRow(message, colspan) {
     return row;
 }
 
-function appendSecondaryText(cell, text) {
+function appendSecondaryText(cell, text, options = {}) {
+    const { prependBreak = true } = options;
     const note = document.createElement('span');
     note.className = 'invoice-row-note';
     note.textContent = text;
-    cell.appendChild(document.createElement('br'));
+    if (prependBreak) {
+        cell.appendChild(document.createElement('br'));
+    }
     cell.appendChild(note);
 }
 
@@ -880,4 +1080,5 @@ window.initInvoicePage = initInvoicePage;
 window.confirmInvoiceDetailTogglePaid = confirmInvoiceDetailTogglePaid;
 window.confirmInvoiceDetailPaidAction = confirmInvoiceDetailPaidAction;
 window.toggleInvoiceDetailPaidStatus = toggleInvoiceDetailPaidStatus;
+window.saveInvoiceEntryEdit = saveInvoiceEntryEdit;
 })();
