@@ -378,10 +378,16 @@ function renderOrders() {
     table.style.display = '';
     tbody.innerHTML = ''; // Limpiamos el cuerpo antes de renderizar
 
-    const rowsHtml = paginatedItems.map(o => `
+    const rowsHtml = paginatedItems.map(o => {
+        const encodedImageUrl = encodeURIComponent(String(o.image_url || ''));
+        const imageButton = o.image_url
+            ? `<button type="button" class="admin-table-img-btn" title="Ver imagen" onclick="openOrderImageModal('${encodedImageUrl}')"><i class="fas fa-camera"></i></button>`
+            : '';
+
+        return `
             <tr>
                 <td class="col-select" style="display: none;"><input type="checkbox" class="row-selector" data-id="${o.id}" onchange="updateOrderMultiSelectActions()"></td>
-                <td><img src="${o.image_url || 'https://placehold.co/40x40/E19B9D/FFFFFF?text=?'}" class="admin-table-img" alt="Producto" onclick="openImageModal('${o.image_url || ''}')"></td>
+                <td>${imageButton}</td>
                 <td>${o.client_name || ''}</td>
                 <td>${o.client_phone || ''}</td>
                 <td>${o.product_name || ''}</td>
@@ -396,8 +402,8 @@ function renderOrders() {
                     <button class="admin-btn-action btn-invoice" onclick="verFactura(${o.invoice_id ?? 'null'})" title="Ir a Factura"><i class="fas fa-file-invoice-dollar"></i></button>
                     <button class="admin-btn-action btn-delete" onclick="eliminarOrden(${o.id})" title="Eliminar Orden"><i class="fas fa-trash-alt"></i></button>
                 </td>
-            </tr>`
-    ).join('');
+            </tr>`;
+    }).join('');
 
     tbody.innerHTML = rowsHtml;
     actualizarIconosOrden();
@@ -456,6 +462,12 @@ function changeOrderRowsPerPage(value) {
     rowsPerPage = parseInt(value, 10);
     currentPage = 1; // Volver a la primera página
     renderOrders();
+}
+
+function openOrderImageModal(encodedSrc) {
+    const src = decodeURIComponent(String(encodedSrc || ''));
+    if (!src) return;
+    openImageModal(src);
 }
 
 function copyTextToClipboard(text) {

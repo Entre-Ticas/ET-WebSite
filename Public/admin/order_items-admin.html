@@ -68,24 +68,22 @@
                 <tfoot id="adminTableFooter" style="display: none;">
                     <tr>
                         <td id="footerColspan">
-                            <div class="admin-pagination-container" style="margin-top: 0;">
+                            <div class="admin-pagination-container order-pagination-layout" style="margin-top: 0;">
                                 <div class="pagination-info" id="paginationInfo">
                                     <!-- Se rellena con JS -->
                                 </div>
-                                <div class="pagination-controls">
-                                    <div class="pagination-rows-selector">
-                                        <span>Filas:</span>
-                                        <select id="rowsPerPageSelector" onchange="changeOrderRowsPerPage(this.value)">
-                                            <option value="10">10</option>
-                                            <option value="30">30</option>
-                                            <option value="50">50</option>
-                                            <option value="100">100</option>
-                                            <option value="-1">Todos</option>
-                                        </select>
-                                    </div>
-                                    <div class="pagination-nav" id="paginationNav">
-                                        <!-- Se rellena con JS -->
-                                    </div>
+                                <div class="pagination-rows-selector order-pagination-rows">
+                                    <span>Filas:</span>
+                                    <select id="rowsPerPageSelector" onchange="changeOrderRowsPerPage(this.value)">
+                                        <option value="10">10</option>
+                                        <option value="30">30</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                        <option value="-1">Todos</option>
+                                    </select>
+                                </div>
+                                <div class="pagination-nav" id="paginationNav">
+                                    <!-- Se rellena con JS -->
                                 </div>
                             </div>
                         </td>
