@@ -1,6 +1,7 @@
 (() => {
 let currentInvoiceRef = null;
 let currentInvoiceNumericId = null;
+let isInvoiceAdmin = false;
 const feedbackHideTimers = {
     payment: null,
     item: null
@@ -30,6 +31,7 @@ async function loadInvoiceDetails(invoiceRef) {
     noResultsEl.style.display = 'none';
 
     try {
+        isInvoiceAdmin = await resolveInvoiceAdminMode();
         const response = await fetch(`/.netlify/functions/invoice?ref=${encodeURIComponent(invoiceRef)}`);
 
         if (!response.ok) {
@@ -38,36 +40,68 @@ async function loadInvoiceDetails(invoiceRef) {
             throw new Error(`Error del servidor: ${response.statusText}`);
         }
 
-        renderInvoice(await response.json());
+        renderInvoice(await response.json(), isInvoiceAdmin);
 
         statusEl.style.display = 'none';
         contentEl.style.display = 'block';
-
-        const adminSection = document.getElementById('adminPaymentSection');
-        const adminItemSection = document.getElementById('adminItemSection');
-        if (adminSection) {
-            if (getSession()) {
-                adminSection.style.display = 'block';
-            } else {
-                adminSection.remove();
-            }
-        }
-        if (adminItemSection) {
-            if (getSession()) {
-                adminItemSection.style.display = 'block';
-            } else {
-                adminItemSection.remove();
-            }
-        }
+        applyInvoiceAdminMode(isInvoiceAdmin);
     } catch (error) {
         showInvoiceError(error.message);
     }
 }
 
-function renderInvoice(payload) {
+async function resolveInvoiceAdminMode() {
+    const session = getSession();
+    if (!session?.token) return false;
+
+    try {
+        const response = await fetch('/.netlify/functions/session-refresh', {
+            method: 'POST',
+            headers: { 'x-admin-token': session.token }
+        });
+
+        if (!response.ok) {
+            return false;
+        }
+
+        const data = await response.json().catch(() => null);
+        if (data?.token && data?.expiry) {
+            localStorage.setItem('et_token', data.token);
+            localStorage.setItem('et_expiry', String(data.expiry));
+        }
+
+        return true;
+    } catch (_error) {
+        return false;
+    }
+}
+
+function applyInvoiceAdminMode(isAdmin) {
+    const adminSection = document.getElementById('adminPaymentSection');
+    const adminItemSection = document.getElementById('adminItemSection');
+    const copyBtn = document.getElementById('btnCopyInvoiceLink');
+    const paidBtn = document.getElementById('btnToggleInvoicePaid');
+    const paidCheckbox = document.getElementById('detailPaidCheckbox');
+
+    if (isAdmin) {
+        if (adminSection) adminSection.style.display = 'block';
+        if (adminItemSection) adminItemSection.style.display = 'block';
+        if (copyBtn) copyBtn.style.display = 'inline-flex';
+        if (paidBtn) paidBtn.style.display = 'inline-flex';
+        return;
+    }
+
+    // Hard-remove admin UI from DOM for non-admin viewers.
+    if (adminSection) adminSection.remove();
+    if (adminItemSection) adminItemSection.remove();
+    if (copyBtn) copyBtn.remove();
+    if (paidBtn) paidBtn.remove();
+    if (paidCheckbox) paidCheckbox.remove();
+}
+
+function renderInvoice(payload, isAdmin) {
     const { invoice, items, payments } = normalizeInvoiceData(payload);
     currentInvoiceNumericId = invoice?.id || currentInvoiceNumericId;
-    const isAdmin = Boolean(getSession());
 
     if (!invoice || (!invoice.id && !currentInvoiceRef)) {
         throw new Error('La factura no contiene datos válidos.');
