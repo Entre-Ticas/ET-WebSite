@@ -208,6 +208,19 @@ function changeInvoiceRowsPerPage(value) {
 }
 
 async function viewInvoiceDetail(publicRef, invoiceId) {
+    const newTab = window.open('', '_blank');
+    if (!newTab) {
+        alert('Tu navegador bloqueó la nueva pestaña. Habilita popups para este sitio.');
+        return;
+    }
+
+    try {
+        newTab.document.title = 'Cargando factura...';
+        newTab.document.body.innerHTML = '<p style="font-family:Segoe UI,Arial,sans-serif;padding:16px;color:#5b4a55;">Cargando factura...</p>';
+    } catch (_error) {
+        // Si el navegador restringe escritura inicial, continuamos con la navegación normal.
+    }
+
     try {
         let refToUse = publicRef;
 
@@ -231,8 +244,12 @@ async function viewInvoiceDetail(publicRef, invoiceId) {
             throw new Error('No se encontró una referencia válida para la factura.');
         }
 
-        if (typeof loadPage === 'function') loadPage('invoice', refToUse);
+        const invoiceUrl = `${window.location.origin}/invoice/${encodeURIComponent(refToUse)}`;
+        newTab.location.href = invoiceUrl;
     } catch (error) {
+        if (!newTab.closed) {
+            newTab.close();
+        }
         alert(error.message || 'No se pudo abrir la factura.');
     }
 }

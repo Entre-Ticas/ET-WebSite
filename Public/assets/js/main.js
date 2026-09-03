@@ -205,6 +205,14 @@ document.addEventListener('DOMContentLoaded', () => {
             paramToLoad = parts[2] || null; // El siguiente sería el parámetro
         }
 
+        if (paramToLoad) {
+            try {
+                paramToLoad = decodeURIComponent(paramToLoad);
+            } catch (_error) {
+                // Mantener valor original si no es un URI componente válido.
+            }
+        }
+
         // Si estamos en la página de inicio, no hacemos nada para evitar el bucle de recarga.
         // El contenido de la home ya está en index.html.
         if (pageToLoad !== 'home') {
