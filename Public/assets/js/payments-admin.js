@@ -602,13 +602,35 @@ async function togglePaymentReviewStatus(paymentId, field, checkbox) {
     }
 }
 function deletePayment(id) {
+    const payment = todosLosPayments.find(p => Number(p.id) === Number(id));
+    const clientName = escapePaymentDeleteText(payment?.client_name || 'Cliente no disponible');
+    const invoiceId = payment?.invoice_id ?? '--';
+    const paymentMethod = escapePaymentDeleteText(payment?.payment_method || 'Sin método');
+    const referenceCode = payment?.reference_code ? escapePaymentDeleteText(payment.reference_code) : 'Sin referencia';
+    const amount = `₡${Number(payment?.amount || 0).toLocaleString('es-CR')}`;
+
     const title = 'Confirmar Eliminación';
-    const body = '¿Estás seguro de que deseas eliminar este abono? Esta acción no se puede deshacer.';
+    const body = `
+        <p>¿Está seguro que desea eliminar el abono de <strong>${clientName}</strong>?</p>
+        <p><strong>Factura #:</strong> ${invoiceId} | <strong>Método:</strong> ${paymentMethod}</p>
+        <p><strong>Referencia:</strong> ${referenceCode}</p>
+        <p><strong>Monto:</strong> ${amount}</p>
+        <p style="color:#c0392b; margin-top:8px;"><strong>⚠ Esta acción no se puede deshacer.</strong></p>
+    `;
     const footer = `
         <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
         <button class="btn btn-danger" onclick="confirmDeletePayment(${Number(id)})">Eliminar</button>
     `;
     openGenericModal(title, body, footer);
+}
+
+function escapePaymentDeleteText(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 async function confirmDeletePayment(id) {

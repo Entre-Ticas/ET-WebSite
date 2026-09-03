@@ -1421,14 +1421,35 @@ function guardarEdicionCompleta() {
     guardarEdicion();
 }
 
-async function eliminarOrden(id) {
-    if (!confirm('¿Estás seguro de que deseas eliminar esta orden? Esta acción no se puede deshacer.')) {
-        return;
-    }
+function eliminarOrden(id) {
+    const orden = todasLasOrdenes.find(o => Number(o.id) === Number(id));
+    const productName = escapeDeleteText(orden?.product_name || `#${id}`);
+    const clientName = escapeDeleteText(orden?.client_name || 'Cliente no disponible');
+    const quantity = Math.max(1, parseInt(orden?.quantity, 10) || 1);
+    const unitPrice = Number(orden?.price || 0);
+    const totalAmount = unitPrice * quantity;
 
-    const status = document.getElementById('adminStatus');
-    status.innerHTML = '<div class="spinner"></div><p>Eliminando orden...</p>';
-    status.style.display = 'flex';
+    const body = `
+        <p>¿Está seguro que desea eliminar la orden <strong>${productName}</strong>?</p>
+        <p><strong>Cliente:</strong> ${clientName}</p>
+        <p><strong>Cantidad:</strong> ${quantity} | <strong>Precio unitario:</strong> ${formatDeleteCurrency(unitPrice)}</p>
+        <p><strong>Monto total:</strong> ${formatDeleteCurrency(totalAmount)}</p>
+        <p style="color:#c0392b; margin-top:8px;"><strong>⚠ Esta acción no se puede deshacer.</strong></p>
+    `;
+
+    const footer = `
+        <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
+        <button class="btn btn-danger" onclick="confirmDeleteOrder(${Number(id)})">Sí, Eliminar</button>
+    `;
+
+    openGenericModal('Confirmar Eliminación', body, footer);
+}
+
+async function confirmDeleteOrder(id) {
+    const modalBody = document.getElementById('genericModalBody');
+    const modalFooter = document.getElementById('genericModalFooter');
+    if (modalBody) modalBody.innerHTML = '<div class="spinner"></div><p>Eliminando orden...</p>';
+    if (modalFooter) modalFooter.innerHTML = '';
 
     try {
         const session = getSession();
@@ -1439,13 +1460,30 @@ async function eliminarOrden(id) {
             headers: { 'x-admin-token': session.token }
         });
 
-        if (!response.ok) throw new Error((await response.json()).error || 'No se pudo eliminar la orden.');
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'No se pudo eliminar la orden.');
+        }
 
-        await loadAdminOrders();
-
+        if (modalBody) modalBody.innerHTML = '✅ Orden eliminada con éxito.';
+        setTimeout(() => { closeGenericModal(); loadAdminOrders(); }, 900);
     } catch (error) {
-        alert(`Error al eliminar: ${error.message}`);
+        if (modalBody) modalBody.innerHTML = `⚠️ Error al eliminar: ${error.message}`;
+        if (modalFooter) modalFooter.innerHTML = '<button class="btn btn-secondary" onclick="closeGenericModal()">Cerrar</button>';
     }
+}
+
+function formatDeleteCurrency(value) {
+    return `₡${Number(value || 0).toLocaleString('es-CR')}`;
+}
+
+function escapeDeleteText(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 async function handleImageUpload(event, formType) {

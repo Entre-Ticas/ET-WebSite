@@ -631,8 +631,24 @@ async function handleMultiDelete() {
     const idsToDelete = getSelectedInvoiceIds();
     if (idsToDelete.length === 0) return;
 
+    const selectedInvoices = idsToDelete
+        .map(id => todasLasFacturas.find(f => Number(f.id) === Number(id)))
+        .filter(Boolean);
+    const previewRows = selectedInvoices.slice(0, 4).map((f) => {
+        const clientName = escapeInvoiceDeleteText(f.client_name || 'Cliente no disponible');
+        const clientPhone = escapeInvoiceDeleteText(f.client_phone || '--');
+        const status = f.paid ? 'Pagada' : 'Pendiente';
+        return `<li><strong>#${Number(f.id)}</strong> - ${clientName} (${clientPhone}) | Estado: ${status}</li>`;
+    }).join('');
+    const remainingCount = Math.max(0, selectedInvoices.length - 4);
+
     const title = 'Confirmar Eliminación';
-    const body = `¿Estás seguro de que deseas eliminar <strong>${idsToDelete.length}</strong> facturas? Esta acción también podría afectar a las órdenes asociadas.`;
+    const body = `
+        <p>¿Está seguro de que desea eliminar <strong>${idsToDelete.length}</strong> facturas seleccionadas?</p>
+        ${previewRows ? `<ul style="margin:8px 0 0 16px;">${previewRows}</ul>` : ''}
+        ${remainingCount > 0 ? `<p style="margin-top:6px; color:#666;">... y ${remainingCount} factura(s) más.</p>` : ''}
+        <p style="margin-top:8px; color:#c0392b;"><strong>⚠ Esta acción también podría afectar órdenes asociadas y no se puede deshacer.</strong></p>
+    `;
     const footer = `
         <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
         <button class="btn btn-danger" onclick="confirmMultiDelete()">Eliminar</button>
@@ -681,9 +697,62 @@ async function confirmMultiDelete() {
 }
 
 function eliminarFactura(id) {
-    // Reutilizamos la lógica de selección múltiple para una sola factura
-    document.querySelectorAll('.row-selector').forEach(chk => chk.checked = (Number(chk.dataset.id) === id));
-    handleMultiDelete();
+    const factura = todasLasFacturas.find(f => Number(f.id) === Number(id));
+    const clientName = escapeInvoiceDeleteText(factura?.client_name || 'Cliente no disponible');
+    const clientPhone = escapeInvoiceDeleteText(factura?.client_phone || '--');
+    const invoiceDate = factura?.invoice_date ? new Date(factura.invoice_date).toLocaleDateString('es-CR') : 'N/A';
+    const status = factura?.paid ? 'Pagada' : 'Pendiente';
+
+    const body = `
+        <p>¿Está seguro que desea eliminar la factura de <strong>${clientName}</strong>?</p>
+        <p><strong>Factura #:</strong> ${Number(id)} | <strong>Teléfono:</strong> ${clientPhone}</p>
+        <p><strong>Fecha:</strong> ${invoiceDate} | <strong>Estado:</strong> ${status}</p>
+        <p style="color:#c0392b; margin-top:8px;"><strong>⚠ Esta acción no se puede deshacer.</strong></p>
+    `;
+
+    const footer = `
+        <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
+        <button class="btn btn-danger" onclick="confirmDeleteSingleInvoice(${Number(id)})">Sí, Eliminar</button>
+    `;
+
+    openGenericModal('Confirmar Eliminación', body, footer);
+}
+
+async function confirmDeleteSingleInvoice(id) {
+    const modalBody = document.getElementById('genericModalBody');
+    const modalFooter = document.getElementById('genericModalFooter');
+    if (modalBody) modalBody.innerHTML = '<div class="spinner"></div><p>Eliminando factura...</p>';
+    if (modalFooter) modalFooter.innerHTML = '';
+
+    try {
+        const session = getSession();
+        if (!session) throw new Error('Sesión expirada.');
+
+        const response = await fetch(`/.netlify/functions/invoices?id=${id}`, {
+            method: 'DELETE',
+            headers: { 'x-admin-token': session.token }
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'No se pudo eliminar la factura.');
+        }
+
+        if (modalBody) modalBody.innerHTML = '✅ Factura eliminada con éxito.';
+        setTimeout(() => { closeGenericModal(); loadAdminInvoices(); }, 900);
+    } catch (error) {
+        if (modalBody) modalBody.innerHTML = `⚠️ Error al eliminar: ${error.message}`;
+        if (modalFooter) modalFooter.innerHTML = '<button class="btn btn-secondary" onclick="closeGenericModal()">Cerrar</button>';
+    }
+}
+
+function escapeInvoiceDeleteText(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 function initInvoicesAdminPage() {

@@ -392,11 +392,92 @@ function openInvoiceEntryEditModal(entry) {
     const title = isItem ? `Editar orden #${entry.id}` : `Editar abono #${entry.id}`;
     const body = isItem ? buildInvoiceItemEditModalBody(entry) : buildInvoicePaymentEditModalBody(entry);
     const footer = `
+        <button class="btn btn-danger invoice-modal-delete-btn" onclick="confirmDeleteInvoiceEntry()" title="Eliminar" aria-label="Eliminar">
+            <i class="fas fa-trash-alt"></i>
+        </button>
         <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
         <button id="btnSaveInvoiceEntryEdit" class="btn btn-primary" onclick="saveInvoiceEntryEdit()">Guardar</button>
     `;
 
     openGenericModal(title, body, footer);
+}
+
+function confirmDeleteInvoiceEntry() {
+    if (!isInvoiceAdmin || !currentEditingInvoiceEntry?.id) return;
+
+    const isItem = currentEditingInvoiceEntry.kind === 'item';
+    const entryId = Number(currentEditingInvoiceEntry.id);
+    const body = isItem
+        ? buildItemDeleteSummary(currentEditingInvoiceEntry, entryId)
+        : buildPaymentDeleteSummary(currentEditingInvoiceEntry, entryId);
+
+    const footer = `
+        <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
+        <button class="btn btn-danger" onclick="doDeleteInvoiceEntry()">Sí, Eliminar</button>
+    `;
+
+    openGenericModal('Confirmar eliminación', body, footer);
+}
+
+function buildItemDeleteSummary(entry, entryId) {
+    const productName = escapeHtml(entry.title || 'Sin detalle');
+    const quantity = Math.max(1, Math.floor(toNumber(entry.quantity || 1)));
+    const unitPrice = formatCurrency(entry.unitPrice);
+    const amount = formatCurrency(entry.amount);
+
+    return `
+        <p>¿Está seguro que desea eliminar la orden <strong>${productName}</strong>?</p>
+        <p><strong>Cantidad:</strong> ${quantity} | <strong>Precio unitario:</strong> ${unitPrice}</p>
+        <p><strong>Monto total:</strong> ${amount}</p>
+        <p style="color:#c0392b; margin-top:8px;"><strong>⚠ Esta acción no se puede deshacer.</strong></p>
+    `;
+}
+
+function buildPaymentDeleteSummary(entry, entryId) {
+    const paymentMethod = escapeHtml(entry.title || 'Abono');
+    const reference = entry.reference ? escapeHtml(entry.reference) : 'Sin referencia';
+    const amount = formatCurrency(entry.amountRaw ?? entry.amount);
+
+    return `
+        <p>¿Está seguro que desea eliminar el abono <strong>${paymentMethod}</strong>?</p>
+        <p><strong>Referencia:</strong> ${reference}</p>
+        <p><strong>Monto:</strong> ${amount}</p>
+        <p style="color:#c0392b; margin-top:8px;"><strong>⚠ Esta acción no se puede deshacer.</strong></p>
+    `;
+}
+
+async function doDeleteInvoiceEntry() {
+    if (!isInvoiceAdmin || !currentEditingInvoiceEntry?.id) return;
+
+    const session = getSession();
+    if (!session) {
+        alert('Sesión expirada. Inicia sesión de nuevo.');
+        return;
+    }
+
+    const isItem = currentEditingInvoiceEntry.kind === 'item';
+    const entryId = Number(currentEditingInvoiceEntry.id);
+    const endpoint = isItem
+        ? `/.netlify/functions/order-items?id=${entryId}`
+        : `/.netlify/functions/payments?id=${entryId}`;
+    const entryLabel = isItem ? 'orden' : 'abono';
+
+    try {
+        const response = await fetch(endpoint, {
+            method: 'DELETE',
+            headers: { 'x-admin-token': session.token }
+        });
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error || `No se pudo eliminar el ${entryLabel}.`);
+        }
+
+        closeGenericModal();
+        await loadInvoiceDetails(currentInvoiceRef);
+    } catch (error) {
+        alert(`Error: ${error.message}`);
+    }
 }
 
 function buildInvoiceItemEditModalBody(entry) {
@@ -1081,4 +1162,6 @@ window.confirmInvoiceDetailTogglePaid = confirmInvoiceDetailTogglePaid;
 window.confirmInvoiceDetailPaidAction = confirmInvoiceDetailPaidAction;
 window.toggleInvoiceDetailPaidStatus = toggleInvoiceDetailPaidStatus;
 window.saveInvoiceEntryEdit = saveInvoiceEntryEdit;
+window.confirmDeleteInvoiceEntry = confirmDeleteInvoiceEntry;
+window.doDeleteInvoiceEntry = doDeleteInvoiceEntry;
 })();

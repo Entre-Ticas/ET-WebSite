@@ -1042,3 +1042,15 @@
     gap: 0.55rem;
     margin-top: 0.2rem;
 }
+
+.modal-footer .invoice-modal-delete-btn {
+    margin-right: auto;
+    width: 38px;
+    min-width: 38px;
+    height: 36px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+}
