@@ -137,23 +137,6 @@ function updateMobileNavColumns() {
     nav.style.setProperty('--mobile-nav-cols', String(cols));
 }
 
-async function loadHeaderImage() {
-    const logoImg = document.querySelector('header .logo');
-    if (!logoImg) return;
-
-    try {
-        const response = await fetch(`/.netlify/functions/info-image?id=ImagenET`);
-        if (!response.ok) return; // Si falla, simplemente se queda la imagen por defecto.
-
-        const { imageUrl } = await response.json();
-        if (imageUrl) {
-            logoImg.src = imageUrl;
-        }
-    } catch (error) {
-        console.error('Error al cargar la imagen del encabezado:', error);
-    }
-}
-
 document.addEventListener('DOMContentLoaded', () => {
     // Guardar el contenido original de HOME antes de cualquier navegación
     const container = document.getElementById('content-area');
@@ -175,7 +158,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('btnFacebookFlotante').href = `https://www.facebook.com/${Facebook_user}`;
     }
 
-    loadHeaderImage();
     updateMobileNavColumns();
     initializeAutofillObserver();
     applyGlobalInputHardening(document.getElementById('content-area') || document);
