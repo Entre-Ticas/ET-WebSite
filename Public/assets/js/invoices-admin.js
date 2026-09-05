@@ -150,6 +150,7 @@ function renderInvoices() {
                 </td>
                 <td class="admin-actions-cell">
                     <button class="admin-btn-action btn-edit" onclick="openInvoiceEditForm(${f.id})" title="Editar Factura"><i class="fas fa-pencil-alt"></i></button>
+                    <button class="admin-btn-action btn-copy" onclick="copiarLinkFactura(this, ${f.id})" title="Copiar Link de Factura"><i class="fas fa-copy"></i></button>
                     <button class="admin-btn-action btn-invoice" onclick="viewInvoiceDetail('${f.public_ref || ''}', ${f.id})" title="Ver Detalle de Factura"><i class="fas fa-file-invoice-dollar"></i></button>
                     <button class="admin-btn-action btn-delete" onclick="eliminarFactura(${f.id})" title="Eliminar Factura"><i class="fas fa-trash-alt"></i></button>
                 </td>
@@ -205,6 +206,95 @@ function changeInvoiceRowsPerPage(value) {
     invoicesRowsPerPage = parseInt(value, 10);
     invoicesCurrentPage = 1;
     renderInvoices();
+}
+
+function copyTextToClipboard(text) {
+    if (navigator.clipboard?.writeText) {
+        return navigator.clipboard.writeText(text);
+    }
+
+    return new Promise((resolve, reject) => {
+        const tempInput = document.createElement('input');
+        tempInput.type = 'text';
+        tempInput.value = text;
+        tempInput.setAttribute('readonly', 'readonly');
+        tempInput.style.position = 'fixed';
+        tempInput.style.opacity = '0';
+        tempInput.style.pointerEvents = 'none';
+
+        document.body.appendChild(tempInput);
+        tempInput.focus();
+        tempInput.select();
+        tempInput.setSelectionRange(0, tempInput.value.length);
+
+        const copied = document.execCommand('copy');
+        document.body.removeChild(tempInput);
+
+        if (copied) {
+            resolve();
+            return;
+        }
+
+        reject(new Error('Tu dispositivo no permitió copiar el link.'));
+    });
+}
+
+async function getInvoicePublicRef(invoiceId) {
+    if (!invoiceId) {
+        throw new Error('No se encontró una referencia válida para la factura.');
+    }
+
+    const session = getSession();
+    if (!session) throw new Error('Sesión no válida.');
+
+    const response = await fetch(`/.netlify/functions/invoices?id=${invoiceId}`, {
+        headers: { 'x-admin-token': session.token }
+    });
+
+    if (!response.ok) {
+        throw new Error('No se pudo generar el enlace seguro de factura.');
+    }
+
+    const payload = await response.json();
+    const publicRef = payload?.invoice?.public_ref;
+
+    if (!publicRef) {
+        throw new Error('No se encontró una referencia válida para la factura.');
+    }
+
+    return publicRef;
+}
+
+async function copiarLinkFactura(btn, invoiceId) {
+    try {
+        const refToUse = await getInvoicePublicRef(invoiceId);
+
+        const invoiceUrl = `${window.location.origin}/invoice/${encodeURIComponent(refToUse)}`;
+        await copyTextToClipboard(invoiceUrl);
+
+        const icon = btn?.querySelector('i');
+        const originalClass = icon?.className;
+
+        if (icon) {
+            icon.className = 'fas fa-check';
+        }
+        if (btn) {
+            btn.style.color = '#25d366';
+            btn.title = 'Link copiado';
+        }
+
+        setTimeout(() => {
+            if (icon && originalClass) {
+                icon.className = originalClass;
+            }
+            if (btn) {
+                btn.style.color = '';
+                btn.title = 'Copiar Link de Factura';
+            }
+        }, 2000);
+    } catch (error) {
+        alert(error.message || 'No se pudo copiar el link de la factura.');
+    }
 }
 
 async function viewInvoiceDetail(publicRef, invoiceId) {

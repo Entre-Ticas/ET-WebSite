@@ -262,6 +262,8 @@ function renderPayments() {
             <td style="text-align:center;"><input type="checkbox" id="bankrev-cb-${p.id}" onclick="confirmTogglePaymentBank(${p.id}, this)" ${p.bank_reviewed ? 'checked' : ''}></td>
             <td class="admin-actions-cell">
                 <button class="admin-btn-action btn-edit" onclick="openPaymentEditForm(${p.id})" title="Editar Abono"><i class="fas fa-pencil-alt"></i></button>
+                <button class="admin-btn-action btn-copy" onclick="copiarLinkFactura(this, ${p.invoice_id ?? 'null'})" title="Copiar Link de Factura"><i class="fas fa-copy"></i></button>
+                <button class="admin-btn-action btn-invoice" onclick="verFactura(${p.invoice_id ?? 'null'})" title="Ir a Factura"><i class="fas fa-file-invoice-dollar"></i></button>
                 <button class="admin-btn-action btn-delete" onclick="deletePayment(${p.id})" title="Eliminar Abono"><i class="fas fa-trash-alt"></i></button>
             </td>
         </tr>
@@ -302,6 +304,120 @@ function renderPaymentsPagination(totalRows) {
             <span>Página <strong>${paymentsCurrentPage}</strong> de ${totalPages}</span>
             <button onclick="changePaymentsPage(${paymentsCurrentPage + 1})" ${paymentsCurrentPage >= totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>
         `;
+    }
+}
+
+function copyTextToClipboard(text) {
+    if (navigator.clipboard?.writeText) {
+        return navigator.clipboard.writeText(text);
+    }
+
+    return new Promise((resolve, reject) => {
+        const tempInput = document.createElement('input');
+        tempInput.type = 'text';
+        tempInput.value = text;
+        tempInput.setAttribute('readonly', 'readonly');
+        tempInput.style.position = 'fixed';
+        tempInput.style.opacity = '0';
+        tempInput.style.pointerEvents = 'none';
+
+        document.body.appendChild(tempInput);
+        tempInput.focus();
+        tempInput.select();
+        tempInput.setSelectionRange(0, tempInput.value.length);
+
+        const copied = document.execCommand('copy');
+        document.body.removeChild(tempInput);
+
+        if (copied) {
+            resolve();
+            return;
+        }
+
+        reject(new Error('Tu dispositivo no permitió copiar el link.'));
+    });
+}
+
+async function getInvoicePublicRef(invoiceId) {
+    if (!invoiceId) {
+        throw new Error('Este abono no tiene factura asociada.');
+    }
+
+    const session = getSession();
+    if (!session) throw new Error('Sesión no válida.');
+
+    const response = await fetch(`/.netlify/functions/invoices?id=${invoiceId}`, {
+        headers: { 'x-admin-token': session.token }
+    });
+
+    if (!response.ok) {
+        throw new Error('No se pudo generar el enlace seguro de factura.');
+    }
+
+    const payload = await response.json();
+    const publicRef = payload?.invoice?.public_ref;
+
+    if (!publicRef) {
+        throw new Error('No se encontró referencia pública para la factura.');
+    }
+
+    return publicRef;
+}
+
+async function copiarLinkFactura(btn, invoiceId) {
+    try {
+        const publicRef = await getInvoicePublicRef(invoiceId);
+        const invoiceUrl = `${window.location.origin}/invoice/${encodeURIComponent(publicRef)}`;
+        await copyTextToClipboard(invoiceUrl);
+
+        const icon = btn?.querySelector('i');
+        const originalClass = icon?.className;
+
+        if (icon) {
+            icon.className = 'fas fa-check';
+        }
+        if (btn) {
+            btn.style.color = '#25d366';
+            btn.title = 'Link copiado';
+        }
+
+        setTimeout(() => {
+            if (icon && originalClass) {
+                icon.className = originalClass;
+            }
+            if (btn) {
+                btn.style.color = '';
+                btn.title = 'Copiar Link de Factura';
+            }
+        }, 2000);
+    } catch (error) {
+        alert(error.message || 'No se pudo copiar el link de la factura.');
+    }
+}
+
+async function verFactura(invoiceId) {
+    const newTab = window.open('', '_blank');
+    if (!newTab) {
+        alert('Tu navegador bloqueó la nueva pestaña. Habilita popups para este sitio.');
+        return;
+    }
+
+    try {
+        newTab.document.title = 'Cargando factura...';
+        newTab.document.body.innerHTML = '<p style="font-family:Segoe UI,Arial,sans-serif;padding:16px;color:#5b4a55;">Cargando factura...</p>';
+    } catch (_error) {
+        // Si el navegador restringe escritura inicial, continuamos con la navegación normal.
+    }
+
+    try {
+        const publicRef = await getInvoicePublicRef(invoiceId);
+        const invoiceUrl = `${window.location.origin}/invoice/${encodeURIComponent(publicRef)}`;
+        newTab.location.href = invoiceUrl;
+    } catch (error) {
+        if (!newTab.closed) {
+            newTab.close();
+        }
+        alert(error.message || 'No se pudo abrir la factura.');
     }
 }
 
