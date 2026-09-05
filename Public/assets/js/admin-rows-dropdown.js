@@ -60,10 +60,7 @@ function positionAdminRowsPerPageDropdownMenu(name) {
         top = Math.max(viewportPadding, rect.top - menuHeight - 6);
     }
 
-    let left = rect.left - menuWidth - 6;
-    if (left < viewportPadding) {
-        left = Math.min(window.innerWidth - viewportPadding - menuWidth, rect.left);
-    }
+    let left = rect.right - menuWidth;
     if (left < viewportPadding) {
         left = viewportPadding;
     }

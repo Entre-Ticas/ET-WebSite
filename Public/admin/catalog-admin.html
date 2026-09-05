@@ -36,37 +36,35 @@
                 <tfoot id="adminTableFooter" style="display: none;">
                     <tr>
                         <td id="footerColspan">
-                            <div class="admin-pagination-container" style="margin-top: 0;">
+                            <div class="admin-pagination-container order-pagination-layout" style="margin-top: 0;">
                                 <div class="pagination-info" id="paginationInfo">
                                     <!-- Se rellena con JS -->
                                 </div>
-                                <div class="pagination-controls order-pagination-layout">
-                                    <div class="pagination-rows-selector order-pagination-rows">
-                                        <span>Filas:</span>
-                                        <div class="order-rows-dropdown" id="catalogRowsDropdown">
-                                            <button type="button" class="order-rows-trigger" id="catalogRowsPerPageTrigger" aria-haspopup="listbox" aria-expanded="false" onclick="toggleCatalogRowsPerPageDropdown(event)">
-                                                <span id="catalogRowsPerPageSelectedLabel">10</span>
-                                                <i class="fas fa-chevron-down" aria-hidden="true"></i>
-                                            </button>
-                                            <div class="order-rows-menu" id="catalogRowsPerPageMenu" role="listbox" aria-label="Filas por página">
-                                                <button type="button" data-value="10" role="option" onclick="selectCatalogRowsPerPage('10')">10</button>
-                                                <button type="button" data-value="30" role="option" onclick="selectCatalogRowsPerPage('30')">30</button>
-                                                <button type="button" data-value="50" role="option" onclick="selectCatalogRowsPerPage('50')">50</button>
-                                                <button type="button" data-value="100" role="option" onclick="selectCatalogRowsPerPage('100')">100</button>
-                                                <button type="button" data-value="-1" role="option" onclick="selectCatalogRowsPerPage('-1')">Todos</button>
-                                            </div>
-                                            <select id="rowsPerPageSelector" class="order-rows-native-select" onchange="changeCatalogRowsPerPage(this.value)">
-                                                <option value="10">10</option>
-                                                <option value="30">30</option>
-                                                <option value="50">50</option>
-                                                <option value="100">100</option>
-                                                <option value="-1">Todos</option>
-                                            </select>
+                                <div class="pagination-rows-selector order-pagination-rows">
+                                    <span>Filas:</span>
+                                    <div class="order-rows-dropdown" id="catalogRowsDropdown">
+                                        <button type="button" class="order-rows-trigger" id="catalogRowsPerPageTrigger" aria-haspopup="listbox" aria-expanded="false" onclick="toggleCatalogRowsPerPageDropdown(event)">
+                                            <span id="catalogRowsPerPageSelectedLabel">10</span>
+                                            <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                                        </button>
+                                        <div class="order-rows-menu" id="catalogRowsPerPageMenu" role="listbox" aria-label="Filas por página">
+                                            <button type="button" data-value="10" role="option" onclick="selectCatalogRowsPerPage('10')">10</button>
+                                            <button type="button" data-value="30" role="option" onclick="selectCatalogRowsPerPage('30')">30</button>
+                                            <button type="button" data-value="50" role="option" onclick="selectCatalogRowsPerPage('50')">50</button>
+                                            <button type="button" data-value="100" role="option" onclick="selectCatalogRowsPerPage('100')">100</button>
+                                            <button type="button" data-value="-1" role="option" onclick="selectCatalogRowsPerPage('-1')">Todos</button>
                                         </div>
+                                        <select id="rowsPerPageSelector" class="order-rows-native-select" onchange="changeCatalogRowsPerPage(this.value)">
+                                            <option value="10">10</option>
+                                            <option value="30">30</option>
+                                            <option value="50">50</option>
+                                            <option value="100">100</option>
+                                            <option value="-1">Todos</option>
+                                        </select>
                                     </div>
-                                    <div class="pagination-nav" id="paginationNav">
-                                        <!-- Se rellena con JS -->
-                                    </div>
+                                </div>
+                                <div class="pagination-nav" id="paginationNav">
+                                    <!-- Se rellena con JS -->
                                 </div>
                             </div>
                         </td>

@@ -601,6 +601,122 @@ body {
     white-space: nowrap;
 }
 
+/* Variante de paginación tipo Órdenes, compartida por los módulos admin */
+.order-pagination-layout {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    flex-wrap: nowrap;
+    overflow: visible;
+}
+
+.order-pagination-layout .pagination-info {
+    white-space: nowrap;
+}
+
+.order-pagination-layout .order-pagination-rows {
+    margin-left: 0.25rem;
+    gap: 0.5rem;
+}
+
+.order-pagination-layout .order-rows-dropdown {
+    position: relative;
+}
+
+.order-pagination-layout .order-rows-trigger {
+    min-height: 34px;
+    min-width: 88px;
+    padding: 6px 11px;
+    border: 1px solid #f4c9cf;
+    border-radius: 999px;
+    background-color: #fff9fb;
+    color: var(--brown-text);
+    font-weight: 600;
+    box-shadow: none;
+    outline: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.7rem;
+    cursor: pointer;
+}
+
+.order-pagination-layout .order-rows-trigger i {
+    font-size: 0.72rem;
+    color: #c78f95;
+    transition: transform 0.2s ease;
+}
+
+.order-pagination-layout .order-rows-dropdown.open .order-rows-trigger {
+    border-color: var(--pink-accent);
+    box-shadow: 0 0 0 3px rgba(225, 155, 157, 0.14);
+}
+
+.order-pagination-layout .order-rows-dropdown.open .order-rows-trigger i {
+    transform: rotate(180deg);
+}
+
+.order-pagination-layout .order-rows-menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    min-width: 88px;
+    z-index: 4000;
+    background: #fff9fb;
+    border: 1px solid #f4c9cf;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(112, 78, 54, 0.14);
+    padding: 0.35rem;
+    display: none;
+}
+
+.order-pagination-layout .order-rows-dropdown.open .order-rows-menu {
+    display: grid;
+    gap: 0.2rem;
+}
+
+.order-pagination-layout .order-rows-menu button {
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--brown-text);
+    padding: 0.35rem 0.55rem;
+    text-align: left;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.order-pagination-layout .order-rows-menu button:hover,
+.order-pagination-layout .order-rows-menu button.is-active {
+    background: #f8dde2;
+    color: #6b4634;
+}
+
+.order-pagination-layout .order-rows-native-select {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.order-pagination-layout .order-pagination-rows::before {
+    content: "|";
+    color: #c6a8aa;
+    margin-right: 0.25rem;
+}
+
+.order-pagination-layout .pagination-nav {
+    margin-left: auto;
+}
+
+@media (max-width: 768px) {
+    .order-pagination-layout {
+        gap: 0.45rem;
+    }
+}
+
 /* Barra de herramientas para selección múltiple */
 .admin-multi-select-toolbar {
     display: flex;
