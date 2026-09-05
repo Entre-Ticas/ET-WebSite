@@ -2,6 +2,7 @@
 
 let homeContentCache = null;
 let autofillObserver = null;
+const loadedScriptPromises = new Map();
 
 function ensureAutofillTrap(enabled) {
     const existing = document.getElementById('browserAutofillTrap');
@@ -135,6 +136,45 @@ function updateMobileNavColumns() {
     const visibleCount = getVisibleNavLinkCount();
     const cols = pickMobileNavColumns(visibleCount || 1);
     nav.style.setProperty('--mobile-nav-cols', String(cols));
+}
+
+function loadScriptOnce(src) {
+    if (document.querySelector(`script[src="${src}"]`)) {
+        return Promise.resolve();
+    }
+
+    if (loadedScriptPromises.has(src)) {
+        return loadedScriptPromises.get(src);
+    }
+
+    const promise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = false;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error(`No se pudo cargar ${src}`));
+        document.head.appendChild(script);
+    });
+
+    loadedScriptPromises.set(src, promise);
+    return promise;
+}
+
+function getScriptsForPage(page) {
+    const scriptMap = {
+        catalog: ['assets/js/catalog.js'],
+        tracking: ['assets/js/tracking.js'],
+        info: ['assets/js/infoImg.js'],
+        informacion: ['assets/js/infoImg.js'],
+        'admin/tracking': ['assets/js/tracking-admin.js'],
+        'admin/catalog': ['assets/js/catalog-admin.js'],
+        'admin/order': ['assets/js/order_items-admin.js'],
+        'admin/invoices': ['assets/js/invoices-admin.js'],
+        'admin/payments': ['assets/js/payments-admin.js'],
+        invoice: ['assets/js/invoice.js']
+    };
+
+    return scriptMap[page] || [];
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -273,6 +313,11 @@ async function loadPage(page, param = null) {
 
     setTimeout(async () => {
         try {
+            const scriptsToLoad = getScriptsForPage(page);
+            if (scriptsToLoad.length > 0) {
+                await Promise.all(scriptsToLoad.map((src) => loadScriptOnce(src)));
+            }
+
             if (page === 'home') {
                 history.pushState({}, '', '/');
                 container.innerHTML = homeContentCache || (await fetch('/index.html').then(r => r.text())).match(/<div id="content-area">([\s\S]*)<\/div>/)[1];
