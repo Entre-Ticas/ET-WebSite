@@ -428,6 +428,16 @@ body {
     font-size: 0.8rem;    /* Iconos dentro de los botones de acción */
 }
 
+.admin-actions-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.admin-actions-inline .admin-btn-action {
+    margin: 0;
+}
+
 .admin-btn-copy-link {
     background: #fff;
     color: #704E36;
