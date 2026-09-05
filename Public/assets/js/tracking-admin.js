@@ -11,6 +11,23 @@
     let trackingCurrentPage = 1;
     let trackingRowsPerPage = 10;
 
+    registerAdminRowsPerPageDropdown({
+        name: 'tracking',
+        dropdownId: 'trackingRowsDropdown',
+        triggerId: 'trackingRowsPerPageTrigger',
+        menuId: 'trackingRowsPerPageMenu',
+        labelId: 'trackingRowsPerPageSelectedLabel',
+        selectorId: 'rowsPerPageSelector',
+        toggleFnName: 'toggleTrackingRowsPerPageDropdown',
+        selectFnName: 'selectTrackingRowsPerPage',
+        getValue: () => trackingRowsPerPage,
+        onSelect: (value) => {
+            trackingRowsPerPage = parseInt(value, 10);
+            trackingCurrentPage = 1;
+            renderTrackings();
+        }
+    });
+
     function resetTrackingViewState() {
         trackingGlobalSearch = '';
         trackingSortColumn = null;
@@ -25,6 +42,9 @@
 
         const rowsSelector = document.getElementById('rowsPerPageSelector');
         if (rowsSelector) rowsSelector.value = '10';
+
+        syncAdminRowsPerPageDropdown('tracking');
+        closeAdminRowsPerPageDropdown('tracking');
 
         document.querySelectorAll('.admin-filter-row input').forEach(input => {
             input.value = '';
@@ -196,6 +216,7 @@
 
         infoEl.innerHTML = `Mostrando <strong>${startItem} - ${endItem}</strong> de <strong>${totalRows}</strong>`;
         selectorEl.value = trackingRowsPerPage;
+        syncAdminRowsPerPageDropdown('tracking');
 
         navEl.innerHTML = `
             <button onclick="changeTrackingPage(${trackingCurrentPage - 1})" ${trackingCurrentPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>

@@ -11,6 +11,23 @@ let invoicesColumnFilters = {
     id: '', client_name: '', client_phone: '', invoice_date: '', status_name: '', items_count: '', paid: ''
 };
 
+registerAdminRowsPerPageDropdown({
+    name: 'invoices',
+    dropdownId: 'invoicesRowsDropdown',
+    triggerId: 'invoicesRowsPerPageTrigger',
+    menuId: 'invoicesRowsPerPageMenu',
+    labelId: 'invoicesRowsPerPageSelectedLabel',
+    selectorId: 'rowsPerPageSelector',
+    toggleFnName: 'toggleInvoicesRowsPerPageDropdown',
+    selectFnName: 'selectInvoicesRowsPerPage',
+    getValue: () => invoicesRowsPerPage,
+    onSelect: (value) => {
+        invoicesRowsPerPage = parseInt(value, 10);
+        invoicesCurrentPage = 1;
+        renderInvoices();
+    }
+});
+
 function resetInvoicesViewState() {
     invoicesGlobalSearch = '';
     invoicesCurrentPage = 1;
@@ -26,6 +43,9 @@ function resetInvoicesViewState() {
 
     const rowsSelector = document.getElementById('rowsPerPageSelector');
     if (rowsSelector) rowsSelector.value = '10';
+
+    syncAdminRowsPerPageDropdown('invoices');
+    closeAdminRowsPerPageDropdown('invoices');
 
     const multiSelectToggle = document.getElementById('multiSelectToggle');
     if (multiSelectToggle) multiSelectToggle.checked = false;
@@ -188,6 +208,7 @@ function renderInvoicePagination(totalRows) {
 
     if (infoEl) infoEl.innerHTML = `Mostrando <strong>${startItem} - ${endItem}</strong> de <strong>${totalRows}</strong>`;
     if (selectorEl) selectorEl.value = invoicesRowsPerPage;
+    syncAdminRowsPerPageDropdown('invoices');
     if (navEl) {
         navEl.innerHTML = `
             <button onclick="changeInvoicePage(${invoicesCurrentPage - 1})" ${invoicesCurrentPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
@@ -204,144 +225,15 @@ function changeInvoicePage(newPage) {
 
 function changeInvoiceRowsPerPage(value) {
     invoicesRowsPerPage = parseInt(value, 10);
-    invoicesCurrentPage = 1;
     renderInvoices();
 }
 
-function copyTextToClipboard(text) {
-    if (navigator.clipboard?.writeText) {
-        return navigator.clipboard.writeText(text);
-    }
-
-    return new Promise((resolve, reject) => {
-        const tempInput = document.createElement('input');
-        tempInput.type = 'text';
-        tempInput.value = text;
-        tempInput.setAttribute('readonly', 'readonly');
-        tempInput.style.position = 'fixed';
-        tempInput.style.opacity = '0';
-        tempInput.style.pointerEvents = 'none';
-
-        document.body.appendChild(tempInput);
-        tempInput.focus();
-        tempInput.select();
-        tempInput.setSelectionRange(0, tempInput.value.length);
-
-        const copied = document.execCommand('copy');
-        document.body.removeChild(tempInput);
-
-        if (copied) {
-            resolve();
-            return;
-        }
-
-        reject(new Error('Tu dispositivo no permitió copiar el link.'));
-    });
-}
-
-async function getInvoicePublicRef(invoiceId) {
-    if (!invoiceId) {
-        throw new Error('No se encontró una referencia válida para la factura.');
-    }
-
-    const session = getSession();
-    if (!session) throw new Error('Sesión no válida.');
-
-    const response = await fetch(`/.netlify/functions/invoices?id=${invoiceId}`, {
-        headers: { 'x-admin-token': session.token }
-    });
-
-    if (!response.ok) {
-        throw new Error('No se pudo generar el enlace seguro de factura.');
-    }
-
-    const payload = await response.json();
-    const publicRef = payload?.invoice?.public_ref;
-
-    if (!publicRef) {
-        throw new Error('No se encontró una referencia válida para la factura.');
-    }
-
-    return publicRef;
-}
-
-async function copiarLinkFactura(btn, invoiceId) {
-    try {
-        const refToUse = await getInvoicePublicRef(invoiceId);
-
-        const invoiceUrl = `${window.location.origin}/invoice/${encodeURIComponent(refToUse)}`;
-        await copyTextToClipboard(invoiceUrl);
-
-        const icon = btn?.querySelector('i');
-        const originalClass = icon?.className;
-
-        if (icon) {
-            icon.className = 'fas fa-check';
-        }
-        if (btn) {
-            btn.style.color = '#25d366';
-            btn.title = 'Link copiado';
-        }
-
-        setTimeout(() => {
-            if (icon && originalClass) {
-                icon.className = originalClass;
-            }
-            if (btn) {
-                btn.style.color = '';
-                btn.title = 'Copiar Link de Factura';
-            }
-        }, 2000);
-    } catch (error) {
-        alert(error.message || 'No se pudo copiar el link de la factura.');
-    }
+function copiarLinkFactura(btn, invoiceId) {
+    return copyInvoiceLink(btn, invoiceId);
 }
 
 async function viewInvoiceDetail(publicRef, invoiceId) {
-    const newTab = window.open('', '_blank');
-    if (!newTab) {
-        alert('Tu navegador bloqueó la nueva pestaña. Habilita popups para este sitio.');
-        return;
-    }
-
-    try {
-        newTab.document.title = 'Cargando factura...';
-        newTab.document.body.innerHTML = '<p style="font-family:Segoe UI,Arial,sans-serif;padding:16px;color:#5b4a55;">Cargando factura...</p>';
-    } catch (_error) {
-        // Si el navegador restringe escritura inicial, continuamos con la navegación normal.
-    }
-
-    try {
-        let refToUse = publicRef;
-
-        if (!refToUse) {
-            const session = getSession();
-            if (!session) throw new Error('Sesión no válida.');
-
-            const response = await fetch(`/.netlify/functions/invoices?id=${invoiceId}`, {
-                headers: { 'x-admin-token': session.token }
-            });
-
-            if (!response.ok) {
-                throw new Error('No se pudo generar el enlace seguro de factura.');
-            }
-
-            const payload = await response.json();
-            refToUse = payload?.invoice?.public_ref || null;
-        }
-
-        if (!refToUse) {
-            throw new Error('No se encontró una referencia válida para la factura.');
-        }
-
-        const invoiceUrl = `${window.location.origin}/invoice/${encodeURIComponent(refToUse)}`;
-        newTab.location.href = invoiceUrl;
-    } catch (error) {
-        if (!newTab.closed) {
-            newTab.close();
-        }
-        alert(error.message || 'No se pudo abrir la factura.');
-    }
+    return openInvoiceInNewTab(invoiceId, publicRef);
 }
 
 function backToInvoicesGrid() {

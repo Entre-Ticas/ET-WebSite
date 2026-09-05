@@ -166,11 +166,11 @@ function getScriptsForPage(page) {
         tracking: ['assets/js/tracking.js'],
         info: ['assets/js/infoImg.js'],
         informacion: ['assets/js/infoImg.js'],
-        'admin/tracking': ['assets/js/tracking-admin.js'],
-        'admin/catalog': ['assets/js/catalog-admin.js'],
-        'admin/order': ['assets/js/order_items-admin.js'],
-        'admin/invoices': ['assets/js/invoices-admin.js'],
-        'admin/payments': ['assets/js/payments-admin.js'],
+        'admin/tracking': ['assets/js/admin-rows-dropdown.js', 'assets/js/tracking-admin.js'],
+        'admin/catalog': ['assets/js/admin-rows-dropdown.js', 'assets/js/catalog-admin.js'],
+        'admin/order': ['assets/js/admin-rows-dropdown.js', 'assets/js/order_items-admin.js'],
+        'admin/invoices': ['assets/js/admin-rows-dropdown.js', 'assets/js/invoices-admin.js'],
+        'admin/payments': ['assets/js/admin-rows-dropdown.js', 'assets/js/payments-admin.js'],
         invoice: ['assets/js/invoice.js']
     };
 
@@ -315,7 +315,9 @@ async function loadPage(page, param = null) {
         try {
             const scriptsToLoad = getScriptsForPage(page);
             if (scriptsToLoad.length > 0) {
-                await Promise.all(scriptsToLoad.map((src) => loadScriptOnce(src)));
+                for (const src of scriptsToLoad) {
+                    await loadScriptOnce(src);
+                }
             }
 
             if (page === 'home') {

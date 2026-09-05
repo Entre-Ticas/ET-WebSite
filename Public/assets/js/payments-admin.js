@@ -10,6 +10,23 @@ let paymentsColumnFilters = {
     id: '', invoice_id: '', client_name: '', client_phone: '', amount: '', payment_method: '', reference_code: '', payment_date: ''
 };
 
+registerAdminRowsPerPageDropdown({
+    name: 'payments',
+    dropdownId: 'paymentsRowsDropdown',
+    triggerId: 'paymentsRowsPerPageTrigger',
+    menuId: 'paymentsRowsPerPageMenu',
+    labelId: 'paymentsRowsPerPageSelectedLabel',
+    selectorId: 'paymentsRowsPerPageSelector',
+    toggleFnName: 'togglePaymentsRowsPerPageDropdown',
+    selectFnName: 'selectPaymentsRowsPerPage',
+    getValue: () => paymentsRowsPerPage,
+    onSelect: (value) => {
+        paymentsRowsPerPage = parseInt(value, 10);
+        paymentsCurrentPage = 1;
+        renderPayments();
+    }
+});
+
 function normalizeInvoiceSearchText(value) {
     return String(value ?? '')
         .trim()
@@ -154,6 +171,8 @@ function resetPaymentsViewState() {
 
     const rowsSelector = document.getElementById('paymentsRowsPerPageSelector');
     if (rowsSelector) rowsSelector.value = '10';
+    syncAdminRowsPerPageDropdown('payments');
+    closeAdminRowsPerPageDropdown('payments');
 
     document.querySelectorAll('.admin-filter-row input').forEach(input => { input.value = ''; });
 }
@@ -298,6 +317,7 @@ function renderPaymentsPagination(totalRows) {
 
     if (infoEl) infoEl.innerHTML = `Mostrando <strong>${startItem} - ${endItem}</strong> de <strong>${totalRows}</strong>`;
     if (selectorEl) selectorEl.value = paymentsRowsPerPage;
+    syncAdminRowsPerPageDropdown('payments');
     if (navEl) {
         navEl.innerHTML = `
             <button onclick="changePaymentsPage(${paymentsCurrentPage - 1})" ${paymentsCurrentPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
@@ -307,118 +327,16 @@ function renderPaymentsPagination(totalRows) {
     }
 }
 
-function copyTextToClipboard(text) {
-    if (navigator.clipboard?.writeText) {
-        return navigator.clipboard.writeText(text);
-    }
-
-    return new Promise((resolve, reject) => {
-        const tempInput = document.createElement('input');
-        tempInput.type = 'text';
-        tempInput.value = text;
-        tempInput.setAttribute('readonly', 'readonly');
-        tempInput.style.position = 'fixed';
-        tempInput.style.opacity = '0';
-        tempInput.style.pointerEvents = 'none';
-
-        document.body.appendChild(tempInput);
-        tempInput.focus();
-        tempInput.select();
-        tempInput.setSelectionRange(0, tempInput.value.length);
-
-        const copied = document.execCommand('copy');
-        document.body.removeChild(tempInput);
-
-        if (copied) {
-            resolve();
-            return;
-        }
-
-        reject(new Error('Tu dispositivo no permitió copiar el link.'));
+function copiarLinkFactura(btn, invoiceId) {
+    return copyInvoiceLink(btn, invoiceId, {
+        missingMessage: 'Este abono no tiene factura asociada.'
     });
 }
 
-async function getInvoicePublicRef(invoiceId) {
-    if (!invoiceId) {
-        throw new Error('Este abono no tiene factura asociada.');
-    }
-
-    const session = getSession();
-    if (!session) throw new Error('Sesión no válida.');
-
-    const response = await fetch(`/.netlify/functions/invoices?id=${invoiceId}`, {
-        headers: { 'x-admin-token': session.token }
+function verFactura(invoiceId) {
+    return openInvoiceInNewTab(invoiceId, null, {
+        missingMessage: 'Este abono no tiene factura asociada.'
     });
-
-    if (!response.ok) {
-        throw new Error('No se pudo generar el enlace seguro de factura.');
-    }
-
-    const payload = await response.json();
-    const publicRef = payload?.invoice?.public_ref;
-
-    if (!publicRef) {
-        throw new Error('No se encontró referencia pública para la factura.');
-    }
-
-    return publicRef;
-}
-
-async function copiarLinkFactura(btn, invoiceId) {
-    try {
-        const publicRef = await getInvoicePublicRef(invoiceId);
-        const invoiceUrl = `${window.location.origin}/invoice/${encodeURIComponent(publicRef)}`;
-        await copyTextToClipboard(invoiceUrl);
-
-        const icon = btn?.querySelector('i');
-        const originalClass = icon?.className;
-
-        if (icon) {
-            icon.className = 'fas fa-check';
-        }
-        if (btn) {
-            btn.style.color = '#25d366';
-            btn.title = 'Link copiado';
-        }
-
-        setTimeout(() => {
-            if (icon && originalClass) {
-                icon.className = originalClass;
-            }
-            if (btn) {
-                btn.style.color = '';
-                btn.title = 'Copiar Link de Factura';
-            }
-        }, 2000);
-    } catch (error) {
-        alert(error.message || 'No se pudo copiar el link de la factura.');
-    }
-}
-
-async function verFactura(invoiceId) {
-    const newTab = window.open('', '_blank');
-    if (!newTab) {
-        alert('Tu navegador bloqueó la nueva pestaña. Habilita popups para este sitio.');
-        return;
-    }
-
-    try {
-        newTab.document.title = 'Cargando factura...';
-        newTab.document.body.innerHTML = '<p style="font-family:Segoe UI,Arial,sans-serif;padding:16px;color:#5b4a55;">Cargando factura...</p>';
-    } catch (_error) {
-        // Si el navegador restringe escritura inicial, continuamos con la navegación normal.
-    }
-
-    try {
-        const publicRef = await getInvoicePublicRef(invoiceId);
-        const invoiceUrl = `${window.location.origin}/invoice/${encodeURIComponent(publicRef)}`;
-        newTab.location.href = invoiceUrl;
-    } catch (error) {
-        if (!newTab.closed) {
-            newTab.close();
-        }
-        alert(error.message || 'No se pudo abrir la factura.');
-    }
 }
 
 function toLocalDateTimeInputValue(value) {
@@ -788,6 +706,95 @@ function changePaymentsRowsPerPage(value) {
     renderPayments();
 }
 
+function closePaymentsRowsPerPageDropdown() {
+    const dropdown = document.getElementById('paymentsRowsDropdown');
+    const trigger = document.getElementById('paymentsRowsPerPageTrigger');
+    const menu = document.getElementById('paymentsRowsPerPageMenu');
+    if (!dropdown || !trigger) return;
+    dropdown.classList.remove('open');
+    trigger.setAttribute('aria-expanded', 'false');
+    if (menu) {
+        menu.style.top = '';
+        menu.style.left = '';
+        menu.style.minWidth = '';
+    }
+}
+
+function positionPaymentsRowsPerPageMenu() {
+    const dropdown = document.getElementById('paymentsRowsDropdown');
+    const trigger = document.getElementById('paymentsRowsPerPageTrigger');
+    const menu = document.getElementById('paymentsRowsPerPageMenu');
+    if (!dropdown || !trigger || !menu || !dropdown.classList.contains('open')) return;
+
+    const rect = trigger.getBoundingClientRect();
+    const viewportPadding = 8;
+
+    menu.style.minWidth = `${Math.max(88, Math.round(rect.width))}px`;
+
+    const menuHeight = menu.offsetHeight || 180;
+    let top = rect.bottom + 6;
+
+    if (top + menuHeight > window.innerHeight - viewportPadding) {
+        top = Math.max(viewportPadding, rect.top - menuHeight - 6);
+    }
+
+    let left = rect.right - menu.offsetWidth;
+    if (left < viewportPadding) left = viewportPadding;
+    if (left + menu.offsetWidth > window.innerWidth - viewportPadding) {
+        left = Math.max(viewportPadding, window.innerWidth - menu.offsetWidth - viewportPadding);
+    }
+
+    menu.style.top = `${Math.round(top)}px`;
+    menu.style.left = `${Math.round(left)}px`;
+}
+
+function togglePaymentsRowsPerPageDropdown(event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
+    const dropdown = document.getElementById('paymentsRowsDropdown');
+    const trigger = document.getElementById('paymentsRowsPerPageTrigger');
+    if (!dropdown || !trigger) return;
+
+    const shouldOpen = !dropdown.classList.contains('open');
+    closePaymentsRowsPerPageDropdown();
+
+    if (shouldOpen) {
+        dropdown.classList.add('open');
+        trigger.setAttribute('aria-expanded', 'true');
+        requestAnimationFrame(positionPaymentsRowsPerPageMenu);
+    }
+}
+
+function selectPaymentsRowsPerPage(value) {
+    const selector = document.getElementById('paymentsRowsPerPageSelector');
+    if (!selector) return;
+
+    selector.value = String(value);
+    syncPaymentsRowsPerPageDropdown();
+    closePaymentsRowsPerPageDropdown();
+    changePaymentsRowsPerPage(value);
+}
+
+function syncPaymentsRowsPerPageDropdown() {
+    const selector = document.getElementById('paymentsRowsPerPageSelector');
+    const selectedLabel = document.getElementById('paymentsRowsPerPageSelectedLabel');
+    const menu = document.getElementById('paymentsRowsPerPageMenu');
+    if (!selector || !selectedLabel || !menu) return;
+
+    const selectedValue = String(selector.value || paymentsRowsPerPage);
+    const selectedOption = selector.querySelector(`option[value="${selectedValue}"]`);
+    selectedLabel.textContent = selectedOption ? selectedOption.textContent : selectedValue;
+
+    menu.querySelectorAll('button[data-value]').forEach((button) => {
+        const isActive = button.getAttribute('data-value') === selectedValue;
+        button.classList.toggle('is-active', isActive);
+        button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+}
+
 function initPaymentsAdminPage() {
     backToPaymentsGrid();
     editingPaymentId = null;
@@ -796,3 +803,16 @@ function initPaymentsAdminPage() {
 }
 
 window.initPaymentsAdminPage = initPaymentsAdminPage;
+window.togglePaymentsRowsPerPageDropdown = togglePaymentsRowsPerPageDropdown;
+window.selectPaymentsRowsPerPage = selectPaymentsRowsPerPage;
+
+document.addEventListener('click', (event) => {
+    const dropdown = document.getElementById('paymentsRowsDropdown');
+    if (!dropdown) return;
+    if (!dropdown.contains(event.target)) {
+        closePaymentsRowsPerPageDropdown();
+    }
+});
+
+window.addEventListener('resize', positionPaymentsRowsPerPageMenu);
+window.addEventListener('scroll', positionPaymentsRowsPerPageMenu, true);

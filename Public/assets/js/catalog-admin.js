@@ -5,6 +5,23 @@ let catalogRowsPerPage = 10;
 // NOTA: El ordenamiento y filtro por columna no están implementados aún en esta vista.
 // Se deja preparado para el futuro.
 
+registerAdminRowsPerPageDropdown({
+    name: 'catalog',
+    dropdownId: 'catalogRowsDropdown',
+    triggerId: 'catalogRowsPerPageTrigger',
+    menuId: 'catalogRowsPerPageMenu',
+    labelId: 'catalogRowsPerPageSelectedLabel',
+    selectorId: 'rowsPerPageSelector',
+    toggleFnName: 'toggleCatalogRowsPerPageDropdown',
+    selectFnName: 'selectCatalogRowsPerPage',
+    getValue: () => catalogRowsPerPage,
+    onSelect: (value) => {
+        catalogRowsPerPage = parseInt(value, 10);
+        catalogCurrentPage = 1;
+        filtrarProductos();
+    }
+});
+
 function resetCatalogViewState() {
     catalogCurrentPage = 1;
     catalogRowsPerPage = 10;
@@ -14,6 +31,9 @@ function resetCatalogViewState() {
 
     const rowsSelector = document.getElementById('rowsPerPageSelector');
     if (rowsSelector) rowsSelector.value = '10';
+
+    syncAdminRowsPerPageDropdown('catalog');
+    closeAdminRowsPerPageDropdown('catalog');
 }
 
 async function loadAdminProducts() {
@@ -133,6 +153,7 @@ function renderCatalogPagination(totalRows) {
     // Esta versión es más directa y robusta.
     infoEl.innerHTML = `Mostrando <strong>${startItem} - ${endItem}</strong> de <strong>${totalRows}</strong>`;
     selectorEl.value = catalogRowsPerPage;
+    syncAdminRowsPerPageDropdown('catalog');
     
     navEl.innerHTML = `
         <button onclick="changeCatalogPage(${catalogCurrentPage - 1})" ${catalogCurrentPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
