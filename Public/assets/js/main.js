@@ -26,8 +26,10 @@ function ensureAutofillTrap(enabled) {
     trap.style.pointerEvents = 'none';
 
     trap.innerHTML = [
+        '<form onsubmit="return false;">',
         '<input type="text" name="username" autocomplete="username" tabindex="-1">',
-        '<input type="password" name="password" autocomplete="current-password" tabindex="-1">'
+        '<input type="password" name="password" autocomplete="current-password" tabindex="-1">',
+        '</form>'
     ].join('');
 
     document.body.appendChild(trap);
@@ -168,9 +170,12 @@ function getScriptsForPage(page) {
         informacion: ['assets/js/infoImg.js'],
         'admin/tracking': ['assets/js/admin-rows-dropdown.js', 'assets/js/tracking-admin.js'],
         'admin/catalog': ['assets/js/admin-rows-dropdown.js', 'assets/js/catalog-admin.js'],
+        'admin/store': ['assets/js/store-admin.js'],
         'admin/order': ['assets/js/admin-rows-dropdown.js', 'assets/js/order_items-admin.js'],
         'admin/invoices': ['assets/js/admin-rows-dropdown.js', 'assets/js/invoices-admin.js'],
         'admin/payments': ['assets/js/admin-rows-dropdown.js', 'assets/js/payments-admin.js'],
+        StoreCatalog: ['assets/js/store-catalog.js'],
+        'store-catalog': ['assets/js/store-catalog.js'],
         invoice: ['assets/js/invoice.js']
     };
 
@@ -298,7 +303,7 @@ async function loadPage(page, param = null) {
     
     // --- INICIO: LÓGICA DE SEGURIDAD ---
     // Lista de rutas que requieren que el usuario esté autenticado.
-    const protectedRoutes = ['admin/tracking', 'admin/catalog', 'admin/order', 'admin/invoices', 'admin/payments'];
+    const protectedRoutes = ['admin/tracking', 'admin/catalog', 'admin/store', 'admin/order', 'admin/invoices', 'admin/payments'];
     // Verificamos si la página solicitada es protegida Y si el usuario NO tiene una sesión activa.
     // La función getSession() ya existe en auth.js y nos dice si hay un token válido.
     if (protectedRoutes.includes(page) && !getSession()) {
@@ -342,9 +347,12 @@ async function loadPage(page, param = null) {
                 'tracking': 'Tracking/tracking.html',
                 'admin/tracking': 'admin/tracking-admin.html',
                 'admin/catalog': 'admin/catalog-admin.html',
+                'admin/store': 'admin/store-admin.html',
                 'admin/order': 'admin/order_items-admin.html', // Nueva ruta estándar
                 'admin/invoices': 'admin/invoices-admin.html',
                 'admin/payments': 'admin/payments-admin.html',
+                'StoreCatalog': 'StoreCatalog/store-catalog.html',
+                'store-catalog': 'StoreCatalog/store-catalog.html',
                 'invoice': 'invoice/invoice.html',
                 'info': 'InformationImg/info.html',
                 'informacion': 'InformationImg/infoImg.html'
@@ -383,6 +391,8 @@ async function loadPage(page, param = null) {
                 window.initTrackingAdminPage();
             } else if (page === 'admin/catalog' && typeof window.initCatalogAdminPage === 'function') {
                 window.initCatalogAdminPage();
+            } else if (page === 'admin/store' && typeof window.initStoreAdminPage === 'function') {
+                window.initStoreAdminPage();
             } else if (page === 'admin/order' && typeof window.initOrderItemsAdminPage === 'function') {
                 window.initOrderItemsAdminPage();
             } else if (page === 'admin/invoices' && typeof window.initInvoicesAdminPage === 'function') {
@@ -391,6 +401,8 @@ async function loadPage(page, param = null) {
                 window.initInvoicePage(param);
             } else if (page === 'admin/payments' && typeof window.initPaymentsAdminPage === 'function') {
                 window.initPaymentsAdminPage();
+            } else if ((page === 'StoreCatalog' || page === 'store-catalog') && typeof window.initStoreCatalogPage === 'function') {
+                window.initStoreCatalogPage();
             }
 
         } catch (error) {

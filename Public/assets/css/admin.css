@@ -138,6 +138,178 @@
 }
 .admin-btn-agregar:hover { opacity: 0.85; }
 
+.store-admin-grid {
+    width: 100%;
+    margin-top: 1rem;
+}
+
+.store-admin-table {
+    width: 100%;
+    font-size: 0.9rem;
+    min-width: 700px;
+}
+
+.store-admin-table thead tr:first-child th {
+    background: #dfb1a5;
+    color: #fff;
+    font-weight: 700;
+    text-align: left;
+    padding: 0.7rem 0.8rem;
+    border-right: 1px solid rgba(255,255,255,0.22);
+    font-size: 0.9rem;
+}
+
+.store-admin-table .admin-filter-row td {
+    background: #f9e7e4;
+    border-bottom: 1px solid rgba(116, 83, 71, 0.2);
+    padding: 0.45rem 0.6rem;
+}
+
+.store-admin-table .admin-filter-row input {
+    width: 100%;
+    border: 1px solid rgba(116, 83, 71, 0.18);
+    background: rgba(255,255,255,0.75);
+    border-radius: 8px;
+    padding: 0.42rem 0.55rem;
+    box-sizing: border-box;
+    font-size: 0.8rem;
+}
+
+.store-admin-table tbody td {
+    padding: 0.58rem 0.8rem;
+    border-bottom: 1px solid rgba(116, 83, 71, 0.12);
+    vertical-align: middle;
+    background: rgba(255,255,255,0.33);
+    font-size: 0.92rem;
+}
+
+.store-name-cell {
+    font-weight: 700;
+    color: #4d342f;
+    font-size: 0.96rem;
+}
+
+.store-token-cell {
+    color: #7d5a57;
+    font-family: monospace;
+    font-size: 0.74rem;
+    word-break: break-all;
+}
+
+.store-action-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    white-space: nowrap;
+}
+
+.store-action-cell .admin-btn-action {
+    min-width: 28px;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    line-height: 1;
+    margin: 0;
+}
+
+.store-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 90px;
+    padding: 0.32rem 0.55rem;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1;
+    background: #f5e7e1;
+    color: #7b5448;
+}
+
+.store-badge.draft { background: #f4e8e3; color: #7c5d52; }
+.store-badge.active { background: #e8f7ee; color: #266c45; }
+.store-badge.expired { background: #f8e3e3; color: #9d4a4a; }
+
+.store-items-detail-view,
+.store-item-panel {
+    background: rgba(255,255,255,0.7);
+    border: 1px solid var(--pink-light);
+    border-radius: 16px;
+    box-shadow: 0 8px 22px rgba(133, 74, 62, 0.08);
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.store-item-detail-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    position: relative;
+    min-height: 42px;
+}
+
+.store-item-detail-header .admin-btn-back {
+    position: absolute;
+    left: 0;
+}
+
+.store-item-detail-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    font-weight: 800;
+    color: #56392f;
+}
+
+.store-items-table {
+    width: 100%;
+    min-width: 700px;
+}
+
+.store-items-table th {
+    background: #dfb1a5;
+    color: #fff;
+    padding: 0.8rem;
+}
+
+.store-items-table td {
+    background: rgba(255,255,255,0.35);
+    border-bottom: 1px solid rgba(116, 83, 71, 0.12);
+    padding: 0.7rem 0.8rem;
+    vertical-align: middle;
+}
+
+.store-items-thumbnail {
+    width: 54px;
+    height: 54px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 1px solid rgba(116, 83, 71, 0.12);
+    background: #fff;
+}
+
+.store-item-description {
+    max-width: 260px;
+    color: #5f3b2c;
+}
+
+.empty-state {
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px dashed rgba(95, 59, 44, 0.3);
+    border-radius: 14px;
+    padding: 1.4rem;
+    text-align: center;
+    color: #7a5246;
+}
+
 .admin-search-bar {
     display: flex;
     gap: 10px;

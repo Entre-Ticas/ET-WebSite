@@ -34,6 +34,7 @@
         <a onclick="loadPage('info')">Info</a>
         <a class="navAdminLink" onclick="loadPage('admin/tracking')" style="display:none;">Tracking-Admin</a>
         <a class="navAdminLink" onclick="loadPage('admin/catalog')" style="display:none;">Catalog-Admin</a>
+        <a class="navAdminLink" onclick="loadPage('admin/store')" style="display:none;">STORE-ADMIN</a>
         <a class="navAdminLink" onclick="loadPage('admin/order')" style="display: none;">Órdenes</a>
         <a class="navAdminLink" onclick="loadPage('admin/invoices')" style="display: none;">Facturas</a>
         <a class="navAdminLink" onclick="loadPage('admin/payments')" style="display: none;">Abonos</a>
@@ -74,14 +75,16 @@
     <div id="loginModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
         <div style="background:white; border-radius:16px; padding:2rem; width:90%; max-width:340px; text-align:center;">
             <h3 style="margin:0 0 1rem; color:var(--brown-text);">🔐 Iniciar Sesión</h3>
-            <input type="text" id="loginUser" placeholder="Usuario"
-                style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); box-sizing:border-box; margin-bottom:0.8rem;">
-            <input type="password" id="loginPassword" placeholder="Contraseña"
-                style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); box-sizing:border-box; margin-bottom:1rem;">
-            <button onclick="iniciarSesion()"
-                style="width:100%; padding:11px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
-                Entrar
-            </button>
+            <form onsubmit="event.preventDefault(); iniciarSesion();">
+                <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username"
+                    style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); box-sizing:border-box; margin-bottom:0.8rem;">
+                <input type="password" id="loginPassword" placeholder="Contraseña" autocomplete="current-password"
+                    style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--pink-light); box-sizing:border-box; margin-bottom:1rem;">
+                <button type="submit"
+                    style="width:100%; padding:11px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
+                    Entrar
+                </button>
+            </form>
             <div id="loginError" style="margin-top:0.8rem; color:red; font-size:0.85rem;"></div>
             <button onclick="cerrarLoginModal()"
                 style="margin-top:0.8rem; background:none; border:none; color:#aaa; cursor:pointer; font-size:0.85rem;">

@@ -1,0 +1,48 @@
+<div class="store-catalog-shell" style="max-width: 1100px; margin: 0 auto; padding: 1.5rem 1rem 3rem;">
+    <div class="store-catalog-topbar" style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:nowrap; margin-bottom:0.35rem; min-height:52px;">
+        <div style="display:inline-block; vertical-align:middle; min-width:0;">
+            <h2 id="storeCatalogTitle" style="margin:0; font-size:2.1rem; line-height:1.1; display:inline-block; vertical-align:middle;">Nike</h2>
+        </div>
+        <div style="display:inline-block; vertical-align:middle; white-space:nowrap;">
+            <div id="storeCountdown" style="display:inline-block; vertical-align:middle; font-weight:700; color:#b33b7b; background:#fff3f7; padding:0.55rem 0.85rem; border-radius:999px; min-width:70px; text-align:center; margin-right:0.6rem;">34:38</div>
+            <button id="storeCartButton" class="admin-btn success" type="button" aria-label="Carrito" title="Carrito" style="display:inline-block; vertical-align:middle; width:42px; height:42px; padding:0; border-radius:50%; font-size:1.15rem; background:#f6dfe9; color:#7d355e; border:none; box-shadow:none; line-height:42px; text-align:center;">
+                <i class="fas fa-shopping-cart" aria-hidden="true"></i>
+            </button>
+        </div>
+    </div>
+
+    <div id="storePhoneConfirmedLabel" style="display:none; margin:0; font-weight:700; color:#7a3d5d; display:inline-block; vertical-align:middle; white-space:nowrap;">
+        <span>Teléfono: <span id="storePhoneConfirmedValue">8888-8883</span></span>
+        <button id="storePhoneEditBtn" type="button" style="display:inline-block; vertical-align:middle; padding:0.38rem 0.75rem; background:#f2d6e1; border:none; border-radius:999px; color:#5c2039; font-weight:700; cursor:pointer; margin-left:0.6rem;">Editar</button>
+    </div>
+
+    <div id="storeCatalogStatus" class="catalog-status" style="display:flex;"><div class="spinner"></div><p>Cargando catálogo...</p></div>
+    <div id="storeCatalogGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:1rem;"></div>
+
+    <div id="storePhoneModal" class="modal-overlay" style="display:flex; z-index:1000; background:rgba(77, 60, 71, 0.68);">
+        <div class="modal-content" style="max-width:520px; width:min(92vw, 520px); background:#f7e8ef; border:2px solid #f0bfd0; border-radius:20px; box-shadow:0 18px 40px rgba(85, 35, 58, 0.25); padding:1.5rem 1.4rem;">
+            <div style="text-align:center; margin-bottom:1rem;">
+                <h3 style="margin:0; color:#6b2d4a; font-size:2rem;">Número de teléfono</h3>
+            </div>
+            <div style="margin-bottom:0.8rem;">
+                <input id="storeClientPhone" type="tel" value="" placeholder="Ej: 8888-0000" maxlength="9" inputmode="numeric" pattern="[0-9]{4}-?[0-9]{4}" style="width:100%; padding:0.9rem 1rem; font-size:1.1rem; border:2px solid #e5b9c7; border-radius:12px; background:#fff; outline:none; box-sizing:border-box;" autocomplete="off" />
+            </div>
+            <div id="storePhoneError" style="display:none; color:#b00020; font-size:0.88rem; margin-bottom:0.8rem;">Debes ingresar un teléfono válido antes de continuar.</div>
+            <button id="storePhoneSaveBtn" type="button" style="width:100%; padding:0.9rem 1rem; background:#f7b8d0; color:#5c2039; border:none; border-radius:999px; font-size:1.1rem; font-weight:700; cursor:pointer;">Guardar</button>
+        </div>
+    </div>
+
+    <div id="storeCartModal" class="modal-overlay" style="display:none;">
+        <div class="modal-content" style="max-width:760px;">
+            <div class="modal-header">
+                <h5 class="modal-title">Carrito</h5>
+                <button class="close-btn" onclick="closeStoreCart()">&times;</button>
+            </div>
+            <div id="storeCartBody" class="modal-body"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeStoreCart()">Seguir comprando</button>
+                <button class="btn btn-primary" onclick="confirmStoreOrder()">Comprar</button>
+            </div>
+        </div>
+    </div>
+</div>
