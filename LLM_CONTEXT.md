@@ -104,4 +104,17 @@ Toda nueva pantalla de formulario, admin o edición debe crearse con el patrón 
 
 ---
 
+## 8. Regla obligatoria: reutilizar el CSS de grids/tablas admin ya existente (NO inventar clases nuevas)
+Cuando se cree cualquier grid, tabla o listado nuevo en una pantalla de administración (Store, Store Items, Compras de la tienda, o cualquier módulo futuro), es OBLIGATORIO reutilizar EXPLÍCITAMENTE las clases CSS ya existentes definidas en `Public/assets/css/admin.css` y `Public/assets/css/style.css`. Está PROHIBIDO inventar clases nuevas de grid/tabla/botones de acción que dupliquen o reemplacen el sistema ya definido.
+
+*   Contenedor de tabla: usar siempre `admin-grid` (definido en `admin.css`), NO crear wrappers nuevos tipo `store-admin-grid`, `xxx-grid`, etc.
+*   Tabla: usar siempre `admin-table` (header rosa `var(--pink-accent)`, hover de filas, bordes), NO crear subclases nuevas tipo `store-admin-table`, `store-items-table`, etc. que sobreescriban colores de header o celdas.
+*   Fila de filtros por columna: usar siempre `admin-filter-row` (ya estilizada en `admin.css`), no crear una variante con otro color de fondo.
+*   Celda de acciones: usar siempre `admin-actions-cell` para la columna de botones, NO crear clases tipo `store-action-cell` con tamaños fijos (28x28, flex centrado, etc.).
+*   Botones de acción dentro de la tabla: usar siempre `admin-btn-action` + su variante de color (`btn-edit`, `btn-update`, `btn-copy`, `btn-invoice`, `btn-delete`, `btn-track`), ya definidas en `style.css`. No crear botones con estilos inline ni tamaños/colores nuevos.
+*   Antes de escribir CSS para un grid nuevo, se debe revisar primero `admin.css` y `style.css` para confirmar si la clase ya existe. Si existe, se reutiliza tal cual. Si el caso de uso es genuinamente distinto (por ejemplo `store-badge`, `store-name-cell` para datos específicos de negocio que no son grid/tabla/acciones), se puede agregar una clase nueva SOLO para ese detalle puntual, nunca para reemplazar el grid, la tabla o los botones de acción ya estandarizados.
+*   Esta regla existe porque en el pasado se crearon clases duplicadas (`store-admin-table`, `store-items-table`, `store-action-cell`) que rompían la consistencia visual con el resto de los admin (Orders, Tracking, Invoices, Payments). Todos los grids nuevos y existentes deben verse y comportarse igual.
+
+---
+
 

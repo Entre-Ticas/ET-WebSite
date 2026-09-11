@@ -173,7 +173,9 @@ function normalizeItem(item = {}) {
     name: safeItem.name || 'Sin nombre',
     price: Number(safeItem.price || 0),
     image_url: safeItem.image_url || '',
-    quantity: Number(safeItem.quantity || 0),
+    quantity: (safeItem.quantity === null || safeItem.quantity === undefined || safeItem.quantity === '')
+      ? null
+      : Number(safeItem.quantity),
     description: safeItem.description || '',
   };
 }
@@ -342,7 +344,9 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
         name: payload.name || '',
         price: Number(payload.price || 0),
         image_url: payload.image_url || payload.imageUrl || '',
-        quantity: Number(payload.quantity || 0),
+        quantity: (payload.quantity === null || payload.quantity === undefined || payload.quantity === '')
+          ? null
+          : Number(payload.quantity),
         description: payload.description || '',
       };
 
@@ -454,8 +458,8 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
       });
 
       const waNumber = (process.env.WHATSAPP_NUMBER || '70328006').replace(/\D/g, '');
-      const summary = rows.map((row) => `${row.quantity} x ${row.unit_price}`).join(', ');
-      const message = encodeURIComponent(`Hola, quiero confirmar mi pedido de la tienda ${store.nombre_tienda}.\n${summary}`);
+      const summary = items.map((item) => `${item.name || 'Item'} ${Number(item.quantity || 1)}x${Number(item.price || 0)}`).join('\n');
+      const message = encodeURIComponent(`Hola, quiero confirmar mi pedido de la tienda ${store.nombre_tienda}.\n${summary}\n\nCódigo de pedido: ${orderGroupId}`);
       return jsonResponse(201, {
         message: 'Pedido registrado.',
         order_group_id: orderGroupId,

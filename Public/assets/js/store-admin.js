@@ -189,7 +189,7 @@ async function renderStoreAdminList(stores) {
 
     root.innerHTML = `
         <div class="admin-grid">
-            <table class="admin-table store-admin-table">
+            <table class="admin-table">
                 <thead>
                     <tr>
                         <th>Tienda</th>
@@ -207,7 +207,7 @@ async function renderStoreAdminList(stores) {
                         <tr>
                             <td class="store-name-cell">${store.nombre_tienda}</td>
                             <td><span class="store-badge ${store.status}">${formatStoreStatus(store.status)}</span></td>
-                            <td class="store-action-cell">
+                            <td class="admin-actions-cell">
                                 <button class="admin-btn-action btn-edit" title="Abrir tienda" onclick="openStoreItemPanel('${store.id_store}')"><i class="fas fa-store"></i></button>
                                 <button class="admin-btn-action btn-edit" title="Editar tienda" onclick="openEditStorePanel('${store.id_store}')"><i class="fas fa-pen"></i></button>
                                 <button class="admin-btn-action btn-invoice" title="Ver items" onclick="viewStoreItems('${store.id_store}')"><i class="fas fa-boxes"></i></button>
@@ -246,8 +246,8 @@ async function openStoreItemPanel(storeId) {
             <label class="floating-label">Precio</label>
         </div>
         <div class="floating-field">
-            <input id="storeItemQuantity" class="floating-input" type="number" min="1" value="1" placeholder=" " autocomplete="new-password" />
-            <label class="floating-label">Cantidad</label>
+            <input id="storeItemQuantity" class="floating-input" type="number" min="0" placeholder=" " autocomplete="new-password" />
+            <label class="floating-label">Cantidad (0 o vacío = ilimitado)</label>
         </div>
         <div class="floating-field">
             <input id="storeItemImageUrl" class="floating-input" type="text" placeholder=" " autocomplete="new-password" />
@@ -257,18 +257,173 @@ async function openStoreItemPanel(storeId) {
             <textarea id="storeItemDescription" class="floating-input" placeholder=" " autocomplete="new-password"></textarea>
             <label class="floating-label">Descripción</label>
         </div>
-        <button class="admin-btn success" onclick="saveStoreItem('${storeId}', '${session.token}')">Guardar</button>
+        <button onclick="saveStoreItem('${storeId}', '${session.token}')"
+            style="width:100%; padding:12px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
+            Guardar Cambios
+        </button>
         <div id="storeItemMessage"></div>
     `;
 }
 
+let storeItemsCache = {};
+
+function openEditStoreItemPanel(storeId, itemId) {
+    const session = getSession();
+    const gridView = document.getElementById('storeAdminGridView');
+    const itemsDetailView = document.getElementById('storeItemsDetailView');
+    const panel = document.getElementById('storeItemFormPanel');
+    if (!panel) return;
+
+    const items = storeItemsCache[storeId] || [];
+    const item = items.find((it) => String(it.id) === String(itemId));
+    if (!item) return;
+
+    if (itemsDetailView) itemsDetailView.style.display = 'none';
+    if (gridView) gridView.style.display = 'none';
+    panel.style.display = 'block';
+    panel.dataset.storeId = storeId;
+    panel.dataset.itemId = itemId;
+    panel.innerHTML = `
+        <button onclick="closeStoreItemPanel()" class="admin-btn-back">← Volver</button>
+        <h3>Editar item</h3>
+        <div class="floating-field">
+            <input id="storeItemName" class="floating-input" type="text" placeholder=" " autocomplete="new-password" value="${String(item.name || '').replace(/"/g, '&quot;')}" />
+            <label class="floating-label">Nombre</label>
+        </div>
+        <div class="floating-field">
+            <input id="storeItemPrice" class="floating-input" type="number" step="0.01" placeholder=" " autocomplete="new-password" value="${Number(item.price || 0)}" />
+            <label class="floating-label">Precio</label>
+        </div>
+        <div class="floating-field">
+            <input id="storeItemQuantity" class="floating-input" type="number" min="0" placeholder=" " autocomplete="new-password" value="${(item.quantity === null || item.quantity === undefined) ? '' : Number(item.quantity)}" />
+            <label class="floating-label">Cantidad (0 o vacío = ilimitado)</label>
+        </div>
+        <div class="floating-field">
+            <input id="storeItemImageUrl" class="floating-input" type="text" placeholder=" " autocomplete="new-password" value="${String(item.image_url || '').replace(/"/g, '&quot;')}" />
+            <label class="floating-label">URL de imagen</label>
+        </div>
+        <div class="floating-field">
+            <textarea id="storeItemDescription" class="floating-input" placeholder=" " autocomplete="new-password">${String(item.description || '')}</textarea>
+            <label class="floating-label">Descripción</label>
+        </div>
+        <button onclick="saveStoreItemEdit('${storeId}', '${itemId}', '${session.token}')"
+            style="width:100%; padding:12px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
+            Guardar Cambios
+        </button>
+        <div id="storeItemMessage"></div>
+    `;
+}
+
+async function saveStoreItemEdit(storeId, itemId, token) {
+    const quantityRaw = document.getElementById('storeItemQuantity').value;
+    const payload = {
+        id: itemId,
+        name: document.getElementById('storeItemName').value.trim(),
+        price: Number(document.getElementById('storeItemPrice').value || 0),
+        quantity: quantityRaw === '' ? null : Number(quantityRaw),
+        image_url: document.getElementById('storeItemImageUrl').value.trim(),
+        description: document.getElementById('storeItemDescription').value.trim(),
+    };
+
+    if (!payload.name || !payload.price || payload.price <= 0) {
+        showStoreItemMessage('Nombre y precio válidos son requeridos.', true);
+        return;
+    }
+
+    const response = await fetch('/.netlify/functions/store-admin?action=update-store-item', {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-admin-token': token,
+        },
+        body: JSON.stringify(payload)
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        showStoreItemMessage(data.error || 'No se pudo actualizar el item.', true);
+        return;
+    }
+
+    showStoreItemMessage('Item actualizado.', false);
+    setTimeout(() => {
+        closeStoreItemPanel();
+    }, 600);
+}
+
+function deleteStoreItem(storeId, itemId) {
+    const items = storeItemsCache[storeId] || [];
+    const item = items.find((it) => String(it.id) === String(itemId));
+    const itemName = String(item?.name || `#${itemId}`).replace(/</g, '&lt;');
+    const price = Number(item?.price || 0);
+    const quantityText = (item?.quantity === null || item?.quantity === undefined || Number(item?.quantity) === 0)
+        ? 'Ilimitado'
+        : Number(item?.quantity);
+
+    const body = `
+        <p>¿Está seguro que desea eliminar el item <strong>${itemName}</strong>?</p>
+        <p><strong>Precio:</strong> ₡${price.toLocaleString('es-CR')} | <strong>Cantidad disponible:</strong> ${quantityText}</p>
+        <p style="color:#c0392b; margin-top:8px;"><strong>⚠ Esta acción no se puede deshacer.</strong></p>
+    `;
+
+    const footer = `
+        <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
+        <button class="btn btn-danger" onclick="confirmDeleteStoreItem('${storeId}', '${itemId}')">Sí, Eliminar</button>
+    `;
+
+    openGenericModal('Confirmar Eliminación', body, footer);
+}
+
+async function confirmDeleteStoreItem(storeId, itemId) {
+    const modalBody = document.getElementById('genericModalBody');
+    const modalFooter = document.getElementById('genericModalFooter');
+    if (modalBody) modalBody.innerHTML = '<div class="spinner"></div><p>Eliminando item...</p>';
+    if (modalFooter) modalFooter.innerHTML = '';
+
+    try {
+        const session = getSession();
+        if (!session) throw new Error('Sesión expirada.');
+
+        const response = await fetch(`/.netlify/functions/store-admin?action=delete-store-item&id=${encodeURIComponent(itemId)}`, {
+            method: 'DELETE',
+            headers: { 'x-admin-token': session.token }
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'No se pudo eliminar el item.');
+        }
+
+        if (modalBody) modalBody.innerHTML = '✅ Item eliminado con éxito.';
+        setTimeout(() => {
+            closeGenericModal();
+            viewStoreItems(storeId);
+        }, 900);
+    } catch (error) {
+        if (modalBody) modalBody.innerHTML = `⚠️ Error al eliminar: ${error.message}`;
+        if (modalFooter) modalFooter.innerHTML = '<button class="btn btn-secondary" onclick="closeGenericModal()">Cerrar</button>';
+    }
+}
+
 function closeStoreItemPanel() {
     const gridView = document.getElementById('storeAdminGridView');
+    const itemsDetailView = document.getElementById('storeItemsDetailView');
     const panel = document.getElementById('storeItemFormPanel');
-    if (!gridView || !panel) return;
+    if (!panel) return;
+
+    const isEditMode = Boolean(panel.dataset.itemId);
+    const storeId = panel.dataset.storeId;
     panel.style.display = 'none';
     panel.innerHTML = '';
-    gridView.style.display = 'block';
+    delete panel.dataset.itemId;
+    delete panel.dataset.storeId;
+
+    if (isEditMode && itemsDetailView && storeId) {
+        viewStoreItems(storeId);
+        return;
+    }
+
+    if (gridView) gridView.style.display = 'block';
 }
 
 let storeAdminCache = {};
@@ -321,7 +476,10 @@ function openEditStorePanel(storeId) {
             <input id="storeEditExpiresAt" class="floating-input" type="datetime-local" placeholder=" " value="${toDatetimeLocalValue(store.expires_at)}" />
             <label class="floating-label">Expira en</label>
         </div>
-        <button class="admin-btn success" onclick="saveStoreEdit('${storeId}')">Guardar</button>
+        <button onclick="saveStoreEdit('${storeId}')"
+            style="width:100%; padding:12px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
+            Guardar Cambios
+        </button>
         <div id="storeEditMessage"></div>
     `;
 }
@@ -377,11 +535,12 @@ async function saveStoreEdit(storeId) {
 }
 
 async function saveStoreItem(storeId, token) {
+    const quantityRaw = document.getElementById('storeItemQuantity').value;
     const payload = {
         store_id: storeId,
         name: document.getElementById('storeItemName').value.trim(),
         price: Number(document.getElementById('storeItemPrice').value || 0),
-        quantity: Number(document.getElementById('storeItemQuantity').value || 1),
+        quantity: quantityRaw === '' ? null : Number(quantityRaw),
         image_url: document.getElementById('storeItemImageUrl').value.trim(),
         description: document.getElementById('storeItemDescription').value.trim(),
     };
@@ -441,7 +600,7 @@ async function viewStoreItems(storeId) {
             </div>
         </div>
         <div class="admin-grid">
-            <table class="admin-table store-items-table">
+            <table class="admin-table">
                 <thead>
                     <tr>
                         <th>Foto</th>
@@ -449,6 +608,7 @@ async function viewStoreItems(storeId) {
                         <th>Precio</th>
                         <th>Cant.</th>
                         <th>Descripción</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -462,19 +622,25 @@ async function viewStoreItems(storeId) {
                                 <td>${imageButton}</td>
                                 <td class="store-name-cell">${item.name || 'Sin nombre'}</td>
                                 <td>₡${Number(item.price || 0).toLocaleString('es-CR')}</td>
-                                <td>${Number(item.quantity || 0)}</td>
+                                <td>${(item.quantity === null || item.quantity === undefined || Number(item.quantity) === 0) ? 'Ilimitado' : Number(item.quantity)}</td>
                                 <td class="store-item-description">${item.description || 'Sin descripción'}</td>
+                                <td class="admin-actions-cell">
+                                    <button class="admin-btn-action btn-edit" title="Editar item" onclick="openEditStoreItemPanel('${storeId}', '${item.id}')"><i class="fas fa-pen"></i></button>
+                                    <button class="admin-btn-action btn-delete" title="Eliminar item" onclick="deleteStoreItem('${storeId}', '${item.id}')"><i class="fas fa-trash-alt"></i></button>
+                                </td>
                             </tr>
                         `;
                     }).join('') || `
                         <tr>
-                            <td colspan="5" style="text-align:center; color:#7a5246; padding:1.2rem;">No hay items cargados.</td>
+                            <td colspan="6" style="text-align:center; color:#7a5246; padding:1.2rem;">No hay items cargados.</td>
                         </tr>
                     `}
                 </tbody>
             </table>
         </div>
     `;
+
+    storeItemsCache[storeId] = data.items || [];
 
     detailView.querySelectorAll('.admin-table-img-btn').forEach((button) => {
         button.addEventListener('click', () => {
@@ -521,7 +687,7 @@ async function viewStoreOrders(storeId) {
             </div>
         </div>
         <div class="admin-grid">
-            <table class="admin-table store-items-table">
+            <table class="admin-table">
                 <thead>
                     <tr>
                         <th>Foto</th>
@@ -647,6 +813,10 @@ window.closeStoreOrdersPanel = closeStoreOrdersPanel;
 window.saveStoreItem = saveStoreItem;
 window.viewStoreItems = viewStoreItems;
 window.closeStoreItemsPanel = closeStoreItemsPanel;
+window.openEditStoreItemPanel = openEditStoreItemPanel;
+window.saveStoreItemEdit = saveStoreItemEdit;
+window.deleteStoreItem = deleteStoreItem;
+window.confirmDeleteStoreItem = confirmDeleteStoreItem;
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {

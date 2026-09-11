@@ -115,10 +115,43 @@ function savePhoneFromModal() {
     showStorePhoneConfirmation();
 }
 
-function addToCart(itemId, itemName, itemPrice, itemImage) {
+function getCatalogItemStockLimit(itemId) {
+    const items = window.__storeCatalogItems || [];
+    const catalogItem = items.find((it) => String(it.id) === String(itemId));
+    if (!catalogItem) return { hasLimit: false, maxQty: null };
+    const hasLimit = catalogItem.quantity !== null && catalogItem.quantity !== undefined && Number(catalogItem.quantity) > 0;
+    return { hasLimit, maxQty: hasLimit ? Number(catalogItem.quantity) : null };
+}
+
+function addToCart(itemId, itemName, itemPrice, itemImage, maxQty) {
     const cart = getStoreCart();
-    const nextQty = (cart[itemId]?.qty || 0) + 1;
-    cart[itemId] = { qty: nextQty, name: itemName, price: Number(itemPrice || 0), image: itemImage || '' };
+    const currentQty = cart[itemId]?.qty || 0;
+    const hasLimit = maxQty !== null && maxQty !== undefined && !Number.isNaN(Number(maxQty));
+    if (hasLimit && currentQty >= Number(maxQty)) return;
+    const nextQty = currentQty + 1;
+    cart[itemId] = { qty: nextQty, name: itemName, price: Number(itemPrice || 0), image: itemImage || '', maxQty: hasLimit ? Number(maxQty) : null };
+    saveStoreCart(cart);
+    renderStoreCart();
+    renderStoreCatalogGrid();
+}
+
+function increaseCartItem(itemId) {
+    const cart = getStoreCart();
+    const item = cart[itemId];
+    if (!item) return;
+    const { hasLimit, maxQty } = getCatalogItemStockLimit(itemId);
+    if (hasLimit && Number(item.qty || 0) >= maxQty) return;
+    item.qty = Number(item.qty || 0) + 1;
+    item.maxQty = maxQty;
+    saveStoreCart(cart);
+    renderStoreCart();
+    renderStoreCatalogGrid();
+}
+
+function removeCartItem(itemId) {
+    const cart = getStoreCart();
+    if (!cart[itemId]) return;
+    delete cart[itemId];
     saveStoreCart(cart);
     renderStoreCart();
     renderStoreCatalogGrid();
@@ -180,6 +213,52 @@ function updateStoreCartBadge() {
     }
 }
 
+function updateStoreTopbarOffset() {
+    const topbarActions = document.getElementById('storeTopbarActions');
+    if (!topbarActions) return;
+
+    const siteNav = document.querySelector('nav');
+    const navHeight = siteNav ? Math.ceil(siteNav.getBoundingClientRect().height) : 0;
+    document.documentElement.style.setProperty('--site-nav-height', `${navHeight}px`);
+}
+
+function renderStoreClosedState(message) {
+    const status = document.getElementById('storeCatalogStatus');
+    const grid = document.getElementById('storeCatalogGrid');
+    const countdown = document.getElementById('storeCountdown');
+    const cartButton = document.getElementById('storeCartButton');
+    const title = document.getElementById('storeCatalogTitle');
+    const phoneLabel = document.getElementById('storePhoneConfirmedLabel');
+
+    if (countdown) countdown.style.display = 'none';
+    if (cartButton) cartButton.style.display = 'none';
+    if (grid) grid.style.display = 'none';
+    if (title) title.style.display = 'none';
+    if (phoneLabel) phoneLabel.style.display = 'none';
+    if (!status) return;
+
+    status.style.display = 'flex';
+    status.style.justifyContent = 'center';
+    status.style.alignItems = 'center';
+    status.style.padding = '2.25rem 0.25rem 1rem';
+    status.innerHTML = `
+        <div style="width:min(100%, 720px); background:linear-gradient(180deg, rgba(255,255,255,0.9), rgba(253,239,244,0.95)); border:1px solid #f2c8d9; border-radius:28px; box-shadow:0 18px 45px rgba(120, 45, 85, 0.12); overflow:hidden; text-align:center; padding:2rem 1.5rem 1.7rem;">
+            <div style="width:74px; height:74px; margin:0 auto 1rem; border-radius:24px; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg, #fde3ec 0%, #f9c9db 100%); color:#a94a78; font-size:1.9rem; box-shadow:0 10px 22px rgba(177,73,120,0.14);">
+                <i class="fas fa-door-closed" aria-hidden="true"></i>
+            </div>
+            <div style="display:inline-flex; align-items:center; gap:0.45rem; padding:0.32rem 0.75rem; border-radius:999px; background:#fff5f8; color:#b14978; font-size:0.82rem; font-weight:800; letter-spacing:0.03em; text-transform:uppercase; margin-bottom:0.85rem;">
+                Tienda cerrada
+            </div>
+            <h3 style="margin:0 0 0.8rem; color:#6b2d4a; font-size:2rem; line-height:1.1;">Por ahora no hay compras disponibles</h3>
+            <p style="margin:0 auto 1.3rem; max-width:560px; font-size:1.05rem; line-height:1.65; color:#7a3c5f;">${message}</p>
+            <div style="display:flex; justify-content:center; gap:0.8rem; flex-wrap:wrap; align-items:center;">
+                <a href="/" style="display:inline-flex; align-items:center; justify-content:center; min-width:160px; padding:0.85rem 1.05rem; border-radius:999px; background:var(--pink-accent); color:#fff; text-decoration:none; font-weight:800; border:1px solid var(--pink-accent); box-shadow:0 12px 24px rgba(225,155,157,0.22);">Volver al inicio</a>
+                <span style="color:#8f5a71; font-size:0.95rem;">Si necesitas ayuda, contacta con la tienda por WhatsApp.</span>
+            </div>
+        </div>
+    `;
+}
+
 function renderStoreCart() {
     const cart = getStoreCart();
     const body = document.getElementById('storeCartBody');
@@ -195,18 +274,27 @@ function renderStoreCart() {
     const deposit = Math.round(total * 0.5);
     body.innerHTML = `
         <div style="display:flex; flex-direction:column; gap:0.8rem;">
-            ${items.map(([id, item]) => `
+            ${items.map(([id, item]) => {
+                const { hasLimit, maxQty } = getCatalogItemStockLimit(id);
+                const reachedLimit = hasLimit && Number(item.qty || 0) >= maxQty;
+                return `
                 <div style="display:flex; justify-content:space-between; gap:1rem; align-items:center; border-bottom:1px solid #f0dfe5; padding-bottom:0.7rem;">
                     <div style="display:flex; align-items:center; gap:0.8rem;">
                         <img src="${item.image || 'https://placehold.co/80x80?text=No+img'}" style="width:48px; height:48px; object-fit:cover; border-radius:10px;" />
                         <div>
                             <div><strong>${item.name}</strong></div>
-                            <div style="font-size:0.82rem; color:#666;">Cantidad: ${item.qty}</div>
+                            <div style="display:flex; align-items:center; gap:0.5rem; margin-top:0.3rem;">
+                                <button type="button" onclick="decreaseFromCart('${id}')" style="width:26px; height:26px; border:1px solid rgba(198, 131, 156, 0.7); border-radius:8px; background:#fff; color:#5d2d42; font-size:1.1rem; line-height:1; cursor:pointer;">−</button>
+                                <span style="min-width:1.4rem; text-align:center;">${item.qty}</span>
+                                <button type="button" onclick="increaseCartItem('${id}')" ${reachedLimit ? 'disabled' : ''} style="width:26px; height:26px; border:1px solid rgba(198, 131, 156, 0.7); border-radius:8px; background:#fff; color:#5d2d42; font-size:1.1rem; line-height:1; cursor:pointer; ${reachedLimit ? 'opacity:0.45; cursor:not-allowed;' : ''}">+</button>
+                                <button type="button" onclick="removeCartItem('${id}')" title="Eliminar del carrito" style="margin-left:0.4rem; width:26px; height:26px; border:1px solid rgba(220,53,69,0.4); border-radius:8px; background:#fff5f5; color:#dc3545; font-size:0.85rem; line-height:1; cursor:pointer;"><i class="fas fa-trash-alt"></i></button>
+                            </div>
                         </div>
                     </div>
                     <div>₡${(Number(item.price || 0) * Number(item.qty || 0)).toLocaleString('es-CR')}</div>
                 </div>
-            `).join('')}
+            `;
+            }).join('')}
             <div style="display:flex; justify-content:space-between; align-items:center; font-weight:700; padding-top:0.5rem;">
                 <span>Total</span>
                 <span>₡${total.toLocaleString('es-CR')}</span>
@@ -247,7 +335,7 @@ async function confirmStoreOrder() {
         body: JSON.stringify({
             public_token: token,
             client_phone: phone,
-            items: entries.map((entry) => ({ id: entry.id, quantity: entry.quantity, price: entry.price }))
+            items: entries.map((entry) => ({ id: entry.id, quantity: entry.quantity, price: entry.price, name: entry.name }))
         })
     });
 
@@ -275,17 +363,20 @@ function renderStoreCatalogGrid() {
         const qty = cart[item.id]?.qty || 0;
         const itemName = String(item.name).replace(/"/g, '&quot;');
         const itemImage = String(item.image_url || '').replace(/"/g, '&quot;');
+        const hasLimit = item.quantity !== null && item.quantity !== undefined && Number(item.quantity) > 0;
+        const maxQty = hasLimit ? Number(item.quantity) : null;
+        const reachedLimit = hasLimit && qty >= maxQty;
 
         const quantityControls = `
             <div style="position:absolute; left:12px; right:12px; bottom:12px; z-index:2; display:flex; align-items:center; justify-content:center; gap:0.55rem; padding:0.42rem 0.6rem; border:1px solid rgba(198, 131, 156, 0.8); border-radius:14px; background:rgba(249, 237, 242, 0.96); box-shadow:0 8px 18px rgba(132, 76, 96, 0.12), inset 0 1px 0 rgba(255,255,255,0.8);">
                 <button type="button" data-action="decrease" data-item-id="${item.id}" style="width:34px; height:34px; border:1px solid rgba(198, 131, 156, 0.7); border-radius:10px; background:#fff; color:#5d2d42; font-size:1.5rem; line-height:1; cursor:pointer; box-shadow:inset 0 1px 0 rgba(255,255,255,0.8);">−</button>
                 <span style="min-width:2.2rem; text-align:center; font-weight:700; color:#5d2d42; font-size:1.1rem; background:#fff; border:1px solid rgba(198, 131, 156, 0.7); border-radius:10px; padding:0.25rem 0.5rem; box-shadow:inset 0 1px 0 rgba(255,255,255,0.8);">${qty}</span>
-                <button type="button" data-action="increase" data-item-id="${item.id}" data-item-name="${itemName}" data-item-price="${Number(item.price || 0)}" data-item-image="${itemImage}" style="width:34px; height:34px; border:1px solid rgba(198, 131, 156, 0.7); border-radius:10px; background:#fff; color:#5d2d42; font-size:1.5rem; line-height:1; cursor:pointer; box-shadow:inset 0 1px 0 rgba(255,255,255,0.8);">+</button>
+                <button type="button" data-action="increase" data-item-id="${item.id}" data-item-name="${itemName}" data-item-price="${Number(item.price || 0)}" data-item-image="${itemImage}" data-max-qty="${hasLimit ? maxQty : ''}" ${reachedLimit ? 'disabled' : ''} style="width:34px; height:34px; border:1px solid rgba(198, 131, 156, 0.7); border-radius:10px; background:#fff; color:#5d2d42; font-size:1.5rem; line-height:1; cursor:pointer; box-shadow:inset 0 1px 0 rgba(255,255,255,0.8); ${reachedLimit ? 'opacity:0.45; cursor:not-allowed;' : ''}">+</button>
             </div>
         `;
 
         const addButton = `
-            <button type="button" data-action="increase" data-item-id="${item.id}" data-item-name="${itemName}" data-item-price="${Number(item.price || 0)}" data-item-image="${itemImage}" style="position:absolute; left:12px; right:12px; bottom:12px; z-index:2; width:auto; padding:0.75rem 0.9rem; border:1px solid rgba(198, 131, 156, 0.75); border-radius:12px; background:rgba(243, 191, 209, 0.96); color:#5d2d42; font-size:0.95rem; font-weight:700; cursor:pointer; box-shadow:0 8px 16px rgba(132, 76, 96, 0.12), inset 0 1px 0 rgba(255,255,255,0.8);">Agregar al carrito</button>
+            <button type="button" data-action="increase" data-item-id="${item.id}" data-item-name="${itemName}" data-item-price="${Number(item.price || 0)}" data-item-image="${itemImage}" data-max-qty="${hasLimit ? maxQty : ''}" style="position:absolute; left:12px; right:12px; bottom:12px; z-index:2; width:auto; padding:0.75rem 0.9rem; border:1px solid rgba(198, 131, 156, 0.75); border-radius:12px; background:rgba(243, 191, 209, 0.96); color:#5d2d42; font-size:0.95rem; font-weight:700; cursor:pointer; box-shadow:0 8px 16px rgba(132, 76, 96, 0.12), inset 0 1px 0 rgba(255,255,255,0.8);">Agregar al carrito</button>
         `;
 
         return `
@@ -299,7 +390,7 @@ function renderStoreCatalogGrid() {
                     <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.08em; color:#9b7f8d;">Tienda</div>
                     <h3 style="margin:0.35rem 0; font-size:1.05rem;">${item.name}</h3>
                     <div style="font-weight:700; color:#b33b7b; margin:0.4rem 0;">₡${Number(item.price || 0).toLocaleString('es-CR')}</div>
-                    <div style="color:#666; font-size:0.82rem;">${item.quantity || 0} disponibles</div>
+                    ${hasLimit ? `<div style="color:#666; font-size:0.82rem;">${maxQty} disponibles</div>` : ''}
                 </div>
             </div>
         `;
@@ -307,11 +398,14 @@ function renderStoreCatalogGrid() {
 
     container.querySelectorAll('[data-action="increase"]').forEach((button) => {
         button.addEventListener('click', () => {
+            if (button.disabled) return;
             const itemId = Number(button.dataset.itemId);
             const itemName = button.dataset.itemName || '';
             const itemPrice = Number(button.dataset.itemPrice || 0);
             const itemImage = button.dataset.itemImage || '';
-            addToCart(itemId, itemName, itemPrice, itemImage);
+            const maxQtyRaw = button.dataset.maxQty;
+            const maxQty = maxQtyRaw === '' || maxQtyRaw === undefined ? null : Number(maxQtyRaw);
+            addToCart(itemId, itemName, itemPrice, itemImage, maxQty);
         });
     });
 
@@ -421,7 +515,14 @@ async function loadStoreCatalog() {
         });
         if (!response.ok) {
             const data = await response.json().catch(() => ({}));
-            throw new Error(data.error || 'No se pudo cargar el catálogo.');
+            const closedMessage = data.error || 'La tienda está cerrada en este momento.';
+            if (response.status === 410 || /expirada|no está activa|cerrada/i.test(closedMessage)) {
+                renderStoreClosedState(closedMessage);
+                if (title) title.textContent = 'Tienda cerrada';
+                if (meta) meta.textContent = 'Catálogo temporalmente no disponible';
+                return;
+            }
+            throw new Error(closedMessage || 'No se pudo cargar el catálogo.');
         }
 
         const data = await response.json();
@@ -437,6 +538,13 @@ async function loadStoreCatalog() {
     updateStoreCartBadge();
 
     } catch (error) {
+        const closedMessage = error?.message || 'La tienda está cerrada en este momento.';
+        if (/expirada|no está activa|cerrada/i.test(closedMessage)) {
+            renderStoreClosedState(closedMessage);
+            if (title) title.textContent = 'Tienda cerrada';
+            if (meta) meta.textContent = 'Catálogo temporalmente no disponible';
+            return;
+        }
         if (status) {
             status.innerHTML = `<p class="error-msg">⚠️ ${error.message}</p>`;
         }
@@ -486,9 +594,20 @@ function initStoreCatalogPhoneModal() {
 function initStoreCatalogPage() {
     initStoreCatalogPhoneModal();
     ensurePhoneModalState();
+    updateStoreTopbarOffset();
     loadStoreCatalog();
     renderStoreCart();
     updateStoreCartBadge();
+
+    window.addEventListener('resize', () => {
+        updateStoreTopbarOffset();
+    }, { passive: true });
+    window.addEventListener('orientationchange', () => {
+        updateStoreTopbarOffset();
+    }, { passive: true });
+    window.addEventListener('load', () => {
+        updateStoreTopbarOffset();
+    }, { once: true });
 }
 
 window.loadStoreCatalog = loadStoreCatalog;
@@ -497,6 +616,8 @@ window.closeStoreCart = closeStoreCart;
 window.confirmStoreOrder = confirmStoreOrder;
 window.addToCart = addToCart;
 window.decreaseFromCart = decreaseFromCart;
+window.increaseCartItem = increaseCartItem;
+window.removeCartItem = removeCartItem;
 window.savePhoneFromModal = savePhoneFromModal;
 window.normalizeStorePhoneInput = normalizeStorePhoneInput;
 window.ensurePhoneModalState = ensurePhoneModalState;
