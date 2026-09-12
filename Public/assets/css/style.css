@@ -507,7 +507,12 @@ body {
     border-radius: 6px;
     margin: 0 2px;
     transition: all 0.2s ease;
-    font-size: 0.8rem; 
+    font-size: 0.8rem;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
 }
 
 .admin-btn-action:hover {

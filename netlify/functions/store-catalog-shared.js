@@ -180,6 +180,12 @@ function normalizeItem(item = {}) {
   };
 }
 
+function formatStoreCurrency(value) {
+  const amount = Number(value || 0);
+  if (!Number.isFinite(amount)) return '¢0';
+  return `¢${amount.toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+}
+
 async function handleStoreRequest({ httpMethod, headers = {}, queryStringParameters = {}, body = {} }) {
   const action = queryStringParameters.action || body.action || 'list-stores';
   const payload = typeof body === 'string' ? JSON.parse(body || '{}') : body;
@@ -427,7 +433,7 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
       const storeId = queryStringParameters.store_id || payload.store_id || payload.storeId;
       if (!storeId) return jsonResponse(400, { error: 'Falta store_id.' });
 
-      const orders = await supabaseRequest(`/rest/v1/store_orders?store_id=eq.${encodeURIComponent(storeId)}&select=client_phone,item_id,quantity,created_at`);
+      const orders = await supabaseRequest(`/rest/v1/store_orders?store_id=eq.${encodeURIComponent(storeId)}&select=client_phone,item_id,quantity,unit_price,created_at`);
       if (!Array.isArray(orders) || !orders.length) {
         return jsonResponse(200, { customers: [] });
       }
@@ -458,16 +464,19 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
         const item = itemMap[order.item_id] || {};
         const name = item.name || 'Artículo sin nombre';
         const quantity = Number(order.quantity || 0);
+        const unitPrice = Number(order.unit_price || item.price || 0);
         grouped[key].total_quantity += quantity;
 
         const existingItem = grouped[key].items.find((entry) => entry.item_id === order.item_id);
         if (existingItem) {
           existingItem.quantity += quantity;
+          existingItem.unit_price = existingItem.unit_price || unitPrice;
         } else {
           grouped[key].items.push({
             item_id: order.item_id,
             name,
             quantity,
+            unit_price: unitPrice,
             image_url: item.image_url || '',
           });
         }
@@ -483,6 +492,7 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
               item_id: item.item_id,
               name: item.name,
               quantity: Number(item.quantity || 0),
+              unit_price: Number(item.unit_price || 0),
               image_url: item.image_url || '',
             }))
           }))
@@ -527,9 +537,13 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
       });
 
       const waNumber = (process.env.WHATSAPP_NUMBER || '70328006').replace(/\D/g, '');
-      const summary = items.map((item) => `${item.name || 'Item'} ${Number(item.quantity || 1)}x${Number(item.price || 0)}`).join('\n');
-      const clientNameLine = clientName ? `Nombre: ${clientName}\n` : '';
-      const message = encodeURIComponent(`Hola, quiero confirmar mi pedido de la tienda ${store.nombre_tienda}.\n${clientNameLine}${summary}\n\nCódigo de pedido: ${orderGroupId}`);
+      const summary = items.map((item) => {
+        const quantity = Number(item.quantity || 1);
+        const price = Number(item.price || 0);
+        return `${item.name || 'Item'}: ${quantity} x ${formatStoreCurrency(price)}`;
+      }).join('\n');
+      const customerGreeting = clientName ? `Hola soy *${clientName}*\n` : 'Hola\n';
+      const message = encodeURIComponent(`${customerGreeting}Quiero confirmar mi pedido de la tienda ${store.nombre_tienda}.\n${summary}\n\nCódigo de pedido: ${orderGroupId}`);
       return jsonResponse(201, {
         message: 'Pedido registrado.',
         order_group_id: orderGroupId,

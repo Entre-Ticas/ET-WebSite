@@ -204,6 +204,12 @@ function normalizeStoreClientPhoneForWa(phone) {
     return digits;
 }
 
+function formatStoreCurrency(value) {
+    const amount = Number(value || 0);
+    if (!Number.isFinite(amount)) return '¢0';
+    return `¢${amount.toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+}
+
 async function copyStoreLink(publicToken) {
     const link = getStorePublicLink(publicToken);
     try {
@@ -296,6 +302,77 @@ async function renderStoreAdminList(stores) {
     bindStoreAdminFilters();
 }
 
+let pendingStoreItemImageFile = null;
+
+function getPreferredStoreItemImageName(file, itemName) {
+    const nameBase = (itemName || '').trim();
+    const originalName = (file && file.name) ? file.name : 'producto';
+    const extension = originalName.includes('.') ? originalName.slice(originalName.lastIndexOf('.')) : '';
+    const normalizedBase = nameBase
+        .toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'producto';
+
+    return `${normalizedBase}${extension}`;
+}
+
+async function uploadStoreItemImageFile(file, token, itemName = '') {
+    const response = await fetch('/.netlify/functions/upload-image', {
+        method: 'POST',
+        headers: {
+            'Content-Type': file.type,
+            'x-admin-token': token,
+            'x-file-name': getPreferredStoreItemImageName(file, itemName)
+        },
+        body: file
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data.error || 'No se pudo subir la imagen.');
+    }
+
+    if (!data.imageUrl) {
+        throw new Error('No se recibió URL de imagen.');
+    }
+
+    return data.imageUrl;
+}
+
+async function handleStoreItemImageUpload(event, formType) {
+    const fileInput = event.target;
+    const file = fileInput.files[0];
+    if (!file) return;
+
+    const statusEl = document.getElementById(`${formType}ImageStatus`);
+    const previewImg = document.getElementById(`${formType}ImagePreview`).querySelector('img');
+    const urlHiddenInput = document.getElementById(`${formType}ImageUrl`);
+
+    pendingStoreItemImageFile = file;
+
+    if (previewImg) {
+        previewImg.src = URL.createObjectURL(file);
+    }
+
+    if (statusEl) {
+        statusEl.textContent = 'Vista previa lista. Se subirá al guardar.';
+        statusEl.style.color = 'var(--brown-text)';
+    }
+
+    if (urlHiddenInput && !urlHiddenInput.value) {
+        urlHiddenInput.value = '';
+    }
+}
+
+function triggerStoreItemFileUpload(formType) {
+    document.getElementById(`${formType}ImageUpload`).click();
+}
+
+function triggerStoreItemCameraUpload(formType) {
+    document.getElementById(`${formType}CameraUpload`).click();
+}
+
 async function openStoreItemPanel(storeId) {
     const session = getSession();
     const gridView = document.getElementById('storeAdminGridView');
@@ -305,9 +382,26 @@ async function openStoreItemPanel(storeId) {
     gridView.style.display = 'none';
     panel.style.display = 'block';
     panel.dataset.storeId = storeId;
+    pendingStoreItemImageFile = null;
     panel.innerHTML = `
         <button onclick="closeStoreItemPanel()" class="admin-btn-back">← Volver</button>
         <h3>Cargar item</h3>
+        <div class="image-upload-container">
+            <label for="storeItemImageUpload">Imagen del Producto</label>
+            <div class="image-upload-content">
+                <div class="image-preview" id="storeItemImagePreview">
+                    <img src="https://placehold.co/100x100/E19B9D/FFFFFF?text=?" alt="Vista previa" />
+                </div>
+                <div class="image-upload-buttons">
+                    <button class="admin-btn" type="button" onclick="triggerStoreItemFileUpload('storeItem')" title="Subir foto"><i class="fas fa-upload"></i></button>
+                    <button class="admin-btn" type="button" onclick="triggerStoreItemCameraUpload('storeItem')" title="Tomar foto"><i class="fas fa-camera"></i></button>
+                </div>
+            </div>
+            <input type="file" accept="image/*" id="storeItemImageUpload" class="image-upload-input" onchange="handleStoreItemImageUpload(event, 'storeItem')">
+            <input type="file" accept="image/*" capture id="storeItemCameraUpload" class="image-upload-input" onchange="handleStoreItemImageUpload(event, 'storeItem')">
+            <input type="hidden" id="storeItemImageUrl">
+            <small class="image-upload-status" id="storeItemImageStatus"></small>
+        </div>
         <div class="floating-field">
             <input id="storeItemName" class="floating-input" type="text" placeholder=" " autocomplete="new-password" />
             <label class="floating-label">Nombre</label>
@@ -319,10 +413,6 @@ async function openStoreItemPanel(storeId) {
         <div class="floating-field">
             <input id="storeItemQuantity" class="floating-input" type="number" min="0" placeholder=" " autocomplete="new-password" />
             <label class="floating-label">Cantidad (0 o vacío = ilimitado)</label>
-        </div>
-        <div class="floating-field">
-            <input id="storeItemImageUrl" class="floating-input" type="text" placeholder=" " autocomplete="new-password" />
-            <label class="floating-label">URL de imagen</label>
         </div>
         <div class="floating-field">
             <textarea id="storeItemDescription" class="floating-input" placeholder=" " autocomplete="new-password"></textarea>
@@ -354,9 +444,26 @@ function openEditStoreItemPanel(storeId, itemId) {
     panel.style.display = 'block';
     panel.dataset.storeId = storeId;
     panel.dataset.itemId = itemId;
+    pendingStoreItemImageFile = null;
     panel.innerHTML = `
         <button onclick="closeStoreItemPanel()" class="admin-btn-back">← Volver</button>
         <h3>Editar item</h3>
+        <div class="image-upload-container">
+            <label for="storeItemImageUpload">Imagen del Producto</label>
+            <div class="image-upload-content">
+                <div class="image-preview" id="storeItemImagePreview">
+                    <img src="${String(item.image_url || 'https://placehold.co/100x100/E19B9D/FFFFFF?text=?')}" alt="Vista previa" />
+                </div>
+                <div class="image-upload-buttons">
+                    <button class="admin-btn" type="button" onclick="triggerStoreItemFileUpload('storeItem')" title="Subir foto"><i class="fas fa-upload"></i></button>
+                    <button class="admin-btn" type="button" onclick="triggerStoreItemCameraUpload('storeItem')" title="Tomar foto"><i class="fas fa-camera"></i></button>
+                </div>
+            </div>
+            <input type="file" accept="image/*" id="storeItemImageUpload" class="image-upload-input" onchange="handleStoreItemImageUpload(event, 'storeItem')">
+            <input type="file" accept="image/*" capture id="storeItemCameraUpload" class="image-upload-input" onchange="handleStoreItemImageUpload(event, 'storeItem')">
+            <input type="hidden" id="storeItemImageUrl" value="${String(item.image_url || '').replace(/"/g, '&quot;')}">
+            <small class="image-upload-status" id="storeItemImageStatus"></small>
+        </div>
         <div class="floating-field">
             <input id="storeItemName" class="floating-input" type="text" placeholder=" " autocomplete="new-password" value="${String(item.name || '').replace(/"/g, '&quot;')}" />
             <label class="floating-label">Nombre</label>
@@ -368,10 +475,6 @@ function openEditStoreItemPanel(storeId, itemId) {
         <div class="floating-field">
             <input id="storeItemQuantity" class="floating-input" type="number" min="0" placeholder=" " autocomplete="new-password" value="${(item.quantity === null || item.quantity === undefined) ? '' : Number(item.quantity)}" />
             <label class="floating-label">Cantidad (0 o vacío = ilimitado)</label>
-        </div>
-        <div class="floating-field">
-            <input id="storeItemImageUrl" class="floating-input" type="text" placeholder=" " autocomplete="new-password" value="${String(item.image_url || '').replace(/"/g, '&quot;')}" />
-            <label class="floating-label">URL de imagen</label>
         </div>
         <div class="floating-field">
             <textarea id="storeItemDescription" class="floating-input" placeholder=" " autocomplete="new-password">${String(item.description || '')}</textarea>
@@ -386,13 +489,40 @@ function openEditStoreItemPanel(storeId, itemId) {
 }
 
 async function saveStoreItemEdit(storeId, itemId, token) {
+    const statusEl = document.getElementById('storeItemImageStatus');
+    const urlHiddenInput = document.getElementById('storeItemImageUrl');
+
+    let imageUrl = (urlHiddenInput?.value || '').trim();
+    if (pendingStoreItemImageFile) {
+        try {
+            const itemName = document.getElementById('storeItemName')?.value || '';
+            if (statusEl) {
+                statusEl.textContent = 'Subiendo imagen...';
+                statusEl.style.color = 'var(--brown-text)';
+            }
+            imageUrl = await uploadStoreItemImageFile(pendingStoreItemImageFile, token, itemName);
+            if (urlHiddenInput) urlHiddenInput.value = imageUrl;
+            if (statusEl) {
+                statusEl.textContent = '✅ Imagen subida.';
+                statusEl.style.color = '#28a745';
+            }
+        } catch (error) {
+            if (statusEl) {
+                statusEl.textContent = `Error: ${error.message}`;
+                statusEl.style.color = 'red';
+            }
+            showStoreItemMessage(error.message, true);
+            return;
+        }
+    }
+
     const quantityRaw = document.getElementById('storeItemQuantity').value;
     const payload = {
         id: itemId,
         name: document.getElementById('storeItemName').value.trim(),
         price: Number(document.getElementById('storeItemPrice').value || 0),
         quantity: quantityRaw === '' ? null : Number(quantityRaw),
-        image_url: document.getElementById('storeItemImageUrl').value.trim(),
+        image_url: imageUrl,
         description: document.getElementById('storeItemDescription').value.trim(),
     };
 
@@ -417,6 +547,7 @@ async function saveStoreItemEdit(storeId, itemId, token) {
     }
 
     showStoreItemMessage('Item actualizado.', false);
+    pendingStoreItemImageFile = null;
     setTimeout(() => {
         closeStoreItemPanel();
     }, 600);
@@ -606,13 +737,40 @@ async function saveStoreEdit(storeId) {
 }
 
 async function saveStoreItem(storeId, token) {
+    const statusEl = document.getElementById('storeItemImageStatus');
+    const urlHiddenInput = document.getElementById('storeItemImageUrl');
+
+    let imageUrl = (urlHiddenInput?.value || '').trim();
+    if (pendingStoreItemImageFile) {
+        try {
+            const itemName = document.getElementById('storeItemName')?.value || '';
+            if (statusEl) {
+                statusEl.textContent = 'Subiendo imagen...';
+                statusEl.style.color = 'var(--brown-text)';
+            }
+            imageUrl = await uploadStoreItemImageFile(pendingStoreItemImageFile, token, itemName);
+            if (urlHiddenInput) urlHiddenInput.value = imageUrl;
+            if (statusEl) {
+                statusEl.textContent = '✅ Imagen subida.';
+                statusEl.style.color = '#28a745';
+            }
+        } catch (error) {
+            if (statusEl) {
+                statusEl.textContent = `Error: ${error.message}`;
+                statusEl.style.color = 'red';
+            }
+            showStoreItemMessage(error.message, true);
+            return;
+        }
+    }
+
     const quantityRaw = document.getElementById('storeItemQuantity').value;
     const payload = {
         store_id: storeId,
         name: document.getElementById('storeItemName').value.trim(),
         price: Number(document.getElementById('storeItemPrice').value || 0),
         quantity: quantityRaw === '' ? null : Number(quantityRaw),
-        image_url: document.getElementById('storeItemImageUrl').value.trim(),
+        image_url: imageUrl,
         description: document.getElementById('storeItemDescription').value.trim(),
     };
 
@@ -637,10 +795,171 @@ async function saveStoreItem(storeId, token) {
     }
 
     showStoreItemMessage('Item guardado correctamente.', false);
+    pendingStoreItemImageFile = null;
     setTimeout(() => {
         closeStoreItemPanel();
         initStoreAdminPage();
     }, 600);
+}
+
+function getSelectedStoreItemIds() {
+    return Array.from(document.querySelectorAll('.row-selector:checked'))
+        .map((checkbox) => String(checkbox.dataset.id));
+}
+
+function toggleStoreItemsMultiSelect(isMultiSelect) {
+    const selectColumns = document.querySelectorAll('.col-select');
+    selectColumns.forEach((col) => {
+        col.style.display = isMultiSelect ? '' : 'none';
+    });
+
+    const actionContainer = document.getElementById('storeItemsMultiActionContainer');
+    const label = document.getElementById('storeItemsMultiSelectLabel');
+
+    if (!isMultiSelect) {
+        document.querySelectorAll('.row-selector').forEach((chk) => {
+            chk.checked = false;
+        });
+
+        const selectAllCheckbox = document.querySelector('.admin-main-header .col-select input[type="checkbox"]');
+        if (selectAllCheckbox) {
+            selectAllCheckbox.checked = false;
+        }
+    }
+
+    updateStoreItemsSelectionState();
+
+    if (actionContainer && !isMultiSelect) {
+        actionContainer.style.display = 'none';
+    }
+
+    if (label) {
+        label.textContent = 'Seleccionar Varios';
+    }
+}
+
+function toggleStoreItemsSelectAll(isChecked) {
+    document.querySelectorAll('.row-selector').forEach((chk) => {
+        chk.checked = isChecked;
+    });
+    updateStoreItemsSelectionState();
+}
+
+function updateStoreItemsSelectionState() {
+    const selectedIds = getSelectedStoreItemIds();
+    const actionContainer = document.getElementById('storeItemsMultiActionContainer');
+    const label = document.getElementById('storeItemsMultiSelectLabel');
+    const isMultiSelectActive = document.getElementById('storeItemsMultiSelectToggle')?.checked;
+
+    if (!isMultiSelectActive) {
+        if (actionContainer) actionContainer.style.display = 'none';
+        if (label) label.textContent = 'Seleccionar Varios';
+        return;
+    }
+
+    const hasSelection = selectedIds.length > 0;
+    if (actionContainer) {
+        actionContainer.style.display = hasSelection ? 'flex' : 'none';
+    }
+
+    if (label) {
+        label.textContent = hasSelection ? `${selectedIds.length} Seleccionados` : 'Seleccionar Varios';
+    }
+
+    const selectAllCheckbox = document.querySelector('.admin-main-header .col-select input[type="checkbox"]');
+    const allRowCheckboxes = document.querySelectorAll('.row-selector');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.checked = allRowCheckboxes.length > 0 && selectedIds.length === allRowCheckboxes.length;
+    }
+}
+
+function handleStoreItemsMultiDelete() {
+    const selectedIds = getSelectedStoreItemIds();
+    if (selectedIds.length === 0) return;
+
+    const storeId = document.getElementById('storeItemsDetailView')?.dataset.storeId;
+    const selectedItems = (storeItemsCache[storeId] || []).filter((item) => selectedIds.includes(String(item.id)));
+    const groupedItems = new Map();
+
+    selectedItems.forEach((item) => {
+        const key = `${String(item.name || 'Sin nombre').replace(/</g, '&lt;')}-${Number(item.price || 0)}`;
+        if (!groupedItems.has(key)) {
+            groupedItems.set(key, {
+                name: String(item.name || 'Sin nombre').replace(/</g, '&lt;'),
+                price: Number(item.price || 0),
+                count: 0
+            });
+        }
+        groupedItems.get(key).count += 1;
+    });
+
+    const detailList = Array.from(groupedItems.values()).map((entry) => {
+        const totalEntryValue = entry.price * entry.count;
+        return `
+            <div style="display:flex; justify-content:space-between; gap:12px; margin-bottom:6px; color:#5f3b2c;">
+                <span><strong>${entry.count}x</strong> ${entry.name}</span>
+                <span>₡${totalEntryValue.toLocaleString('es-CR')}</span>
+            </div>
+        `;
+    }).join('');
+
+    const title = 'Confirmar Eliminación';
+    const body = `
+        <p>¿Estás seguro de que deseas eliminar <strong>${selectedIds.length}</strong> items seleccionados? Esta acción no se puede deshacer.</p>
+        <div style="margin-top:12px; padding-top:10px; border-top:1px solid #eee; color:#5f3b2c;">
+            <div style="font-size:0.8rem; text-transform:uppercase; letter-spacing:0.03em; color:#8a5a49; margin-bottom:8px; font-weight:700;">Resumen</div>
+            ${detailList || '<p style="margin:0;">Sin detalle disponible.</p>'}
+        </div>
+    `;
+
+    const footer = `
+        <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
+        <button class="btn btn-danger" onclick="confirmStoreItemsMultiDelete()">Eliminar</button>
+    `;
+
+    openGenericModal(title, body, footer);
+}
+
+async function confirmStoreItemsMultiDelete() {
+    const idsToDelete = getSelectedStoreItemIds();
+    if (idsToDelete.length === 0) {
+        closeGenericModal();
+        return;
+    }
+
+    const modalBody = document.getElementById('genericModalBody');
+    const modalFooter = document.getElementById('genericModalFooter');
+    if (modalBody) modalBody.innerHTML = `<div class="spinner"></div><p>Eliminando ${idsToDelete.length} items...</p>`;
+    if (modalFooter) modalFooter.innerHTML = '';
+
+    try {
+        const session = getSession();
+        if (!session) throw new Error('Sesión expirada.');
+
+        const deletePromises = idsToDelete.map((itemId) =>
+            fetch(`/.netlify/functions/store-admin?action=delete-store-item&id=${encodeURIComponent(itemId)}`, {
+                method: 'DELETE',
+                headers: { 'x-admin-token': session.token }
+            }).then(async (response) => {
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || 'No se pudo eliminar uno de los items.');
+                }
+            })
+        );
+
+        await Promise.all(deletePromises);
+
+        if (modalBody) modalBody.innerHTML = `✅ Se eliminaron ${idsToDelete.length} items con éxito.`;
+        setTimeout(() => {
+            closeGenericModal();
+            const storeId = document.getElementById('storeItemsDetailView')?.dataset.storeId;
+            if (storeId) viewStoreItems(storeId);
+        }, 1500);
+    } catch (error) {
+        if (modalBody) modalBody.innerHTML = `⚠️ Error al eliminar: ${error.message}`;
+        if (modalFooter) modalFooter.innerHTML = '<button class="btn btn-secondary" onclick="closeGenericModal()">Cerrar</button>';
+    }
 }
 
 async function viewStoreItems(storeId) {
@@ -662,6 +981,7 @@ async function viewStoreItems(storeId) {
 
     gridView.style.display = 'none';
     detailView.style.display = 'block';
+    detailView.dataset.storeId = storeId;
     detailView.innerHTML = `
         <button onclick="closeStoreItemsPanel()" class="admin-btn-back">← Volver</button>
         <div class="store-item-detail-header">
@@ -670,16 +990,26 @@ async function viewStoreItems(storeId) {
                 <h3>Items de la tienda</h3>
             </div>
         </div>
+        <div class="admin-multi-select-toolbar">
+            <label for="storeItemsMultiSelectToggle">
+                <input type="checkbox" id="storeItemsMultiSelectToggle" onchange="toggleStoreItemsMultiSelect(this.checked)">
+                <span id="storeItemsMultiSelectLabel">Seleccionar Varios</span>
+            </label>
+            <div id="storeItemsMultiActionContainer" style="display: none;">
+                <button id="storeItemsMultiDeleteBtn" class="admin-btn-action btn-delete" onclick="handleStoreItemsMultiDelete()" title="Eliminar Seleccionados"><i class="fas fa-trash-alt"></i></button>
+            </div>
+        </div>
         <div class="admin-grid">
             <table class="admin-table">
                 <thead>
-                    <tr>
+                    <tr class="admin-main-header">
+                        <th class="col-select" style="display: none;"><input type="checkbox" onchange="toggleStoreItemsSelectAll(this.checked)"></th>
                         <th>Foto</th>
                         <th>Nombre</th>
                         <th>Precio</th>
                         <th>Cant.</th>
                         <th>Descripción</th>
-                        <th>Acciones</th>
+                        <th class="col-actions">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -690,12 +1020,13 @@ async function viewStoreItems(storeId) {
 
                         return `
                             <tr>
+                                <td class="col-select" style="display: none;"><input type="checkbox" class="row-selector" data-id="${item.id}" onchange="updateStoreItemsSelectionState()"></td>
                                 <td>${imageButton}</td>
                                 <td class="store-name-cell">${item.name || 'Sin nombre'}</td>
                                 <td>₡${Number(item.price || 0).toLocaleString('es-CR')}</td>
                                 <td>${(item.quantity === null || item.quantity === undefined || Number(item.quantity) === 0) ? 'Ilimitado' : Number(item.quantity)}</td>
                                 <td class="store-item-description">${item.description || 'Sin descripción'}</td>
-                                <td class="admin-actions-cell">
+                                <td class="admin-actions-cell col-actions">
                                     <button class="admin-btn-action btn-edit" title="Editar item" onclick="openEditStoreItemPanel('${storeId}', '${item.id}')"><i class="fas fa-pen"></i></button>
                                     <button class="admin-btn-action btn-delete" title="Eliminar item" onclick="deleteStoreItem('${storeId}', '${item.id}')"><i class="fas fa-trash-alt"></i></button>
                                 </td>
@@ -703,7 +1034,7 @@ async function viewStoreItems(storeId) {
                         `;
                     }).join('') || `
                         <tr>
-                            <td colspan="6" style="text-align:center; color:#7a5246; padding:1.2rem;">No hay items cargados.</td>
+                            <td colspan="7" style="text-align:center; color:#7a5246; padding:1.2rem;">No hay items cargados.</td>
                         </tr>
                     `}
                 </tbody>
@@ -719,6 +1050,8 @@ async function viewStoreItems(storeId) {
             if (src) openImageModal(src);
         });
     });
+
+    toggleStoreItemsMultiSelect(document.getElementById('storeItemsMultiSelectToggle')?.checked || false);
 }
 
 function closeStoreItemsPanel() {
@@ -838,7 +1171,8 @@ async function viewStoreCustomerOrders(storeId) {
                 <tbody>
                     ${customers.length ? customers.map((customer) => {
                         const phoneDigits = normalizeStoreClientPhoneForWa(customer.phone_digits || customer.phone || '');
-                        const waText = encodeURIComponent(`Hola, quiero reconfirmar mi pedido:\n${(customer.items || []).map((item) => `- ${item.name || 'Item'}: ${Number(item.quantity || 0)} unidad/es`).join('\n')}\n\nGracias.`);
+                        const adminSummary = (customer.items || []).map((item) => `- ${item.name || 'Item'}: ${Number(item.quantity || 0)} x ${formatStoreCurrency(Number(item.unit_price || item.price || 0))}`).join('\n');
+                        const waText = encodeURIComponent(`Hola, quiero confirmar tu pedido:\n${adminSummary}\n\nGracias.`);
                         const waLink = phoneDigits ? `https://wa.me/${phoneDigits}?text=${waText}` : '#';
                         const itemList = (customer.items || []).map((item) => `<div>${item.name || 'Sin nombre'}: ${Number(item.quantity || 0)}</div>`).join('');
                         return `
