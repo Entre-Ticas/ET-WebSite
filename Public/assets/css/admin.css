@@ -247,14 +247,38 @@
 /* Fila de filtros por columna */
 .admin-filter-row { background: #fdf0f1 !important; }
 .admin-filter-row td { padding: 6px 8px; }
-.admin-filter-row input {
+.admin-filter-row input,
+.admin-filter-row select {
     width: 100%;
     padding: 5px 8px;
-    border: 1px solid var(--pink-light);
+    border: 1px solid #dfe3e8;
     border-radius: 6px;
     font-size: 0.78rem;
     box-sizing: border-box;
     background: white;
+    color: var(--brown-text);
+    min-height: 30px;
+    box-shadow: none;
+    outline: none;
+}
+
+.admin-filter-row select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: none;
+    padding-right: 8px;
+    cursor: pointer;
+}
+
+.admin-filter-row input:focus,
+.admin-filter-row select:focus {
+    border-color: var(--pink-accent);
+    box-shadow: 0 0 0 2px rgba(225, 155, 157, 0.12);
+}
+
+.store-admin-status-filter {
+    cursor: pointer;
 }
 
 /* Header ordenable */

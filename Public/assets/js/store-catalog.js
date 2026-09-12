@@ -1,5 +1,6 @@
 const STORE_CART_KEY = 'et_store_cart';
 const STORE_CLIENT_PHONE_KEY = 'et_store_client_phone';
+const STORE_CLIENT_NAME_KEY = 'et_store_client_name';
 
 function getStoreCatalogToken() {
     const pathParts = window.location.pathname.split('/').filter(Boolean);
@@ -27,6 +28,20 @@ function saveStoreClientPhone(phone) {
     localStorage.setItem(STORE_CLIENT_PHONE_KEY, phone.trim());
 }
 
+function getStoreClientName() {
+    const raw = localStorage.getItem(STORE_CLIENT_NAME_KEY) || '';
+    return raw.trim();
+}
+
+function saveStoreClientName(name) {
+    if (!name) return;
+    localStorage.setItem(STORE_CLIENT_NAME_KEY, name.trim());
+}
+
+function isValidStoreClientName(value) {
+    return String(value || '').trim().length >= 2;
+}
+
 function saveStoreCart(cart) {
     sessionStorage.setItem(STORE_CART_KEY, JSON.stringify(cart));
 }
@@ -39,7 +54,7 @@ function normalizeStorePhoneInput(value) {
 
 function isValidStorePhone(value) {
     const normalized = normalizeStorePhoneInput(value);
-    return /^\d{4}-\d{4}$/.test(normalized) || /^\d{4}$/.test(normalized);
+    return /^\d{4}-\d{4}$/.test(normalized);
 }
 
 function applyStorePhoneMask() {
@@ -51,31 +66,38 @@ function applyStorePhoneMask() {
 function showStorePhoneConfirmation() {
     const label = document.getElementById('storePhoneConfirmedLabel');
     const value = document.getElementById('storePhoneConfirmedValue');
+    const nameValue = document.getElementById('storeNameConfirmedValue');
     if (!label || !value) return;
 
     const phone = getStoreClientPhone();
+    const name = getStoreClientName();
     value.textContent = phone || '-';
+    if (nameValue) nameValue.textContent = name || '-';
     label.style.display = 'flex';
 }
 
 function ensurePhoneModalState() {
     const modal = document.getElementById('storePhoneModal');
     const savedPhone = getStoreClientPhone();
+    const savedName = getStoreClientName();
     const phoneInput = document.getElementById('storeClientPhone');
+    const nameInput = document.getElementById('storeClientName');
     const errorBox = document.getElementById('storePhoneError');
 
     if (!modal || !phoneInput) return;
 
-    if (savedPhone) {
+    if (savedPhone && savedName) {
         modal.style.display = 'none';
         phoneInput.value = savedPhone;
+        if (nameInput) nameInput.value = savedName;
         showStorePhoneConfirmation();
         if (errorBox) errorBox.style.display = 'none';
         return;
     }
 
     modal.style.display = 'flex';
-    phoneInput.value = '';
+    phoneInput.value = savedPhone || '';
+    if (nameInput) nameInput.value = savedName || '';
     showStorePhoneConfirmation();
     if (errorBox) errorBox.style.display = 'none';
 }
@@ -83,33 +105,47 @@ function ensurePhoneModalState() {
 function openPhoneEditModal() {
     const modal = document.getElementById('storePhoneModal');
     const input = document.getElementById('storeClientPhone');
+    const nameInput = document.getElementById('storeClientName');
     const errorBox = document.getElementById('storePhoneError');
     if (!modal || !input) return;
 
     input.value = getStoreClientPhone() || '';
+    if (nameInput) nameInput.value = getStoreClientName() || '';
     if (errorBox) {
         errorBox.style.display = 'none';
-        errorBox.textContent = 'Debes ingresar un teléfono válido antes de continuar.';
+        errorBox.textContent = 'Debes ingresar un nombre y un teléfono válido (8 dígitos) antes de continuar.';
     }
     modal.style.display = 'flex';
 }
 
 function savePhoneFromModal() {
     const input = document.getElementById('storeClientPhone');
+    const nameInput = document.getElementById('storeClientName');
     const errorBox = document.getElementById('storePhoneError');
     const modal = document.getElementById('storePhoneModal');
     const phone = normalizeStorePhoneInput(input?.value || '');
+    const name = (nameInput?.value || '').trim();
 
-    if (!isValidStorePhone(phone)) {
+    if (!isValidStoreClientName(name)) {
         if (errorBox) {
-            errorBox.textContent = 'Debes ingresar un teléfono válido antes de continuar.';
+            errorBox.textContent = 'Debes ingresar tu nombre antes de continuar.';
             errorBox.style.display = 'block';
         }
         return;
     }
 
+    if (!isValidStorePhone(phone)) {
+        if (errorBox) {
+            errorBox.textContent = 'El teléfono debe tener 8 dígitos numéricos (formato 0000-0000).';
+            errorBox.style.display = 'block';
+        }
+        return;
+    }
+
+    saveStoreClientName(name);
     saveStoreClientPhone(phone);
     if (input) input.value = phone;
+    if (nameInput) nameInput.value = name;
     if (errorBox) errorBox.style.display = 'none';
     if (modal) modal.style.display = 'none';
     showStorePhoneConfirmation();
@@ -272,34 +308,51 @@ function renderStoreCart() {
 
     const total = calculateCartTotal(cart);
     const deposit = Math.round(total * 0.5);
+    const customerName = getStoreClientName() || 'Sin nombre';
+    const customerPhone = getStoreClientPhone() || 'Sin teléfono';
     body.innerHTML = `
-        <div style="display:flex; flex-direction:column; gap:0.8rem;">
-            ${items.map(([id, item]) => {
-                const { hasLimit, maxQty } = getCatalogItemStockLimit(id);
-                const reachedLimit = hasLimit && Number(item.qty || 0) >= maxQty;
-                return `
-                <div style="display:flex; justify-content:space-between; gap:1rem; align-items:center; border-bottom:1px solid #f0dfe5; padding-bottom:0.7rem;">
-                    <div style="display:flex; align-items:center; gap:0.8rem;">
-                        <img src="${item.image || 'https://placehold.co/80x80?text=No+img'}" style="width:48px; height:48px; object-fit:cover; border-radius:10px;" />
-                        <div>
-                            <div><strong>${item.name}</strong></div>
-                            <div style="display:flex; align-items:center; gap:0.5rem; margin-top:0.3rem;">
-                                <button type="button" onclick="decreaseFromCart('${id}')" style="width:26px; height:26px; border:1px solid rgba(198, 131, 156, 0.7); border-radius:8px; background:#fff; color:#5d2d42; font-size:1.1rem; line-height:1; cursor:pointer;">−</button>
-                                <span style="min-width:1.4rem; text-align:center;">${item.qty}</span>
-                                <button type="button" onclick="increaseCartItem('${id}')" ${reachedLimit ? 'disabled' : ''} style="width:26px; height:26px; border:1px solid rgba(198, 131, 156, 0.7); border-radius:8px; background:#fff; color:#5d2d42; font-size:1.1rem; line-height:1; cursor:pointer; ${reachedLimit ? 'opacity:0.45; cursor:not-allowed;' : ''}">+</button>
-                                <button type="button" onclick="removeCartItem('${id}')" title="Eliminar del carrito" style="margin-left:0.4rem; width:26px; height:26px; border:1px solid rgba(220,53,69,0.4); border-radius:8px; background:#fff5f5; color:#dc3545; font-size:0.85rem; line-height:1; cursor:pointer;"><i class="fas fa-trash-alt"></i></button>
+        <div style="display:flex; flex-direction:column; gap:0.9rem;">
+            <div style="padding:0.85rem 1rem; border:1px solid #f0dfe5; border-radius:16px; background:#fff9fb; box-shadow:0 8px 18px rgba(177,73,120,0.04); display:flex; flex-direction:column; gap:0.35rem;">
+                <div style="font-size:0.75rem; letter-spacing:0.08em; text-transform:uppercase; color:#a64b7b; font-weight:800; margin-bottom:0.1rem;">Cliente</div>
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:0.8rem; flex-wrap:nowrap; white-space:nowrap;">
+                    <div style="display:inline-block; white-space:nowrap;"><strong>Nombre:</strong> ${customerName}</div>
+                    <div style="display:inline-block; white-space:nowrap;"><strong>Número:</strong> ${customerPhone}</div>
+                </div>
+            </div>
+            <div style="padding:0.85rem 1rem; border:1px solid #f0dfe5; border-radius:16px; background:linear-gradient(180deg, #fffafc 0%, #fff0f6 100%); box-shadow:0 8px 18px rgba(177,73,120,0.05);">
+                <div style="font-size:0.75rem; letter-spacing:0.08em; text-transform:uppercase; color:#a64b7b; font-weight:800; margin-bottom:0.5rem;">Productos</div>
+                ${items.map(([id, item]) => {
+                    const { hasLimit, maxQty } = getCatalogItemStockLimit(id);
+                    const reachedLimit = hasLimit && Number(item.qty || 0) >= maxQty;
+                    return `
+                    <div style="display:flex; justify-content:space-between; gap:1rem; align-items:center; border-bottom:1px solid #f0dfe5; padding-bottom:0.7rem; margin-bottom:0.7rem;">
+                        <div style="display:flex; align-items:center; gap:0.8rem; flex:1; min-width:0;">
+                            <img src="${item.image || 'https://placehold.co/80x80?text=No+img'}" style="width:48px; height:48px; object-fit:cover; border-radius:10px; border:1px solid rgba(177,73,120,0.12);" />
+                            <div style="min-width:0; flex:1;">
+                                <div style="font-weight:700; color:#5d2d42; word-break:break-word;">${item.name}</div>
+                                <div style="display:flex; align-items:center; gap:0.5rem; margin-top:0.35rem;">
+                                    <div style="display:flex; flex-direction:column; align-items:flex-start; gap:0.2rem;">
+                                        <div style="display:flex; align-items:center; transform:scale(0.9); transform-origin:left center;">
+                                            <button type="button" onclick="decreaseFromCart('${id}')" style="background-color:#fceaf1; border:1px solid #e19b9d; color:#5d2d42; cursor:pointer; font-size:1.2rem; font-weight:bold; width:34px; height:34px; border-radius:10px 0 0 10px;">−</button>
+                                            <input type="number" value="${item.qty}" readonly min="0" style="width:56px; height:34px; text-align:center; border:1px solid #e19b9d; border-left:none; border-right:none; font-size:1rem; font-weight:bold; border-radius:0; margin:0; box-sizing:border-box; appearance:textfield; -moz-appearance:textfield; color:#5d2d42; background:#fff;" />
+                                            <button type="button" onclick="increaseCartItem('${id}')" ${reachedLimit ? 'disabled' : ''} style="background-color:#fceaf1; border:1px solid #e19b9d; color:#5d2d42; cursor:pointer; font-size:1.2rem; font-weight:bold; width:34px; height:34px; border-radius:0 10px 10px 0; ${reachedLimit ? 'opacity:0.45; cursor:not-allowed;' : ''}">+</button>
+                                        </div>
+                                    </div>
+                                    <button type="button" onclick="removeCartItem('${id}')" title="Eliminar del carrito" style="width:28px; height:28px; border:1px solid rgba(220,53,69,0.4); border-radius:9px; background:#fff5f5; color:#dc3545; font-size:0.85rem; line-height:1; cursor:pointer; margin-top:0; align-self:center;"><i class="fas fa-trash-alt"></i></button>
+                                </div>
                             </div>
                         </div>
+                        <div style="font-weight:800; color:#6d2d4a; white-space:nowrap;">₡${(Number(item.price || 0) * Number(item.qty || 0)).toLocaleString('es-CR')}</div>
                     </div>
-                    <div>₡${(Number(item.price || 0) * Number(item.qty || 0)).toLocaleString('es-CR')}</div>
-                </div>
-            `;
-            }).join('')}
-            <div style="display:flex; justify-content:space-between; align-items:center; font-weight:700; padding-top:0.5rem;">
+                `;
+                }).join('')}
+            </div>
+        
+            <div style="display:flex; justify-content:space-between; align-items:center; font-weight:700; padding-top:0.2rem;">
                 <span>Total</span>
                 <span>₡${total.toLocaleString('es-CR')}</span>
             </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; font-weight:800; font-size:1.3rem; color:#a42169; padding-top:0.5rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; font-weight:800; font-size:1.9rem; line-height:1.2; color:#a42169; padding-top:0.2rem;">
                 <span>Depósito (50%)</span>
                 <span>₡${deposit.toLocaleString('es-CR')}</span>
             </div>
@@ -318,13 +371,60 @@ function closeStoreCart() {
     if (modal) modal.style.display = 'none';
 }
 
+function openOrderConfirmModal() {
+    const modal = document.getElementById('storeConfirmModal');
+    const summary = document.getElementById('storeConfirmSummary');
+    const nameValue = document.getElementById('storeConfirmName');
+    const phoneValue = document.getElementById('storeConfirmPhone');
+
+    if (!modal || !summary || !nameValue || !phoneValue) return;
+
+    const name = getStoreClientName();
+    const phone = getStoreClientPhone();
+    const cart = getStoreCart();
+    const entries = Object.entries(cart).map(([id, item]) => ({ id, quantity: Number(item.qty || 0), price: Number(item.price || 0), name: item.name }));
+
+    if (entries.length) {
+        summary.innerHTML = entries
+            .map((entry) => `<li style="margin:0;">${entry.name} (${entry.quantity})</li>`)
+            .join('');
+    } else {
+        summary.innerHTML = '<li style="margin:0;">Seguro que desea confirmar la compra.</li>';
+    }
+
+    nameValue.textContent = name;
+    phoneValue.textContent = phone;
+    modal.style.display = 'flex';
+}
+
+function closeOrderConfirmModal() {
+    const modal = document.getElementById('storeConfirmModal');
+    if (modal) modal.style.display = 'none';
+}
+
 async function confirmStoreOrder() {
     const phone = getStoreClientPhone();
+    const name = getStoreClientName();
+    const cart = getStoreCart();
+    const entries = Object.entries(cart).map(([id, item]) => ({ id, quantity: Number(item.qty || 0), price: Number(item.price || 0), name: item.name }));
+
+    if (!phone || !name || !entries.length) {
+        ensurePhoneModalState();
+        return;
+    }
+
+    openOrderConfirmModal();
+}
+
+async function submitConfirmedStoreOrder() {
+    const phone = getStoreClientPhone();
+    const name = getStoreClientName();
     const token = getStoreCatalogToken();
     const cart = getStoreCart();
     const entries = Object.entries(cart).map(([id, item]) => ({ id, quantity: Number(item.qty || 0), price: Number(item.price || 0), name: item.name }));
 
-    if (!phone || !entries.length) {
+    if (!phone || !name || !entries.length) {
+        closeOrderConfirmModal();
         ensurePhoneModalState();
         return;
     }
@@ -335,11 +435,14 @@ async function confirmStoreOrder() {
         body: JSON.stringify({
             public_token: token,
             client_phone: phone,
+            client_name: name,
             items: entries.map((entry) => ({ id: entry.id, quantity: entry.quantity, price: entry.price, name: entry.name }))
         })
     });
 
     const data = await response.json().catch(() => ({}));
+    closeOrderConfirmModal();
+
     if (!response.ok) {
         alert(data.error || 'No se pudo confirmar la compra.');
         return;
@@ -387,7 +490,6 @@ function renderStoreCatalogGrid() {
                 </div>
                 <div style="padding:0.9rem; display:flex; flex-direction:column; flex:1;">
                     ${item.description ? `<div style="display:inline-block; background:#efebed; color:#5d2d42; border-radius:999px; padding:0.35rem 0.7rem; font-size:0.72rem; font-weight:700; margin-bottom:0.7rem;">${item.description}</div>` : ''}
-                    <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.08em; color:#9b7f8d;">Tienda</div>
                     <h3 style="margin:0.35rem 0; font-size:1.05rem;">${item.name}</h3>
                     <div style="font-weight:700; color:#b33b7b; margin:0.4rem 0;">₡${Number(item.price || 0).toLocaleString('es-CR')}</div>
                     ${hasLimit ? `<div style="color:#666; font-size:0.82rem;">${maxQty} disponibles</div>` : ''}
@@ -550,14 +652,6 @@ async function loadStoreCatalog() {
         }
     }
 }
-
-window.addEventListener('beforeunload', (event) => {
-    const cart = getStoreCart();
-    if (Object.keys(cart).length > 0) {
-        event.preventDefault();
-        event.returnValue = '';
-    }
-});
 
 function initStoreCatalogPhoneModal() {
     const phoneInput = document.getElementById('storeClientPhone');

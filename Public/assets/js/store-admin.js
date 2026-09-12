@@ -1,3 +1,9 @@
+let storeAdminAllStores = [];
+let storeAdminFilters = {
+    name: '',
+    status: ''
+};
+
 function formatStoreStatus(status) {
     const map = {
         draft: 'Borrador',
@@ -5,6 +11,44 @@ function formatStoreStatus(status) {
         expired: 'Expirada'
     };
     return map[status] || status || 'Borrador';
+}
+
+function normalizeStoreAdminFilterText(value) {
+    return String(value || '')
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+}
+
+function getFilteredStoreAdminList(stores) {
+    const nameFilter = normalizeStoreAdminFilterText(storeAdminFilters.name);
+    const statusFilter = String(storeAdminFilters.status || '').trim();
+
+    return stores.filter((store) => {
+        const matchesName = !nameFilter || normalizeStoreAdminFilterText(store.nombre_tienda).includes(nameFilter);
+        const matchesStatus = !statusFilter || store.status === statusFilter;
+        return matchesName && matchesStatus;
+    });
+}
+
+function bindStoreAdminFilters() {
+    const nameInput = document.getElementById('storeAdminFilterName');
+    const statusInput = document.getElementById('storeAdminFilterStatus');
+    if (!nameInput || !statusInput) return;
+
+    nameInput.value = storeAdminFilters.name;
+    statusInput.value = storeAdminFilters.status;
+
+    nameInput.oninput = () => {
+        storeAdminFilters.name = nameInput.value;
+        renderStoreAdminList(storeAdminAllStores);
+    };
+
+    statusInput.onchange = () => {
+        storeAdminFilters.status = statusInput.value;
+        renderStoreAdminList(storeAdminAllStores);
+    };
 }
 
 function getStoreAdminStatusText(store) {
@@ -152,6 +196,14 @@ function getStorePublicLink(publicToken) {
     return `${origin}/StoreCatalog/${publicToken}`;
 }
 
+function normalizeStoreClientPhoneForWa(phone) {
+    const digits = String(phone || '').replace(/\D/g, '');
+    if (!digits) return '';
+    if (digits.startsWith('506')) return digits;
+    if (digits.length === 8) return `506${digits}`;
+    return digits;
+}
+
 async function copyStoreLink(publicToken) {
     const link = getStorePublicLink(publicToken);
     try {
@@ -172,17 +224,22 @@ async function renderStoreAdminList(stores) {
     const root = document.getElementById('storeAdminGrid');
     if (!root) return;
 
-    if (!stores.length) {
+    storeAdminAllStores = Array.isArray(stores) ? stores : [];
+
+    if (!storeAdminAllStores.length) {
         root.innerHTML = '<div class="empty-state">No hay tiendas creadas aún.</div>';
         return;
     }
 
     const statusOrder = { active: 0, draft: 1, expired: 2 };
-    const sortedStores = [...stores].sort((a, b) => {
+    const sortedStores = [...storeAdminAllStores].sort((a, b) => {
         const orderA = statusOrder[a.status] ?? 99;
         const orderB = statusOrder[b.status] ?? 99;
-        return orderA - orderB;
+        if (orderA !== orderB) return orderA - orderB;
+        return (a.nombre_tienda || '').localeCompare(b.nombre_tienda || '', 'es', { sensitivity: 'base' });
     });
+
+    const filteredStores = getFilteredStoreAdminList(sortedStores);
 
     storeAdminCache = {};
     sortedStores.forEach((store) => { storeAdminCache[store.id_store] = store; });
@@ -197,32 +254,46 @@ async function renderStoreAdminList(stores) {
                         <th>Acciones</th>
                     </tr>
                     <tr class="admin-filter-row">
-                        <td><input type="text" placeholder="Filtrar..." /></td>
-                        <td><input type="text" placeholder="Filtrar..." /></td>
+                        <td><input id="storeAdminFilterName" type="text" placeholder="Filtrar..." /></td>
+                        <td>
+                            <select id="storeAdminFilterStatus" class="store-admin-status-filter">
+                                <option value="">Todos</option>
+                                <option value="active">Activa</option>
+                                <option value="draft">Borrador</option>
+                                <option value="expired">Expirada</option>
+                            </select>
+                        </td>
                         <td></td>
                     </tr>
                 </thead>
                 <tbody>
-                    ${sortedStores.map((store) => `
+                    ${filteredStores.length ? filteredStores.map((store) => `
                         <tr>
                             <td class="store-name-cell">${store.nombre_tienda}</td>
                             <td><span class="store-badge ${store.status}">${formatStoreStatus(store.status)}</span></td>
                             <td class="admin-actions-cell">
-                                <button class="admin-btn-action btn-edit" title="Abrir tienda" onclick="openStoreItemPanel('${store.id_store}')"><i class="fas fa-store"></i></button>
                                 <button class="admin-btn-action btn-edit" title="Editar tienda" onclick="openEditStorePanel('${store.id_store}')"><i class="fas fa-pen"></i></button>
+                                <button class="admin-btn-action btn-edit" title="Agregar item a la tienda" onclick="openStoreItemPanel('${store.id_store}')"><i class="fas fa-plus"></i></button>
                                 <button class="admin-btn-action btn-invoice" title="Ver items" onclick="viewStoreItems('${store.id_store}')"><i class="fas fa-boxes"></i></button>
                                 <button class="admin-btn-action btn-copy" title="Ver compras" onclick="viewStoreOrders('${store.id_store}')"><i class="fas fa-receipt"></i></button>
+                                <button class="admin-btn-action btn-update" title="Ver clientes" onclick="viewStoreCustomerOrders('${store.id_store}')"><i class="fas fa-user"></i></button>
                                 ${store.status === 'draft' ? `<button class="admin-btn-action btn-update" title="Activar" onclick="activateStoreById('${store.id_store}')"><i class="fas fa-check"></i></button>` : ''}
                                 ${store.status === 'expired' ? `<button class="admin-btn-action btn-update" title="Reabrir como borrador" onclick="reopenStoreById('${store.id_store}')"><i class="fas fa-rotate-left"></i></button>` : ''}
                                 ${store.status === 'active' ? `<button class="admin-btn-action btn-copy" title="Ir al catálogo" onclick="openStorePublicLink('${store.public_token}')"><i class="fas fa-external-link-alt"></i></button>` : ''}
                                 ${store.status === 'active' ? `<button class="admin-btn-action btn-copy" title="Copiar link" onclick="copyStoreLink('${store.public_token}')"><i class="fas fa-link"></i></button>` : ''}
                             </td>
                         </tr>
-                    `).join('')}
+                    `).join('') : `
+                        <tr>
+                            <td colspan="3" class="empty-state">No hay tiendas que coincidan con el filtro.</td>
+                        </tr>
+                    `}
                 </tbody>
             </table>
         </div>
     `;
+
+    bindStoreAdminFilters();
 }
 
 async function openStoreItemPanel(storeId) {
@@ -726,6 +797,73 @@ async function viewStoreOrders(storeId) {
     });
 }
 
+async function viewStoreCustomerOrders(storeId) {
+    const session = getSession();
+    const response = await fetch(`/.netlify/functions/store-admin?action=store-customer-orders&store_id=${encodeURIComponent(storeId)}`, {
+        method: 'GET',
+        headers: { 'x-admin-token': session.token }
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        alert(data.error || 'No se pudieron cargar las compras por cliente.');
+        return;
+    }
+
+    const gridView = document.getElementById('storeAdminGridView');
+    const detailView = document.getElementById('storeOrdersDetailView');
+    if (!gridView || !detailView) return;
+
+    const customers = Array.isArray(data.customers) ? data.customers : [];
+    gridView.style.display = 'none';
+    detailView.style.display = 'block';
+    detailView.innerHTML = `
+        <button onclick="closeStoreOrdersPanel()" class="admin-btn-back">← Volver</button>
+        <div class="store-item-detail-header">
+            <div class="store-item-detail-title-wrap">
+                <i class="fas fa-user" style="font-size:1.8rem; color:var(--pink-accent);"></i>
+                <h3>Clientes con compras</h3>
+            </div>
+        </div>
+        <div class="admin-grid">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Teléfono</th>
+                        <th>Items solicitados</th>
+                        <th>Totales</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${customers.length ? customers.map((customer) => {
+                        const phoneDigits = normalizeStoreClientPhoneForWa(customer.phone_digits || customer.phone || '');
+                        const waText = encodeURIComponent(`Hola, quiero reconfirmar mi pedido:\n${(customer.items || []).map((item) => `- ${item.name || 'Item'}: ${Number(item.quantity || 0)} unidad/es`).join('\n')}\n\nGracias.`);
+                        const waLink = phoneDigits ? `https://wa.me/${phoneDigits}?text=${waText}` : '#';
+                        const itemList = (customer.items || []).map((item) => `<div>${item.name || 'Sin nombre'}: ${Number(item.quantity || 0)}</div>`).join('');
+                        return `
+                            <tr>
+                                <td class="store-name-cell">${String(customer.phone || 'Sin teléfono')}</td>
+                                <td>${itemList || '<span style="color:#7a5246;">Sin items</span>'}</td>
+                                <td>${Number(customer.total_quantity || 0)}</td>
+                                <td>
+                                    <a class="admin-btn-action btn-copy" title="Reconfirmar por WhatsApp" href="${waLink}" target="_blank" rel="noopener noreferrer" aria-label="Reconfirmar por WhatsApp">
+                                        <i class="fab fa-whatsapp"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('') : `
+                        <tr>
+                            <td colspan="4" style="text-align:center; color:#7a5246; padding:1.2rem;">Aún no hay clientes con compras registradas.</td>
+                        </tr>
+                    `}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
 function closeStoreOrdersPanel() {
     const gridView = document.getElementById('storeAdminGridView');
     const detailView = document.getElementById('storeOrdersDetailView');
@@ -809,6 +947,7 @@ window.openEditStorePanel = openEditStorePanel;
 window.closeEditStorePanel = closeEditStorePanel;
 window.saveStoreEdit = saveStoreEdit;
 window.viewStoreOrders = viewStoreOrders;
+window.viewStoreCustomerOrders = viewStoreCustomerOrders;
 window.closeStoreOrdersPanel = closeStoreOrdersPanel;
 window.saveStoreItem = saveStoreItem;
 window.viewStoreItems = viewStoreItems;

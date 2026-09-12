@@ -422,9 +422,78 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
       });
     }
 
+    if (httpMethod === 'GET' && action === 'store-customer-orders') {
+      if (!verifyToken(token)) return jsonResponse(401, { error: 'No autorizado.' });
+      const storeId = queryStringParameters.store_id || payload.store_id || payload.storeId;
+      if (!storeId) return jsonResponse(400, { error: 'Falta store_id.' });
+
+      const orders = await supabaseRequest(`/rest/v1/store_orders?store_id=eq.${encodeURIComponent(storeId)}&select=client_phone,item_id,quantity,created_at`);
+      if (!Array.isArray(orders) || !orders.length) {
+        return jsonResponse(200, { customers: [] });
+      }
+
+      const itemIds = [...new Set(orders.map((row) => row.item_id).filter(Boolean))];
+      const itemMap = {};
+      if (itemIds.length) {
+        const items = await supabaseRequest(`/rest/v1/store_items?id=in.(${itemIds.join(',')})&select=id,name,image_url`);
+        (items || []).forEach((item) => {
+          itemMap[item.id] = item;
+        });
+      }
+
+      const grouped = {};
+      for (const order of orders) {
+        const phone = String(order.client_phone || '').trim();
+        if (!phone) continue;
+        const key = phone;
+        if (!grouped[key]) {
+          grouped[key] = {
+            phone,
+            phone_digits: String(phone).replace(/\D/g, ''),
+            items: [],
+            total_quantity: 0,
+          };
+        }
+
+        const item = itemMap[order.item_id] || {};
+        const name = item.name || 'Artículo sin nombre';
+        const quantity = Number(order.quantity || 0);
+        grouped[key].total_quantity += quantity;
+
+        const existingItem = grouped[key].items.find((entry) => entry.item_id === order.item_id);
+        if (existingItem) {
+          existingItem.quantity += quantity;
+        } else {
+          grouped[key].items.push({
+            item_id: order.item_id,
+            name,
+            quantity,
+            image_url: item.image_url || '',
+          });
+        }
+      }
+
+      return jsonResponse(200, {
+        customers: Object.values(grouped)
+          .map((customer) => ({
+            phone: customer.phone,
+            phone_digits: customer.phone_digits,
+            total_quantity: Number(customer.total_quantity || 0),
+            items: customer.items.map((item) => ({
+              item_id: item.item_id,
+              name: item.name,
+              quantity: Number(item.quantity || 0),
+              image_url: item.image_url || '',
+            }))
+          }))
+          .sort((a, b) => (b.total_quantity || 0) - (a.total_quantity || 0) || String(a.phone).localeCompare(String(b.phone)))
+      });
+    }
+
     if (httpMethod === 'POST' && action === 'create-order') {
       const publicToken = payload.public_token || payload.publicToken || queryStringParameters.public_token;
       const clientPhone = payload.client_phone || payload.phone || payload.clientPhone;
+      const clientName = payload.client_name || payload.clientName || '';
       const items = Array.isArray(payload.items) ? payload.items : [];
 
       if (!publicToken || !clientPhone || !items.length) {
@@ -459,7 +528,8 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
 
       const waNumber = (process.env.WHATSAPP_NUMBER || '70328006').replace(/\D/g, '');
       const summary = items.map((item) => `${item.name || 'Item'} ${Number(item.quantity || 1)}x${Number(item.price || 0)}`).join('\n');
-      const message = encodeURIComponent(`Hola, quiero confirmar mi pedido de la tienda ${store.nombre_tienda}.\n${summary}\n\nCódigo de pedido: ${orderGroupId}`);
+      const clientNameLine = clientName ? `Nombre: ${clientName}\n` : '';
+      const message = encodeURIComponent(`Hola, quiero confirmar mi pedido de la tienda ${store.nombre_tienda}.\n${clientNameLine}${summary}\n\nCódigo de pedido: ${orderGroupId}`);
       return jsonResponse(201, {
         message: 'Pedido registrado.',
         order_group_id: orderGroupId,

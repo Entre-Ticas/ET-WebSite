@@ -13,22 +13,23 @@
     </div>
 
     <div id="storePhoneConfirmedLabel" style="display:none; margin:0; font-weight:700; color:#7a3d5d; display:inline-block; vertical-align:middle; white-space:nowrap;">
-        <span>Teléfono: <span id="storePhoneConfirmedValue">8888-8883</span></span>
+        <span>Nombre: <span id="storeNameConfirmedValue">-</span> | Teléfono: <span id="storePhoneConfirmedValue">8888-8883</span></span>
         <button id="storePhoneEditBtn" type="button" style="display:inline-block; vertical-align:middle; padding:0.38rem 0.75rem; background:#f2d6e1; border:none; border-radius:999px; color:#5c2039; font-weight:700; cursor:pointer; margin-left:0.6rem;">Editar</button>
     </div>
 
     <div id="storeCatalogStatus" class="catalog-status" style="display:flex;"><div class="spinner"></div><p>Cargando catálogo...</p></div>
     <div id="storeCatalogGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:1rem;"></div>
 
-    <div id="storePhoneModal" class="modal-overlay" style="display:flex; z-index:1000; background:rgba(77, 60, 71, 0.68);">
+    <div id="storePhoneModal" class="modal-overlay" style="display:flex; z-index:10000; background:rgba(77, 60, 71, 0.68);">
         <div class="modal-content" style="max-width:520px; width:min(92vw, 520px); background:#f7e8ef; border:2px solid #f0bfd0; border-radius:20px; box-shadow:0 18px 40px rgba(85, 35, 58, 0.25); padding:1.5rem 1.4rem;">
             <div style="text-align:center; margin-bottom:1rem;">
-                <h3 style="margin:0; color:#6b2d4a; font-size:2rem;">Número de teléfono</h3>
+                <h3 style="margin:0; color:#6b2d4a; font-size:2rem;">Tus datos de contacto</h3>
             </div>
             <div style="margin-bottom:0.8rem;">
+                <input id="storeClientName" type="text" value="" placeholder="Nombre completo" maxlength="80" style="width:100%; padding:0.9rem 1rem; font-size:1.1rem; border:2px solid #e5b9c7; border-radius:12px; background:#fff; outline:none; box-sizing:border-box; margin-bottom:0.7rem;" autocomplete="off" />
                 <input id="storeClientPhone" type="tel" value="" placeholder="Ej: 8888-0000" maxlength="9" inputmode="numeric" pattern="[0-9]{4}-?[0-9]{4}" style="width:100%; padding:0.9rem 1rem; font-size:1.1rem; border:2px solid #e5b9c7; border-radius:12px; background:#fff; outline:none; box-sizing:border-box;" autocomplete="off" />
             </div>
-            <div id="storePhoneError" style="display:none; color:#b00020; font-size:0.88rem; margin-bottom:0.8rem;">Debes ingresar un teléfono válido antes de continuar.</div>
+            <div id="storePhoneError" style="display:none; color:#b00020; font-size:0.88rem; margin-bottom:0.8rem;">Debes ingresar un nombre y un teléfono válido (8 dígitos) antes de continuar.</div>
             <button id="storePhoneSaveBtn" type="button" style="width:100%; padding:0.9rem 1rem; background:#f7b8d0; color:#5c2039; border:none; border-radius:999px; font-size:1.1rem; font-weight:700; cursor:pointer;">Guardar</button>
         </div>
     </div>
@@ -43,6 +44,26 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeStoreCart()">Seguir comprando</button>
                 <button class="btn btn-primary" onclick="confirmStoreOrder()">Comprar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="storeConfirmModal" class="modal-overlay" style="display:none; z-index:10001; background:rgba(77, 60, 71, 0.68);">
+        <div class="modal-content" style="max-width:520px; width:min(92vw, 520px); background:#f7e8ef; border:2px solid #f0bfd0; border-radius:20px; box-shadow:0 18px 40px rgba(85, 35, 58, 0.25); padding:1.5rem 1.4rem;">
+            <div style="text-align:center; margin-bottom:1rem;">
+                <h3 style="margin:0; color:#6b2d4a; font-size:1.8rem;">Confirmar compra</h3>
+            </div>
+            <div style="margin:0 0 0.9rem; display:flex; justify-content:space-between; align-items:center; gap:0.75rem; flex-wrap:nowrap; white-space:nowrap; color:#5f2a43;">
+                <div style="display:inline-block; font-size:1.7rem; font-weight:800; color:#5f2a43; line-height:1.2; text-align:left; white-space:nowrap;"><span id="storeConfirmName">-</span></div>
+                <div style="display:inline-block; font-size:1.7rem; font-weight:800; color:#5f2a43; line-height:1.2; text-align:right; white-space:nowrap;"><span id="storeConfirmPhone">-</span></div>
+            </div>
+            <div style="padding:0.85rem 1rem; border:1px solid #f0bfd0; border-radius:12px; background:#fff; margin-bottom:1rem; display:flex; flex-direction:column; gap:0.45rem; color:#5f2a43;">
+                <div style="font-size:0.72rem; letter-spacing:0.08em; text-transform:uppercase; color:#a64b7b; font-weight:800;">Productos</div>
+                <ul id="storeConfirmSummary" style="margin:0; padding-left:1.2rem; color:#5f2a43; line-height:1.7; font-size:1rem; list-style:disc;">Seguro que desea confirmar la compra.</ul>
+            </div>
+            <div style="display:flex; gap:0.8rem; justify-content:flex-end; flex-wrap:wrap;">
+                <button type="button" class="btn btn-secondary" onclick="closeOrderConfirmModal()" style="padding:0.8rem 1.2rem; border-radius:999px; font-weight:800; border:1px solid rgba(177,73,120,0.3); background:#f9edf3; color:#5d2d42;">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="submitConfirmedStoreOrder()" style="padding:0.8rem 1.2rem; border-radius:999px; font-weight:800; background:linear-gradient(135deg, #f2b4c9 0%, #e19b9d 100%); border:1px solid rgba(177,73,120,0.2); color:#fff; box-shadow:0 10px 20px rgba(177,73,120,0.18);">Comprar ahora</button>
             </div>
         </div>
     </div>
