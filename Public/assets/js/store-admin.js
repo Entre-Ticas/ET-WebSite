@@ -1130,6 +1130,221 @@ async function viewStoreOrders(storeId) {
     });
 }
 
+let storeCustomerOrdersState = {
+    storeId: null,
+    customers: [],
+    globalSearch: '',
+    filters: {
+        phone: '',
+        items: '',
+        total: ''
+    },
+    currentPage: 1,
+    rowsPerPage: 10
+};
+
+function normalizeStoreCustomerOrdersSearch(value) {
+    return String(value || '')
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+}
+
+function getFilteredStoreCustomerOrders(customers) {
+    const searchTerm = normalizeStoreCustomerOrdersSearch(storeCustomerOrdersState.globalSearch);
+    const phoneFilter = normalizeStoreCustomerOrdersSearch(storeCustomerOrdersState.filters.phone);
+    const itemsFilter = normalizeStoreCustomerOrdersSearch(storeCustomerOrdersState.filters.items);
+    const totalFilter = normalizeStoreCustomerOrdersSearch(storeCustomerOrdersState.filters.total);
+
+    return customers.filter((customer) => {
+        const phone = String(customer.phone || customer.phone_digits || 'Sin teléfono');
+        const itemText = (customer.items || []).map((item) => `${item.name || ''} ${item.quantity || ''}`).join(' ');
+        const totalText = String(Number(customer.total_quantity || 0));
+
+        const matchesSearch = !searchTerm || [phone, itemText, totalText].some((value) => normalizeStoreCustomerOrdersSearch(value).includes(searchTerm));
+        const matchesPhone = !phoneFilter || normalizeStoreCustomerOrdersSearch(phone).includes(phoneFilter);
+        const matchesItems = !itemsFilter || normalizeStoreCustomerOrdersSearch(itemText).includes(itemsFilter);
+        const matchesTotal = !totalFilter || totalText.includes(totalFilter);
+
+        return matchesSearch && matchesPhone && matchesItems && matchesTotal;
+    });
+}
+
+function renderStoreCustomerOrdersTable() {
+    const detailView = document.getElementById('storeOrdersDetailView');
+    if (!detailView) return;
+
+    const customers = storeCustomerOrdersState.customers || [];
+    const filteredCustomers = getFilteredStoreCustomerOrders(customers);
+    let totalRows = filteredCustomers.length;
+    const totalPages = storeCustomerOrdersState.rowsPerPage === -1 ? 1 : Math.max(1, Math.ceil(totalRows / storeCustomerOrdersState.rowsPerPage));
+    if (storeCustomerOrdersState.currentPage > totalPages) {
+        storeCustomerOrdersState.currentPage = totalPages;
+    }
+    if (storeCustomerOrdersState.currentPage < 1) {
+        storeCustomerOrdersState.currentPage = 1;
+    }
+
+    const startIndex = storeCustomerOrdersState.rowsPerPage === -1 ? 0 : (storeCustomerOrdersState.currentPage - 1) * storeCustomerOrdersState.rowsPerPage;
+    const endIndex = storeCustomerOrdersState.rowsPerPage === -1 ? totalRows : startIndex + storeCustomerOrdersState.rowsPerPage;
+    const paginatedCustomers = filteredCustomers.slice(startIndex, endIndex);
+
+    const searchInput = document.getElementById('storeCustomerOrdersSearchInput');
+    const phoneInput = document.getElementById('storeCustomerOrdersPhoneFilter');
+    const itemsInput = document.getElementById('storeCustomerOrdersItemsFilter');
+    const totalInput = document.getElementById('storeCustomerOrdersTotalFilter');
+    const rowsPerPageSelect = document.getElementById('storeCustomerOrdersRowsPerPage');
+    const paginationInfo = document.getElementById('storeCustomerOrdersPaginationInfo');
+    const paginationNav = document.getElementById('storeCustomerOrdersPaginationNav');
+    const paginationContainer = document.getElementById('storeCustomerOrdersPaginationContainer');
+    const tableBody = document.getElementById('storeCustomerOrdersTableBody');
+
+    if (!searchInput || !phoneInput || !itemsInput || !totalInput || !tableBody || !rowsPerPageSelect || !paginationInfo || !paginationNav || !paginationContainer) {
+        detailView.innerHTML = `
+            <button onclick="closeStoreOrdersPanel()" class="admin-btn-back">← Volver</button>
+            <div class="store-item-detail-header">
+                <div class="store-item-detail-title-wrap">
+                    <i class="fas fa-user" style="font-size:1.8rem; color:var(--pink-accent);"></i>
+                    <h3>Clientes con compras</h3>
+                </div>
+            </div>
+            <div class="admin-search-bar">
+                <input id="storeCustomerOrdersSearchInput" type="text" placeholder="🔍 Buscar por teléfono, item o total..." value="${String(storeCustomerOrdersState.globalSearch || '').replace(/"/g, '&quot;')}" oninput="setStoreCustomerOrdersGlobalSearch(this.value)" />
+            </div>
+            <div class="admin-grid">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Teléfono</th>
+                            <th>Items solicitados</th>
+                            <th>Totales</th>
+                            <th>Acción</th>
+                        </tr>
+                        <tr class="admin-filter-row">
+                            <td><input id="storeCustomerOrdersPhoneFilter" type="text" placeholder="Filtrar..." value="${String(storeCustomerOrdersState.filters.phone || '').replace(/"/g, '&quot;')}" oninput="setStoreCustomerOrdersColumnFilter('phone', this.value)" /></td>
+                            <td><input id="storeCustomerOrdersItemsFilter" type="text" placeholder="Filtrar..." value="${String(storeCustomerOrdersState.filters.items || '').replace(/"/g, '&quot;')}" oninput="setStoreCustomerOrdersColumnFilter('items', this.value)" /></td>
+                            <td><input id="storeCustomerOrdersTotalFilter" type="text" placeholder="Filtrar..." value="${String(storeCustomerOrdersState.filters.total || '').replace(/"/g, '&quot;')}" oninput="setStoreCustomerOrdersColumnFilter('total', this.value)" /></td>
+                            <td class="col-actions"></td>
+                        </tr>
+                    </thead>
+                    <tbody id="storeCustomerOrdersTableBody">
+                        ${paginatedCustomers.length ? paginatedCustomers.map((customer) => {
+                            const phoneDigits = normalizeStoreClientPhoneForWa(customer.phone_digits || customer.phone || '');
+                            const adminSummary = (customer.items || []).map((item) => `- ${item.name || 'Item'}: ${Number(item.quantity || 0)} x ${formatStoreCurrency(Number(item.unit_price || item.price || 0))}`).join('\n');
+                            const waText = encodeURIComponent(`Hola!\n\nYa agregamos tu pedido.\nLo que incluimos fue lo siguiente:\n\n${adminSummary || '- Productos sin detalle'}\n\nMuchas gracias por tu compra.`);
+                            const waLink = phoneDigits ? `https://wa.me/${phoneDigits}?text=${waText}` : '#';
+                            const itemList = (customer.items || []).map((item) => `<div>${item.name || 'Sin nombre'}: ${Number(item.quantity || 0)}</div>`).join('');
+                            return `
+                                <tr>
+                                    <td class="store-name-cell">${String(customer.phone || 'Sin teléfono')}</td>
+                                    <td>${itemList || '<span style="color:#7a5246;">Sin items</span>'}</td>
+                                    <td>${Number(customer.total_quantity || 0)}</td>
+                                    <td>
+                                        <a class="admin-btn-action btn-copy" title="Reconfirmar por WhatsApp" href="${waLink}" target="_blank" rel="noopener noreferrer" aria-label="Reconfirmar por WhatsApp">
+                                            <i class="fab fa-whatsapp"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('') : `
+                            <tr>
+                                <td colspan="4" style="text-align:center; color:#7a5246; padding:1.2rem;">No se encontraron clientes con esa búsqueda.</td>
+                            </tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+            <div class="admin-pagination-container order-pagination-layout" id="storeCustomerOrdersPaginationContainer" style="margin-top: 1rem; ${totalRows <= 10 ? 'display:none;' : ''}">
+                <div class="pagination-info" id="storeCustomerOrdersPaginationInfo">
+                    Mostrando <strong>${totalRows === 0 ? 0 : startIndex + 1}</strong> - <strong>${Math.min(endIndex, totalRows)}</strong> de <strong>${totalRows}</strong>
+                </div>
+                <div class="pagination-rows-selector order-pagination-rows">
+                    <span>Filas:</span>
+                    <select id="storeCustomerOrdersRowsPerPage" onchange="changeStoreCustomerOrdersRowsPerPage(this.value)">
+                        <option value="10" ${storeCustomerOrdersState.rowsPerPage === 10 ? 'selected' : ''}>10</option>
+                        <option value="30" ${storeCustomerOrdersState.rowsPerPage === 30 ? 'selected' : ''}>30</option>
+                        <option value="50" ${storeCustomerOrdersState.rowsPerPage === 50 ? 'selected' : ''}>50</option>
+                        <option value="100" ${storeCustomerOrdersState.rowsPerPage === 100 ? 'selected' : ''}>100</option>
+                        <option value="-1" ${storeCustomerOrdersState.rowsPerPage === -1 ? 'selected' : ''}>Todos</option>
+                    </select>
+                </div>
+                <div class="pagination-nav" id="storeCustomerOrdersPaginationNav">
+                    <button type="button" onclick="changeStoreCustomerOrdersPage(${storeCustomerOrdersState.currentPage - 1})" ${storeCustomerOrdersState.currentPage <= 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
+                    <span>Página <strong>${storeCustomerOrdersState.currentPage}</strong> de ${totalPages}</span>
+                    <button type="button" onclick="changeStoreCustomerOrdersPage(${storeCustomerOrdersState.currentPage + 1})" ${storeCustomerOrdersState.currentPage >= totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    if (searchInput) searchInput.value = storeCustomerOrdersState.globalSearch || '';
+    if (phoneInput) phoneInput.value = storeCustomerOrdersState.filters.phone || '';
+    if (itemsInput) itemsInput.value = storeCustomerOrdersState.filters.items || '';
+    if (totalInput) totalInput.value = storeCustomerOrdersState.filters.total || '';
+
+    tableBody.innerHTML = paginatedCustomers.length ? paginatedCustomers.map((customer) => {
+        const phoneDigits = normalizeStoreClientPhoneForWa(customer.phone_digits || customer.phone || '');
+        const adminSummary = (customer.items || []).map((item) => `- ${item.name || 'Item'}: ${Number(item.quantity || 0)} x ${formatStoreCurrency(Number(item.unit_price || item.price || 0))}`).join('\n');
+        const waText = encodeURIComponent(`Hola!\n\nYa agregamos tu pedido.\nLo que incluimos fue lo siguiente:\n\n${adminSummary || '- Productos sin detalle'}\n\nMuchas gracias por tu compra.`);
+        const waLink = phoneDigits ? `https://wa.me/${phoneDigits}?text=${waText}` : '#';
+        const itemList = (customer.items || []).map((item) => `<div>${item.name || 'Sin nombre'}: ${Number(item.quantity || 0)}</div>`).join('');
+        return `
+            <tr>
+                <td class="store-name-cell">${String(customer.phone || 'Sin teléfono')}</td>
+                <td>${itemList || '<span style="color:#7a5246;">Sin items</span>'}</td>
+                <td>${Number(customer.total_quantity || 0)}</td>
+                <td>
+                    <a class="admin-btn-action btn-copy" title="Reconfirmar por WhatsApp" href="${waLink}" target="_blank" rel="noopener noreferrer" aria-label="Reconfirmar por WhatsApp">
+                        <i class="fab fa-whatsapp"></i>
+                    </a>
+                </td>
+            </tr>
+        `;
+    }).join('') : `
+        <tr>
+            <td colspan="4" style="text-align:center; color:#7a5246; padding:1.2rem;">No se encontraron clientes con esa búsqueda.</td>
+        </tr>
+    `;
+
+    rowsPerPageSelect.value = String(storeCustomerOrdersState.rowsPerPage);
+    paginationInfo.innerHTML = `Mostrando <strong>${totalRows === 0 ? 0 : startIndex + 1}</strong> - <strong>${Math.min(endIndex, totalRows)}</strong> de <strong>${totalRows}</strong>`;
+    paginationContainer.style.display = totalRows <= 10 ? 'none' : '';
+    paginationNav.innerHTML = `
+        <button type="button" onclick="changeStoreCustomerOrdersPage(${storeCustomerOrdersState.currentPage - 1})" ${storeCustomerOrdersState.currentPage <= 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
+        <span>Página <strong>${storeCustomerOrdersState.currentPage}</strong> de ${totalPages}</span>
+        <button type="button" onclick="changeStoreCustomerOrdersPage(${storeCustomerOrdersState.currentPage + 1})" ${storeCustomerOrdersState.currentPage >= totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>
+    `;
+}
+
+function setStoreCustomerOrdersGlobalSearch(value) {
+    storeCustomerOrdersState.globalSearch = value;
+    storeCustomerOrdersState.currentPage = 1;
+    renderStoreCustomerOrdersTable();
+}
+
+function setStoreCustomerOrdersColumnFilter(column, value) {
+    storeCustomerOrdersState.filters[column] = value;
+    storeCustomerOrdersState.currentPage = 1;
+    renderStoreCustomerOrdersTable();
+}
+
+function changeStoreCustomerOrdersPage(page) {
+    if (page < 1) return;
+    const totalPages = storeCustomerOrdersState.rowsPerPage === -1 ? 1 : Math.max(1, Math.ceil(getFilteredStoreCustomerOrders(storeCustomerOrdersState.customers).length / storeCustomerOrdersState.rowsPerPage));
+    if (page > totalPages) return;
+    storeCustomerOrdersState.currentPage = page;
+    renderStoreCustomerOrdersTable();
+}
+
+function changeStoreCustomerOrdersRowsPerPage(value) {
+    const parsed = Number(value);
+    storeCustomerOrdersState.rowsPerPage = Number.isFinite(parsed) ? parsed : 10;
+    storeCustomerOrdersState.currentPage = 1;
+    renderStoreCustomerOrdersTable();
+}
+
 async function viewStoreCustomerOrders(storeId) {
     const session = getSession();
     const response = await fetch(`/.netlify/functions/store-admin?action=store-customer-orders&store_id=${encodeURIComponent(storeId)}`, {
@@ -1148,54 +1363,18 @@ async function viewStoreCustomerOrders(storeId) {
     if (!gridView || !detailView) return;
 
     const customers = Array.isArray(data.customers) ? data.customers : [];
+    storeCustomerOrdersState = {
+        storeId,
+        customers,
+        globalSearch: '',
+        filters: { phone: '', items: '', total: '' },
+        currentPage: 1,
+        rowsPerPage: 10
+    };
+
     gridView.style.display = 'none';
     detailView.style.display = 'block';
-    detailView.innerHTML = `
-        <button onclick="closeStoreOrdersPanel()" class="admin-btn-back">← Volver</button>
-        <div class="store-item-detail-header">
-            <div class="store-item-detail-title-wrap">
-                <i class="fas fa-user" style="font-size:1.8rem; color:var(--pink-accent);"></i>
-                <h3>Clientes con compras</h3>
-            </div>
-        </div>
-        <div class="admin-grid">
-            <table class="admin-table">
-                <thead>
-                    <tr>
-                        <th>Teléfono</th>
-                        <th>Items solicitados</th>
-                        <th>Totales</th>
-                        <th>Acción</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${customers.length ? customers.map((customer) => {
-                        const phoneDigits = normalizeStoreClientPhoneForWa(customer.phone_digits || customer.phone || '');
-                        const adminSummary = (customer.items || []).map((item) => `- ${item.name || 'Item'}: ${Number(item.quantity || 0)} x ${formatStoreCurrency(Number(item.unit_price || item.price || 0))}`).join('\n');
-                        const waText = encodeURIComponent(`Hola, quiero confirmar tu pedido:\n${adminSummary}\n\nGracias.`);
-                        const waLink = phoneDigits ? `https://wa.me/${phoneDigits}?text=${waText}` : '#';
-                        const itemList = (customer.items || []).map((item) => `<div>${item.name || 'Sin nombre'}: ${Number(item.quantity || 0)}</div>`).join('');
-                        return `
-                            <tr>
-                                <td class="store-name-cell">${String(customer.phone || 'Sin teléfono')}</td>
-                                <td>${itemList || '<span style="color:#7a5246;">Sin items</span>'}</td>
-                                <td>${Number(customer.total_quantity || 0)}</td>
-                                <td>
-                                    <a class="admin-btn-action btn-copy" title="Reconfirmar por WhatsApp" href="${waLink}" target="_blank" rel="noopener noreferrer" aria-label="Reconfirmar por WhatsApp">
-                                        <i class="fab fa-whatsapp"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                        `;
-                    }).join('') : `
-                        <tr>
-                            <td colspan="4" style="text-align:center; color:#7a5246; padding:1.2rem;">Aún no hay clientes con compras registradas.</td>
-                        </tr>
-                    `}
-                </tbody>
-            </table>
-        </div>
-    `;
+    renderStoreCustomerOrdersTable();
 }
 
 function closeStoreOrdersPanel() {
@@ -1238,12 +1417,34 @@ async function initStoreAdminPage() {
         return;
     }
 
-    await syncStoreStatusFromTimestamps();
+    root.innerHTML = `
+        <div id="storeAdminGridView">
+            <div class="admin-header">
+                <h2>🛍️ STORE-ADMIN</h2>
+                <p>Cargando tiendas...</p>
+            </div>
+            <div class="admin-search-bar">
+                <input id="storeNameInput" type="text" placeholder="Nombre de la nueva tienda" autocomplete="new-password" disabled />
+                <button class="admin-btn-agregar" disabled>+ Nueva tienda</button>
+            </div>
+            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:2rem 1rem; gap:0.75rem; color:#7a5246;">
+                <div class="spinner"></div>
+                <p style="margin:0; font-weight:600;">Cargando tiendas...</p>
+            </div>
+        </div>
+        <div id="storeItemsDetailView" class="store-items-detail-view" style="display:none;"></div>
+        <div id="storeOrdersDetailView" class="store-items-detail-view" style="display:none;"></div>
+        <div id="storeItemFormPanel" class="store-item-panel" style="display:none;"></div>
+        <div id="storeEditFormPanel" class="store-item-panel" style="display:none;"></div>
+    `;
 
-    const stores = await fetchStoreAdminData().catch((error) => {
-        root.innerHTML = `<p style="color:red;">${error.message}</p>`;
-        return [];
-    });
+    const [stores] = await Promise.all([
+        fetchStoreAdminData().catch((error) => {
+            root.innerHTML = `<p style="color:red;">${error.message}</p>`;
+            return [];
+        }),
+        syncStoreStatusFromTimestamps().catch(() => null)
+    ]);
 
     root.innerHTML = `
         <div id="storeAdminGridView">

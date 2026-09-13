@@ -15,6 +15,10 @@
     "/^Set-Location 'd:\\\\WORK\\\\Mike\\\\git\\\\ET-WebSite'; node --check netlify/functions/upload-image\\.js; npm ls wrangler --depth=0; Write-Host '--- source check ---'; Select-String -Path \\.\\\\netlify\\\\functions\\\\upload-image\\.js -Pattern 'CLOUDFLARE_API_TOKEN\\|wrangler\\|npx wrangler' -SimpleMatch -ErrorAction SilentlyContinue$/": {
         "approve": true,
         "matchCommandLine": true
+    },
+    "/^Set-Location 'd:\\\\WORK\\\\Mike\\\\git\\\\ET-WebSite'; node --check Public/assets/js/store-admin\\.js; @'\nconst formatStoreCurrency = \\(n\\) => `¢\\$\\{Number\\(n \\|\\| 0\\)\\.toLocaleString\\('es-AR'\\)\\}`;\nconst customer = \\{ phone: '\\+5491122334455', items: \\[\\{ name: 'Café', quantity: 3, unit_price: 250 \\}, \\{ name: 'Té', quantity: 1, unit_price: 180 \\}\\] \\};\nconst adminSummary = \\(customer\\.items \\|\\| \\[\\]\\)\\.map\\(\\(item\\) => `• \\$\\{item\\.name \\|\\| 'Item'\\}: \\$\\{Number\\(item\\.quantity \\|\\| 0\\)\\} x \\$\\{formatStoreCurrency\\(Number\\(item\\.unit_price \\|\\| item\\.price \\|\\| 0\\)\\)\\}`\\)\\.join\\('\\\\n'\\);\nconst waText = encodeURIComponent\\(`¡Hola! 😊\\\\n\\\\n¡Ya agregamos tu pedido! 🛍️✨\\\\nLo que incluimos fue lo siguiente:\\\\n\\\\n📦\\\\n\\$\\{adminSummary \\|\\| '• Productos sin detalle'\\}\\\\n\\\\nMuchísimas gracias por tu compra 😘`\\);\nconsole\\.log\\(decodeURIComponent\\(waText\\)\\);\n'@ \\| node$/": {
+        "approve": true,
+        "matchCommandLine": true
     }
 }
 }
