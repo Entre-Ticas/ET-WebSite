@@ -73,14 +73,9 @@
 
     async function loadTrackingAdmin() {
         const gridContainer = document.getElementById('adminGrid');
-        const statusEl = document.getElementById('adminStatus');
         if (!gridContainer) {
             console.error("El contenedor 'adminGrid' no existe en el HTML de la página.");
             return;
-        }
-
-        if (statusEl) {
-            statusEl.style.display = 'flex';
         }
 
         cargarEstados();
@@ -88,6 +83,7 @@
         try {
             const session = getSession();
             if (!session) {
+                // La seguridad en main.js debería prevenir esto, pero es una buena salvaguarda.
                 throw new Error('401');
             }
 
@@ -96,22 +92,13 @@
             });
             if (!response.ok) throw new Error(`Error ${response.status}`);
 
-            const payload = await response.json();
-            todosLosTrackings = Array.isArray(payload) ? payload : [];
-
-            if (statusEl) {
-                statusEl.style.display = 'none';
-            }
-
-            const table = document.querySelector('#adminGrid .admin-table');
-            if (table) table.style.display = '';
+            todosLosTrackings = await response.json();
+            const statusEl = document.getElementById('adminStatus');
+            statusEl.style.display = 'none';
+            document.querySelector('#adminGrid .admin-table').style.display = '';
             renderTrackings();
         } catch (err) {
-            console.error('Error al cargar trackings:', err);
-            if (statusEl) {
-                statusEl.innerHTML = `<p style="color:red;">⚠️ Error al cargar: ${err.message}</p>`;
-                statusEl.style.display = 'flex';
-            }
+            statusEl.innerHTML = `<p style="color:red;">⚠️ Error al cargar: ${err.message}</p>`;
         }
     }
 
