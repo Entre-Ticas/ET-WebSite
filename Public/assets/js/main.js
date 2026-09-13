@@ -348,14 +348,14 @@ async function loadPage(page, param = null) {
                 'admin/tracking': 'admin/tracking-admin.html',
                 'admin/catalog': 'admin/catalog-admin.html',
                 'admin/store': 'admin/store-admin.html',
-                'admin/order': 'admin/order_items-admin.html', // Nueva ruta estándar
+                'admin/order': 'admin/order_items-admin.html',
                 'admin/invoices': 'admin/invoices-admin.html',
                 'admin/payments': 'admin/payments-admin.html',
                 'StoreCatalog': 'StoreCatalog/store-catalog.html',
                 'store-catalog': 'StoreCatalog/store-catalog.html',
                 'invoice': 'invoice/invoice.html',
-                'info': 'InformationImg/info.html',
-                'informacion': 'InformationImg/infoImg.html'
+                'info': 'InformationImg/Info.html',
+                'informacion': 'InformationImg/InfoImg.html'
             };
             const url = routes[page];
             if (!url) {

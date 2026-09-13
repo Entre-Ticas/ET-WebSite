@@ -5,7 +5,74 @@
 [dev]
   publish = "Public"
 
+# Route aliases must load the app shell (index.html).
+# Admin and store views are partials rendered by main.js inside #content-area.
 [[redirects]]
-  from = "/*"
+  from = "/admin/tracking"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/admin/catalog"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/admin/store"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/admin/order"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/admin/invoices"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/admin/payments"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/store"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/store-catalog"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/catalog"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/tracking"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/calc"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/info"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/informacion"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/invoice/*"
   to = "/index.html"
   status = 200

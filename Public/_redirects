@@ -1,2 +1,14 @@
-# Cloudflare Pages/Workers does not need this Netlify SPA fallback.
-# The project serves individual HTML files directly, so this redirect causes a loop.
+/admin/tracking   /index.html 200
+/admin/catalog    /index.html 200
+/admin/store      /index.html 200
+/admin/order      /index.html 200
+/admin/invoices   /index.html 200
+/admin/payments   /index.html 200
+/store            /index.html 200
+/store-catalog    /index.html 200
+/catalog          /index.html 200
+/tracking         /index.html 200
+/calc             /index.html 200
+/info             /index.html 200
+/informacion      /index.html 200
+/invoice/*        /index.html 200
