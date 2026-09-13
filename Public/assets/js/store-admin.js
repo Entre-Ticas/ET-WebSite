@@ -1140,8 +1140,27 @@ let storeCustomerOrdersState = {
         total: ''
     },
     currentPage: 1,
-    rowsPerPage: 10
+    rowsPerPage: 10,
+    showOnlyUncontacted: true
 };
+
+function isStoreCustomerUncontacted(customer) {
+    const rawValue = customer?.contacted ?? customer?.contactado ?? customer?.confirmado ?? customer?.contact_status ?? customer?.status_contacted ?? customer?.contact_status_id;
+    if (rawValue === undefined || rawValue === null || rawValue === '') {
+        return true;
+    }
+
+    const normalized = String(rawValue).trim().toLowerCase();
+    if (['true', '1', 'yes', 'si', 'sí', 'contactado', 'confirmado', 'closed', 'done', 'ok'].includes(normalized)) {
+        return false;
+    }
+
+    if (['false', '0', 'no', 'pending', 'sin_contactar', 'sin contactar', 'uncontacted', 'not_contacted', 'not contacted'].includes(normalized)) {
+        return true;
+    }
+
+    return !Boolean(rawValue);
+}
 
 function normalizeStoreCustomerOrdersSearch(value) {
     return String(value || '')
@@ -1151,23 +1170,229 @@ function normalizeStoreCustomerOrdersSearch(value) {
         .replace(/[\u0300-\u036f]/g, '');
 }
 
+function normalizeStorePhoneDigits(value) {
+    return String(value || '').replace(/\D/g, '');
+}
+
+function getLast4PhoneDigits(value) {
+    const digits = normalizeStorePhoneDigits(value);
+    return digits.slice(-4);
+}
+
+async function openStoreCustomerLinkModal(phoneValue) {
+    const phone = String(phoneValue || '').trim();
+    const session = getSession();
+    if (!session) {
+        alert('Debes iniciar sesión para vincular clientes.');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/.netlify/functions/store-admin?action=find-client-matches&phone=${encodeURIComponent(phone)}`, {
+            method: 'GET',
+            headers: { 'x-admin-token': session.token }
+        });
+        const data = await response.json().catch(() => ({ matches: [] }));
+        const matches = Array.isArray(data.matches) ? data.matches : [];
+
+        if (!matches.length) {
+            openGenericModal(
+                'Cliente no encontrado',
+                `
+                    <div style="display:grid; gap:1rem;">
+                        <p style="margin:0; color:#5c3d34; font-weight:600;">No encontramos un cliente relacionado con este teléfono: <strong>${phone}</strong>.</p>
+                        <p style="margin:0; color:#7b4d54;">Si es un cliente nuevo, puedes crearlo y vincularlo inmediatamente.</p>
+                    </div>
+                `,
+                `
+                    <button class="btn btn-secondary" type="button" onclick="closeGenericModal()">Cancelar</button>
+                    <button class="btn btn-primary" type="button" onclick="openStoreCustomerCreateModal('${String(phone).replace(/'/g, "\\'")}')">Crear nuevo cliente</button>
+                `
+            );
+            return;
+        }
+
+        const options = matches.map((client) => `
+            <option value="${client.id}">
+                ${client.name || 'Cliente sin nombre'} · ${client.phone || 'Sin teléfono'}
+            </option>
+        `).join('');
+
+        openGenericModal(
+            'Vincular cliente',
+            `
+                <div style="display:grid; gap:1rem;">
+                    <p style="margin:0; color:#5c3d34; font-weight:600;">Hay varios clientes con coincidencia por teléfono o terminación.</p>
+                    <label style="display:grid; gap:0.45rem; font-size:0.95rem; color:#5c3d34; font-weight:700;">
+                        Selecciona un cliente:
+                        <select id="storeCustomerMatchSelect" style="width:100%; padding:0.8rem 0.9rem; border-radius:12px; border:1px solid #f1c9d1; background:#fff; color:#412c2d; font-size:1rem;">
+                            ${options}
+                        </select>
+                    </label>
+                    <button class="btn btn-secondary" type="button" onclick="openStoreCustomerCreateModal('${String(phone).replace(/'/g, "\\'")}')" style="justify-self:start;">Cliente nuevo</button>
+                </div>
+            `,
+            `
+                <button class="btn btn-secondary" type="button" onclick="closeGenericModal()">Cancelar</button>
+                <button class="btn btn-primary" type="button" onclick="confirmStoreCustomerLink('${String(phone).replace(/'/g, "\\'")}')">Guardar</button>
+            `
+        );
+    } catch (error) {
+        openGenericModal(
+            'No se pudo buscar cliente',
+            `<p style="margin:0; color:#5c3d34;">${error.message || 'Error al buscar coincidencias.'}</p>`,
+            '<button class="btn btn-secondary" type="button" onclick="closeGenericModal()">Cerrar</button>'
+        );
+    }
+}
+
+async function confirmStoreCustomerLink(phoneValue) {
+    const select = document.getElementById('storeCustomerMatchSelect');
+    const clientId = select?.value;
+    if (!clientId) {
+        alert('Debes seleccionar un cliente.');
+        return;
+    }
+
+    const session = getSession();
+    const response = await fetch('/.netlify/functions/store-admin', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-admin-token': session.token,
+        },
+        body: JSON.stringify({
+            action: 'link-store-orders-client',
+            phone: phoneValue,
+            client_id: clientId,
+        })
+    });
+    const data = await response.json().catch(() => ({ error: 'Error al vincular cliente.' }));
+    closeGenericModal();
+    if (!response.ok) {
+        openGenericModal(
+            'No se pudo vincular',
+            `<p style="margin:0; color:#5c3d34;">${data.error || 'No se pudo vincular el cliente.'}</p>`,
+            '<button class="btn btn-primary" type="button" onclick="closeGenericModal()">OK</button>'
+        );
+        return;
+    }
+
+    openGenericModal(
+        'Cliente vinculado',
+        '<p style="margin:0; color:#5c3d34;">Cliente vinculado correctamente.</p>',
+        '<button class="btn btn-primary" type="button" onclick="closeGenericModal(); const storeId = storeCustomerOrdersState.storeId; if (storeId) viewStoreCustomerOrders(storeId);">OK</button>'
+    );
+}
+
+function openStoreCustomerCreateModal(phoneValue) {
+    const safePhone = String(phoneValue || '').trim();
+    closeGenericModal();
+    openGenericModal(
+        'Crear cliente nuevo',
+        `
+            <div style="display:grid; gap:1rem;">
+                <label style="display:grid; gap:0.4rem; font-size:0.95rem; color:#5c3d34; font-weight:700;">
+                    Nombre del cliente
+                    <input id="storeCustomerNewName" type="text" value="" placeholder="Ej: Michael" style="padding:0.8rem 0.9rem; border-radius:12px; border:1px solid #f1c9d1; background:#fff; color:#412c2d; font-size:1rem;" />
+                </label>
+                <label style="display:grid; gap:0.4rem; font-size:0.95rem; color:#5c3d34; font-weight:700;">
+                    Teléfono
+                    <input id="storeCustomerNewPhone" type="text" value="${safePhone}" placeholder="Ej: 0204 o 8326-0204" style="padding:0.8rem 0.9rem; border-radius:12px; border:1px solid #f1c9d1; background:#fff; color:#412c2d; font-size:1rem;" />
+                </label>
+            </div>
+        `,
+        `
+            <button class="btn btn-secondary" type="button" onclick="closeGenericModal()">Cancelar</button>
+            <button class="btn btn-primary" type="button" onclick="saveStoreCustomerFromModal('${safePhone.replace(/'/g, "\\'")}')">Guardar</button>
+        `
+    );
+}
+
+async function saveStoreCustomerFromModal(phoneValue) {
+    const nameInput = document.getElementById('storeCustomerNewName');
+    const phoneInput = document.getElementById('storeCustomerNewPhone');
+    const name = String(nameInput?.value || '').trim();
+    const phone = String(phoneInput?.value || '').trim();
+    if (!name || !phone) {
+        alert('Debes ingresar nombre y teléfono.');
+        return;
+    }
+
+    const session = getSession();
+    const response = await fetch('/.netlify/functions/store-admin', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-admin-token': session.token,
+        },
+        body: JSON.stringify({
+            action: 'create-client-match',
+            name,
+            phone,
+            status_id: 1,
+        })
+    });
+    const data = await response.json().catch(() => ({ error: 'Error al crear el cliente.' }));
+    closeGenericModal();
+    if (!response.ok) {
+        openGenericModal(
+            'No se pudo crear',
+            `<p style="margin:0; color:#5c3d34;">${data.error || 'No se pudo crear el cliente.'}</p>`,
+            '<button class="btn btn-primary" type="button" onclick="closeGenericModal()">OK</button>'
+        );
+        return;
+    }
+
+    const clientId = data.client && data.client.id;
+    let successMessage = `Cliente ${name} guardado correctamente.`;
+    if (clientId) {
+        const linkRes = await fetch('/.netlify/functions/store-admin', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-token': session.token,
+            },
+            body: JSON.stringify({
+                action: 'link-store-orders-client',
+                phone,
+                client_id: clientId,
+            })
+        });
+        await linkRes.json().catch(() => ({}));
+        successMessage = `Cliente ${name} guardado y vinculado correctamente.`;
+    }
+
+    openGenericModal(
+        'Cliente guardado',
+        `<p style="margin:0; color:#5c3d34;">${successMessage}</p>`,
+        '<button class="btn btn-primary" type="button" onclick="closeGenericModal(); const storeId = storeCustomerOrdersState.storeId; if (storeId) viewStoreCustomerOrders(storeId);">OK</button>'
+    );
+}
+
 function getFilteredStoreCustomerOrders(customers) {
     const searchTerm = normalizeStoreCustomerOrdersSearch(storeCustomerOrdersState.globalSearch);
     const phoneFilter = normalizeStoreCustomerOrdersSearch(storeCustomerOrdersState.filters.phone);
+    const clientFilter = normalizeStoreCustomerOrdersSearch(storeCustomerOrdersState.filters.client);
     const itemsFilter = normalizeStoreCustomerOrdersSearch(storeCustomerOrdersState.filters.items);
     const totalFilter = normalizeStoreCustomerOrdersSearch(storeCustomerOrdersState.filters.total);
+    const onlyUncontacted = storeCustomerOrdersState.showOnlyUncontacted !== false;
 
     return customers.filter((customer) => {
         const phone = String(customer.phone || customer.phone_digits || 'Sin teléfono');
+        const clientName = String(customer.client_name || 'Sin cliente');
+        const clientMeta = customer.is_matched ? 'Matcheado' : 'Sin match';
         const itemText = (customer.items || []).map((item) => `${item.name || ''} ${item.quantity || ''}`).join(' ');
         const totalText = String(Number(customer.total_quantity || 0));
+        const matchesContactStatus = !onlyUncontacted || isStoreCustomerUncontacted(customer);
 
-        const matchesSearch = !searchTerm || [phone, itemText, totalText].some((value) => normalizeStoreCustomerOrdersSearch(value).includes(searchTerm));
+        const matchesSearch = !searchTerm || [phone, clientName, clientMeta, itemText, totalText].some((value) => normalizeStoreCustomerOrdersSearch(value).includes(searchTerm));
         const matchesPhone = !phoneFilter || normalizeStoreCustomerOrdersSearch(phone).includes(phoneFilter);
+        const matchesClient = !clientFilter || normalizeStoreCustomerOrdersSearch(clientName).includes(clientFilter) || normalizeStoreCustomerOrdersSearch(clientMeta).includes(clientFilter);
         const matchesItems = !itemsFilter || normalizeStoreCustomerOrdersSearch(itemText).includes(itemsFilter);
         const matchesTotal = !totalFilter || totalText.includes(totalFilter);
 
-        return matchesSearch && matchesPhone && matchesItems && matchesTotal;
+        return matchesContactStatus && matchesSearch && matchesPhone && matchesClient && matchesItems && matchesTotal;
     });
 }
 
@@ -1191,7 +1416,7 @@ function renderStoreCustomerOrdersTable() {
     const paginatedCustomers = filteredCustomers.slice(startIndex, endIndex);
 
     const searchInput = document.getElementById('storeCustomerOrdersSearchInput');
-    const phoneInput = document.getElementById('storeCustomerOrdersPhoneFilter');
+    const clientInput = document.getElementById('storeCustomerOrdersClientFilter');
     const itemsInput = document.getElementById('storeCustomerOrdersItemsFilter');
     const totalInput = document.getElementById('storeCustomerOrdersTotalFilter');
     const rowsPerPageSelect = document.getElementById('storeCustomerOrdersRowsPerPage');
@@ -1200,7 +1425,7 @@ function renderStoreCustomerOrdersTable() {
     const paginationContainer = document.getElementById('storeCustomerOrdersPaginationContainer');
     const tableBody = document.getElementById('storeCustomerOrdersTableBody');
 
-    if (!searchInput || !phoneInput || !itemsInput || !totalInput || !tableBody || !rowsPerPageSelect || !paginationInfo || !paginationNav || !paginationContainer) {
+    if (!searchInput || !clientInput || !itemsInput || !totalInput || !tableBody || !rowsPerPageSelect || !paginationInfo || !paginationNav || !paginationContainer) {
         detailView.innerHTML = `
             <button onclick="closeStoreOrdersPanel()" class="admin-btn-back">← Volver</button>
             <div class="store-item-detail-header">
@@ -1210,19 +1435,29 @@ function renderStoreCustomerOrdersTable() {
                 </div>
             </div>
             <div class="admin-search-bar">
-                <input id="storeCustomerOrdersSearchInput" type="text" placeholder="🔍 Buscar por teléfono, item o total..." value="${String(storeCustomerOrdersState.globalSearch || '').replace(/"/g, '&quot;')}" oninput="setStoreCustomerOrdersGlobalSearch(this.value)" />
+                <input id="storeCustomerOrdersSearchInput" type="text" placeholder="🔍 Buscar por cliente, teléfono, item o total..." value="${String(storeCustomerOrdersState.globalSearch || '').replace(/"/g, '&quot;')}" oninput="setStoreCustomerOrdersGlobalSearch(this.value)" />
+            </div>
+            <div class="admin-filter-chips">
+                <label class="admin-filter-option">
+                    <input type="radio" name="storeCustomerOrdersContactFilter" value="pending" ${storeCustomerOrdersState.showOnlyUncontacted !== false ? 'checked' : ''} onchange="setStoreCustomerOrdersContactFilter(true)" />
+                    <span>Solo sin contactar</span>
+                </label>
+                <label class="admin-filter-option">
+                    <input type="radio" name="storeCustomerOrdersContactFilter" value="all" ${storeCustomerOrdersState.showOnlyUncontacted === false ? 'checked' : ''} onchange="setStoreCustomerOrdersContactFilter(false)" />
+                    <span>Mostrar todos</span>
+                </label>
             </div>
             <div class="admin-grid">
                 <table class="admin-table">
                     <thead>
                         <tr>
-                            <th>Teléfono</th>
+                            <th>Cliente</th>
                             <th>Items solicitados</th>
                             <th>Totales</th>
                             <th>Acción</th>
                         </tr>
                         <tr class="admin-filter-row">
-                            <td><input id="storeCustomerOrdersPhoneFilter" type="text" placeholder="Filtrar..." value="${String(storeCustomerOrdersState.filters.phone || '').replace(/"/g, '&quot;')}" oninput="setStoreCustomerOrdersColumnFilter('phone', this.value)" /></td>
+                            <td><input id="storeCustomerOrdersClientFilter" type="text" placeholder="Filtrar..." value="${String(storeCustomerOrdersState.filters.client || '').replace(/"/g, '&quot;')}" oninput="setStoreCustomerOrdersColumnFilter('client', this.value)" /></td>
                             <td><input id="storeCustomerOrdersItemsFilter" type="text" placeholder="Filtrar..." value="${String(storeCustomerOrdersState.filters.items || '').replace(/"/g, '&quot;')}" oninput="setStoreCustomerOrdersColumnFilter('items', this.value)" /></td>
                             <td><input id="storeCustomerOrdersTotalFilter" type="text" placeholder="Filtrar..." value="${String(storeCustomerOrdersState.filters.total || '').replace(/"/g, '&quot;')}" oninput="setStoreCustomerOrdersColumnFilter('total', this.value)" /></td>
                             <td class="col-actions"></td>
@@ -1235,15 +1470,32 @@ function renderStoreCustomerOrdersTable() {
                             const waText = encodeURIComponent(`Hola!\n\nYa agregamos tu pedido.\nLo que incluimos fue lo siguiente:\n\n${adminSummary || '- Productos sin detalle'}\n\nMuchas gracias por tu compra.`);
                             const waLink = phoneDigits ? `https://wa.me/${phoneDigits}?text=${waText}` : '#';
                             const itemList = (customer.items || []).map((item) => `<div>${item.name || 'Sin nombre'}: ${Number(item.quantity || 0)}</div>`).join('');
+                            const phoneValue = String(customer.phone || '');
+                            const isMatched = Boolean(customer.is_matched && customer.client_name);
+                            const clientName = isMatched ? customer.client_name : 'SIN MATCH';
+                            const clientPhone = isMatched ? (customer.client_phone || customer.phone || 'Sin teléfono') : (customer.phone || customer.phone_digits || 'Sin teléfono');
                             return `
                                 <tr>
-                                    <td class="store-name-cell">${String(customer.phone || 'Sin teléfono')}</td>
+                                    <td>
+                                        ${isMatched ? `
+                                            <div class="store-client-name">${clientName}</div>
+                                            <small class="store-client-meta">${clientPhone}</small>
+                                        ` : `
+                                            <div class="store-match-badge unmatched">SIN MATCH</div>
+                                            <small class="store-client-meta">${clientPhone}</small>
+                                        `}
+                                    </td>
                                     <td>${itemList || '<span style="color:#7a5246;">Sin items</span>'}</td>
                                     <td>${Number(customer.total_quantity || 0)}</td>
-                                    <td>
-                                        <a class="admin-btn-action btn-copy" title="Reconfirmar por WhatsApp" href="${waLink}" target="_blank" rel="noopener noreferrer" aria-label="Reconfirmar por WhatsApp">
-                                            <i class="fab fa-whatsapp"></i>
-                                        </a>
+                                    <td class="admin-actions-cell">
+                                        <span class="admin-actions-inline">
+                                            <button class="admin-btn-action btn-edit" type="button" title="Vincular cliente" onclick="openStoreCustomerLinkModal('${phoneValue.replace(/'/g, "\\'")}')" aria-label="Vincular cliente">
+                                                <i class="fas fa-user-plus"></i>
+                                            </button>
+                                            <button class="admin-btn-action btn-copy" type="button" title="Reconfirmar por WhatsApp" onclick="markStoreCustomerOrdersAsContacted('${phoneValue.replace(/'/g, "\\'")}', '${waLink.replace(/'/g, "\\'")}')" aria-label="Reconfirmar por WhatsApp">
+                                                <i class="fab fa-whatsapp"></i>
+                                            </button>
+                                        </span>
                                     </td>
                                 </tr>
                             `;
@@ -1280,9 +1532,14 @@ function renderStoreCustomerOrdersTable() {
     }
 
     if (searchInput) searchInput.value = storeCustomerOrdersState.globalSearch || '';
-    if (phoneInput) phoneInput.value = storeCustomerOrdersState.filters.phone || '';
+    if (clientInput) clientInput.value = storeCustomerOrdersState.filters.client || '';
     if (itemsInput) itemsInput.value = storeCustomerOrdersState.filters.items || '';
     if (totalInput) totalInput.value = storeCustomerOrdersState.filters.total || '';
+    document.querySelectorAll('input[name="storeCustomerOrdersContactFilter"]').forEach((radio) => {
+        radio.checked = radio.value === 'pending'
+            ? storeCustomerOrdersState.showOnlyUncontacted !== false
+            : storeCustomerOrdersState.showOnlyUncontacted === false;
+    });
 
     tableBody.innerHTML = paginatedCustomers.length ? paginatedCustomers.map((customer) => {
         const phoneDigits = normalizeStoreClientPhoneForWa(customer.phone_digits || customer.phone || '');
@@ -1290,15 +1547,32 @@ function renderStoreCustomerOrdersTable() {
         const waText = encodeURIComponent(`Hola!\n\nYa agregamos tu pedido.\nLo que incluimos fue lo siguiente:\n\n${adminSummary || '- Productos sin detalle'}\n\nMuchas gracias por tu compra.`);
         const waLink = phoneDigits ? `https://wa.me/${phoneDigits}?text=${waText}` : '#';
         const itemList = (customer.items || []).map((item) => `<div>${item.name || 'Sin nombre'}: ${Number(item.quantity || 0)}</div>`).join('');
+        const phoneValue = String(customer.phone || '');
+        const isMatched = Boolean(customer.is_matched && customer.client_name);
+        const clientName = isMatched ? customer.client_name : 'SIN MATCH';
+        const clientPhone = isMatched ? (customer.client_phone || customer.phone || 'Sin teléfono') : (customer.phone || customer.phone_digits || 'Sin teléfono');
         return `
             <tr>
-                <td class="store-name-cell">${String(customer.phone || 'Sin teléfono')}</td>
+                <td>
+                    ${isMatched ? `
+                        <div class="store-client-name">${clientName}</div>
+                        <small class="store-client-meta">${clientPhone}</small>
+                    ` : `
+                        <div class="store-match-badge unmatched">SIN MATCH</div>
+                        <small class="store-client-meta">${clientPhone}</small>
+                    `}
+                </td>
                 <td>${itemList || '<span style="color:#7a5246;">Sin items</span>'}</td>
                 <td>${Number(customer.total_quantity || 0)}</td>
-                <td>
-                    <a class="admin-btn-action btn-copy" title="Reconfirmar por WhatsApp" href="${waLink}" target="_blank" rel="noopener noreferrer" aria-label="Reconfirmar por WhatsApp">
-                        <i class="fab fa-whatsapp"></i>
-                    </a>
+                <td class="admin-actions-cell">
+                    <span class="admin-actions-inline">
+                        <button class="admin-btn-action btn-edit" type="button" title="Vincular cliente" onclick="openStoreCustomerLinkModal('${phoneValue.replace(/'/g, "\\'")}')" aria-label="Vincular cliente">
+                            <i class="fas fa-user-plus"></i>
+                        </button>
+                        <button class="admin-btn-action btn-copy" type="button" title="Reconfirmar por WhatsApp" onclick="markStoreCustomerOrdersAsContacted('${phoneValue.replace(/'/g, "\\'")}', '${waLink.replace(/'/g, "\\'")}')" aria-label="Reconfirmar por WhatsApp">
+                            <i class="fab fa-whatsapp"></i>
+                        </button>
+                    </span>
                 </td>
             </tr>
         `;
@@ -1318,8 +1592,60 @@ function renderStoreCustomerOrdersTable() {
     `;
 }
 
+async function markStoreCustomerOrdersAsContacted(phoneValue, waLink) {
+    const session = getSession();
+    const cleanedPhone = String(phoneValue || '').trim();
+
+    try {
+        if (!session || !cleanedPhone) {
+            throw new Error('No hay sesión activa o falta el teléfono');
+        }
+
+        const response = await fetch('/.netlify/functions/store-admin', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-token': session.token,
+            },
+            body: JSON.stringify({
+                action: 'mark-store-customer-contacted',
+                phone: cleanedPhone,
+            })
+        });
+
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(result?.error || 'No se pudo guardar el estado CONTACTED en la base de datos.');
+        }
+
+        if (waLink && waLink !== '#') {
+            window.open(waLink, '_blank', 'noopener,noreferrer');
+        }
+
+        const storeId = storeCustomerOrdersState.storeId;
+        if (storeId) {
+            setTimeout(() => viewStoreCustomerOrders(storeId), 250);
+        } else {
+            setTimeout(() => window.location.reload(), 250);
+        }
+    } catch (error) {
+        const message = error?.message || 'No se pudo marcar como CONTACTED.';
+        if (typeof openGenericModal === 'function') {
+            openGenericModal('No se pudo actualizar la orden', `<p>${message}</p>`, '<button class="btn btn-secondary" type="button" onclick="closeGenericModal()">Cerrar</button>');
+        } else {
+            console.error(message);
+        }
+    }
+}
+
 function setStoreCustomerOrdersGlobalSearch(value) {
     storeCustomerOrdersState.globalSearch = value;
+    storeCustomerOrdersState.currentPage = 1;
+    renderStoreCustomerOrdersTable();
+}
+
+function setStoreCustomerOrdersContactFilter(showOnlyUncontacted) {
+    storeCustomerOrdersState.showOnlyUncontacted = Boolean(showOnlyUncontacted);
     storeCustomerOrdersState.currentPage = 1;
     renderStoreCustomerOrdersTable();
 }
@@ -1367,9 +1693,10 @@ async function viewStoreCustomerOrders(storeId) {
         storeId,
         customers,
         globalSearch: '',
-        filters: { phone: '', items: '', total: '' },
+        filters: { client: '', phone: '', items: '', total: '' },
         currentPage: 1,
-        rowsPerPage: 10
+        rowsPerPage: 10,
+        showOnlyUncontacted: true
     };
 
     gridView.style.display = 'none';

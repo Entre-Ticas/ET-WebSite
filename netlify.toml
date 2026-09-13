@@ -73,6 +73,16 @@
   status = 200
 
 [[redirects]]
+  from = "/StoreCatalog"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/StoreCatalog/*"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
   from = "/invoice/*"
   to = "/index.html"
   status = 200

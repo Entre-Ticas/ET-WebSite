@@ -11,4 +11,6 @@
 /calc             /index.html 200
 /info             /index.html 200
 /informacion      /index.html 200
+/StoreCatalog     /index.html 200
+/StoreCatalog/*   /index.html 200
 /invoice/*        /index.html 200

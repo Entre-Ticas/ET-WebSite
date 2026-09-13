@@ -186,6 +186,28 @@ function formatStoreCurrency(value) {
   return `¢${amount.toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
+function normalizePhoneDigits(value = '') {
+  return String(value || '').replace(/\D/g, '');
+}
+
+function getExistingContactField(orderSample = {}) {
+  const availableFields = Object.keys(orderSample || {});
+  const preferredFields = [
+    'contacted',
+    'contactado',
+    'confirmado',
+    'contact_status',
+    'contact_status_id',
+    'status_contacted',
+    'status',
+    'confirmed',
+    'estado_contacto',
+    'is_contacted'
+  ];
+
+  return preferredFields.find((field) => availableFields.includes(field)) || null;
+}
+
 async function handleStoreRequest({ httpMethod, headers = {}, queryStringParameters = {}, body = {} }) {
   const action = queryStringParameters.action || body.action || 'list-stores';
   const payload = typeof body === 'string' ? JSON.parse(body || '{}') : body;
@@ -433,9 +455,18 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
       const storeId = queryStringParameters.store_id || payload.store_id || payload.storeId;
       if (!storeId) return jsonResponse(400, { error: 'Falta store_id.' });
 
-      const orders = await supabaseRequest(`/rest/v1/store_orders?store_id=eq.${encodeURIComponent(storeId)}&select=client_phone,item_id,quantity,unit_price,created_at`);
+      const orders = await supabaseRequest(`/rest/v1/store_orders?store_id=eq.${encodeURIComponent(storeId)}&select=id,client_id,client_phone,item_id,quantity,unit_price,created_at,contacted`);
       if (!Array.isArray(orders) || !orders.length) {
         return jsonResponse(200, { customers: [] });
+      }
+
+      const clientIds = [...new Set(orders.map((row) => row.client_id).filter((id) => id !== null && id !== undefined && id !== ''))];
+      const clientMap = {};
+      if (clientIds.length) {
+        const clients = await supabaseRequest(`/rest/v1/clients?id=in.(${clientIds.join(',')})&select=id,name,phone,phone_last4`);
+        (clients || []).forEach((client) => {
+          clientMap[client.id] = client;
+        });
       }
 
       const itemIds = [...new Set(orders.map((row) => row.item_id).filter(Boolean))];
@@ -452,13 +483,28 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
         const phone = String(order.client_phone || '').trim();
         if (!phone) continue;
         const key = phone;
+        const linkedClient = order.client_id ? clientMap[order.client_id] || null : null;
         if (!grouped[key]) {
           grouped[key] = {
             phone,
             phone_digits: String(phone).replace(/\D/g, ''),
+            client_id: linkedClient ? linkedClient.id : null,
+            client_name: linkedClient ? linkedClient.name : null,
+            client_phone: linkedClient ? linkedClient.phone : null,
+            client_phone_last4: linkedClient ? (linkedClient.phone_last4 || String(linkedClient.phone || '').slice(-4)) : null,
+            is_matched: Boolean(linkedClient),
+            contacted: Boolean(order.contacted),
             items: [],
             total_quantity: 0,
           };
+        }
+
+        if (linkedClient && !grouped[key].client_name) {
+          grouped[key].client_id = linkedClient.id;
+          grouped[key].client_name = linkedClient.name || null;
+          grouped[key].client_phone = linkedClient.phone || null;
+          grouped[key].client_phone_last4 = linkedClient.phone_last4 || String(linkedClient.phone || '').slice(-4);
+          grouped[key].is_matched = true;
         }
 
         const item = itemMap[order.item_id] || {};
@@ -487,6 +533,12 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
           .map((customer) => ({
             phone: customer.phone,
             phone_digits: customer.phone_digits,
+            client_id: customer.client_id || null,
+            client_name: customer.client_name || null,
+            client_phone: customer.client_phone || null,
+            client_phone_last4: customer.client_phone_last4 || customer.phone_digits.slice(-4),
+            is_matched: Boolean(customer.is_matched),
+            contacted: Boolean(customer.contacted),
             total_quantity: Number(customer.total_quantity || 0),
             items: customer.items.map((item) => ({
               item_id: item.item_id,
@@ -498,6 +550,177 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
           }))
           .sort((a, b) => (b.total_quantity || 0) - (a.total_quantity || 0) || String(a.phone).localeCompare(String(b.phone)))
       });
+    }
+
+    if (httpMethod === 'GET' && action === 'find-client-matches') {
+      if (!verifyToken(token)) return jsonResponse(401, { error: 'No autorizado.' });
+      const rawPhone = queryStringParameters.phone || payload.phone || '';
+      const normalizedPhone = normalizePhoneDigits(rawPhone);
+      if (!normalizedPhone) return jsonResponse(200, { matches: [] });
+
+      try {
+        const clients = await supabaseRequest('/rest/v1/clients?select=id,name,phone,phone_last4,status_id,is_blacklisted,created_at');
+        const last4 = normalizedPhone.slice(-4);
+        const matches = (clients || [])
+          .filter((client) => {
+            const clientDigits = normalizePhoneDigits(client.phone || '');
+            return clientDigits === normalizedPhone || clientDigits.endsWith(last4) || (client.phone_last4 && String(client.phone_last4).endsWith(last4));
+          })
+          .map((client) => ({
+            id: client.id,
+            name: client.name || 'Cliente sin nombre',
+            phone: client.phone || '',
+            phone_last4: client.phone_last4 || String(client.phone || '').slice(-4),
+            is_blacklisted: Boolean(client.is_blacklisted),
+            status_id: client.status_id || null,
+            created_at: client.created_at || null,
+          }))
+          .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+
+        return jsonResponse(200, { matches });
+      } catch (error) {
+        return jsonResponse(200, { matches: [] });
+      }
+    }
+
+    if (httpMethod === 'POST' && action === 'create-client-match') {
+      if (!verifyToken(token)) return jsonResponse(401, { error: 'No autorizado.' });
+      const name = String(payload.name || '').trim();
+      const phone = String(payload.phone || '').trim();
+      if (!name || !phone) return jsonResponse(400, { error: 'Faltan nombre o teléfono.' });
+
+      const normalizedPhone = normalizePhoneDigits(phone);
+      const last4 = normalizedPhone.slice(-4);
+
+      try {
+        const existing = await supabaseRequest(`/rest/v1/clients?phone=eq.${encodeURIComponent(phone)}&select=id,name,phone,phone_last4,status_id,is_blacklisted`);
+        if (Array.isArray(existing) && existing.length) {
+          const client = existing[0];
+          return jsonResponse(200, {
+            client: {
+              id: client.id,
+              name: client.name,
+              phone: client.phone,
+              phone_last4: client.phone_last4 || last4,
+            },
+            created: false,
+          });
+        }
+      } catch (_error) {
+        // Continue to create when the table is available but the exact match query fails.
+      }
+
+      try {
+        const result = await supabaseRequest('/rest/v1/clients', {
+          method: 'POST',
+          body: JSON.stringify({
+            name,
+            phone,
+            phone_last4: last4,
+            address: payload.address || null,
+            is_blacklisted: Boolean(payload.is_blacklisted || false),
+            status_id: payload.status_id ?? 1,
+            created_at: new Date().toISOString(),
+          })
+        });
+
+        const client = Array.isArray(result) ? result[0] : result;
+        return jsonResponse(201, {
+          client: client || {
+            id: null,
+            name,
+            phone,
+            phone_last4: last4,
+          },
+          created: true,
+        });
+      } catch (error) {
+        return jsonResponse(500, { error: error.message || 'No se pudo crear el cliente.' });
+      }
+    }
+
+    if (httpMethod === 'POST' && action === 'link-store-orders-client') {
+      if (!verifyToken(token)) return jsonResponse(401, { error: 'No autorizado.' });
+      const phone = String(payload.phone || '').trim();
+      const clientId = Number(payload.client_id || payload.clientId);
+      if (!phone || !clientId) return jsonResponse(400, { error: 'Falta teléfono o client_id.' });
+
+      try {
+        const orders = await supabaseRequest('/rest/v1/store_orders?select=id,client_phone,client_id');
+        const normalizedPhone = normalizePhoneDigits(phone);
+        const last4 = normalizedPhone.slice(-4);
+
+        const matches = (orders || []).filter((order) => {
+          const rowPhone = normalizePhoneDigits(order.client_phone || '');
+          return rowPhone === normalizedPhone || rowPhone.endsWith(last4) || (order.client_id != null && Number(order.client_id) === Number(clientId));
+        });
+
+        let updatedCount = 0;
+        for (const order of matches) {
+          await supabaseRequest(`/rest/v1/store_orders?id=eq.${encodeURIComponent(order.id)}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ client_id: clientId })
+          });
+          updatedCount += 1;
+        }
+
+        return jsonResponse(200, {
+          updated: updatedCount,
+          client_id: clientId,
+          phone,
+        });
+      } catch (error) {
+        return jsonResponse(500, { error: error.message || 'No se pudo vincular el cliente.' });
+      }
+    }
+
+    if (httpMethod === 'POST' && action === 'mark-store-customer-contacted') {
+      if (!verifyToken(token)) return jsonResponse(401, { error: 'No autorizado.' });
+      const phone = String(payload.phone || '').trim();
+      if (!phone) return jsonResponse(400, { error: 'Falta teléfono.' });
+
+      try {
+        const orders = await supabaseRequest('/rest/v1/store_orders?select=*');
+        const normalizedPhone = normalizePhoneDigits(phone);
+        const last4 = normalizedPhone.slice(-4);
+        const matches = (orders || []).filter((order) => {
+          const rowPhone = normalizePhoneDigits(order.client_phone || '');
+          return rowPhone === normalizedPhone || rowPhone.endsWith(last4);
+        });
+
+        if (!matches.length) {
+          return jsonResponse(200, { updated: 0, phone, message: 'No hubo coincidencias para marcar contacto.' });
+        }
+
+        const contactField = getExistingContactField((orders || [])[0] || {});
+        if (!contactField) {
+          return jsonResponse(400, {
+            error: 'La tabla store_orders no tiene un campo de contacto activo. Debe existir una columna como contacted, confirmado o contact_status.'
+          });
+        }
+
+        const successfulPatch = [];
+        for (const order of matches) {
+          const patchBody = {};
+
+          if (['contacted', 'contactado', 'confirmado', 'confirmed', 'is_contacted'].includes(contactField)) {
+            patchBody[contactField] = true;
+          } else if (['status', 'contact_status', 'contact_status_id', 'estado_contacto', 'status_contacted'].includes(contactField)) {
+            patchBody[contactField] = 'contactado';
+          }
+
+          const updated = await supabaseRequest(`/rest/v1/store_orders?id=eq.${encodeURIComponent(order.id)}`, {
+            method: 'PATCH',
+            body: JSON.stringify(patchBody)
+          });
+
+          successfulPatch.push(updated);
+        }
+
+        return jsonResponse(200, { updated: successfulPatch.length, phone, contactField });
+      } catch (error) {
+        return jsonResponse(500, { error: error.message || 'No se pudo marcar como contactado.' });
+      }
     }
 
     if (httpMethod === 'POST' && action === 'create-order') {
