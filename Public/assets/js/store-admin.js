@@ -797,8 +797,12 @@ async function saveStoreItem(storeId, token) {
     showStoreItemMessage('Item guardado correctamente.', false);
     pendingStoreItemImageFile = null;
     setTimeout(() => {
-        closeStoreItemPanel();
-        initStoreAdminPage();
+        const currentStoreId = document.getElementById('storeItemFormPanel')?.dataset?.storeId || storeId;
+        if (currentStoreId) {
+            openStoreItemPanel(currentStoreId);
+        } else {
+            closeStoreItemPanel();
+        }
     }, 600);
 }
 

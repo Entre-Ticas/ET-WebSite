@@ -58,6 +58,11 @@
   status = 200
 
 [[redirects]]
+  from = "/tracking/*"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
   from = "/calc"
   to = "/index.html"
   status = 200
