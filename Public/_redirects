@@ -4,6 +4,7 @@
 /admin/order      /index.html 200
 /admin/invoices   /index.html 200
 /admin/payments   /index.html 200
+/admin/clients    /index.html 200
 /store            /index.html 200
 /store-catalog    /index.html 200
 /catalog          /index.html 200

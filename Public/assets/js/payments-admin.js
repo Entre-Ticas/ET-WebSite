@@ -245,10 +245,15 @@ function renderPayments() {
                 valB = new Date(valB);
                 return paymentsSortDir === 'asc' ? valA - valB : valB - valA;
             }
-            if (paymentsSortColumn === 'amount') {
-                valA = Number(valA) || 0;
-                valB = Number(valB) || 0;
-                return paymentsSortDir === 'asc' ? valA - valB : valB - valA;
+
+            const numericA = Number(valA);
+            const numericB = Number(valB);
+            if (
+                (paymentsSortColumn === 'id' || paymentsSortColumn === 'invoice_id' || paymentsSortColumn === 'amount') &&
+                Number.isFinite(numericA) &&
+                Number.isFinite(numericB)
+            ) {
+                return paymentsSortDir === 'asc' ? numericA - numericB : numericB - numericA;
             }
 
             const comparison = String(valA).localeCompare(String(valB), 'es', { sensitivity: 'base' });

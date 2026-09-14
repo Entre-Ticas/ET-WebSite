@@ -119,10 +119,14 @@ function renderInvoices() {
             let valA = a[invoicesSortColumn] || '';
             let valB = b[invoicesSortColumn] || '';
 
-            if (invoicesSortColumn === 'items_count') {
-                return invoicesSortDir === 'asc'
-                    ? String(valA).localeCompare(String(valB), 'es', { sensitivity: 'base' })
-                    : String(valB).localeCompare(String(valA), 'es', { sensitivity: 'base' });
+            const numericA = Number(valA);
+            const numericB = Number(valB);
+            if (
+                (invoicesSortColumn === 'id' || invoicesSortColumn === 'items_count') &&
+                Number.isFinite(numericA) &&
+                Number.isFinite(numericB)
+            ) {
+                return invoicesSortDir === 'asc' ? numericA - numericB : numericB - numericA;
             }
             if (invoicesSortColumn === 'invoice_date') {
                 valA = new Date(valA);

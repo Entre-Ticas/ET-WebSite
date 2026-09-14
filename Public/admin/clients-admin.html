@@ -1,0 +1,179 @@
+<link rel="stylesheet" href="../assets/css/order_items-admin.css">
+
+<div class="admin-wrapper">
+
+    <div id="clientsGridView">
+        <div class="admin-header">
+            <h2>👥 Gestión de Clientes</h2>
+            <p>Administra clientes, filtro por teléfono, estado y bloqueo.</p>
+        </div>
+
+        <div class="admin-search-bar">
+            <input type="text" id="clientsSearchInput" placeholder="🔍 Buscar por nombre, teléfono, estado o ID..." oninput="filterClients()" />
+            <button class="admin-btn-agregar" onclick="openNewClientForm()">+ Agregar Cliente</button>
+        </div>
+
+        <div id="clientsStatus" class="catalog-status">
+            <div class="spinner"></div>
+            <p>Cargando clientes...</p>
+        </div>
+
+        <div id="clientsGrid" class="admin-grid">
+            <table class="admin-table" style="display: none;">
+                <thead>
+                    <tr class="admin-main-header">
+                        <th class="sortable" onclick="sortClientsBy('id')" data-col="id">ID <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortClientsBy('name')" data-col="name">Nombre <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortClientsBy('phone')" data-col="phone">Teléfono <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortClientsBy('phone_last4')" data-col="phone_last4">Últimos 4 <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortClientsBy('status_name')" data-col="status_name">Estado <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortClientsBy('is_blacklisted')" data-col="is_blacklisted">Bloqueado <span class="sort-arrow">↕</span></th>
+                        <th class="sortable" onclick="sortClientsBy('created_at')" data-col="created_at">Fecha <span class="sort-arrow">↕</span></th>
+                        <th>Acciones</th>
+                    </tr>
+                    <tr class="admin-filter-row">
+                        <td><input type="text" placeholder="Filtrar..." oninput="setClientColumnFilter('id', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setClientColumnFilter('name', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setClientColumnFilter('phone', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setClientColumnFilter('phone_last4', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setClientColumnFilter('status_name', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setClientColumnFilter('is_blacklisted', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setClientColumnFilter('created_at', this.value)" /></td>
+                        <td></td>
+                    </tr>
+                </thead>
+                <tbody id="clientsTbody"></tbody>
+                <tfoot id="clientsTableFooter" style="display: none;">
+                    <tr>
+                        <td id="clientsFooterColspan">
+                            <div class="admin-pagination-container order-pagination-layout" style="margin-top: 0;">
+                                <div class="pagination-info" id="clientsPaginationInfo"></div>
+                                <div class="pagination-rows-selector order-pagination-rows">
+                                    <span>Filas:</span>
+                                    <div class="order-rows-dropdown" id="clientsRowsDropdown">
+                                        <button type="button" class="order-rows-trigger" id="clientsRowsPerPageTrigger" aria-haspopup="listbox" aria-expanded="false" onclick="toggleClientsRowsPerPageDropdown(event)">
+                                            <span id="clientsRowsPerPageSelectedLabel">10</span>
+                                            <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                                        </button>
+                                        <div class="order-rows-menu" id="clientsRowsPerPageMenu" role="listbox" aria-label="Filas por página">
+                                            <button type="button" data-value="10" role="option" onclick="selectClientsRowsPerPage('10')">10</button>
+                                            <button type="button" data-value="30" role="option" onclick="selectClientsRowsPerPage('30')">30</button>
+                                            <button type="button" data-value="50" role="option" onclick="selectClientsRowsPerPage('50')">50</button>
+                                            <button type="button" data-value="100" role="option" onclick="selectClientsRowsPerPage('100')">100</button>
+                                            <button type="button" data-value="-1" role="option" onclick="selectClientsRowsPerPage('-1')">Todos</button>
+                                        </div>
+                                        <select id="clientsRowsPerPageSelector" class="order-rows-native-select" onchange="changeClientsRowsPerPage(this.value)">
+                                            <option value="10">10</option>
+                                            <option value="30">30</option>
+                                            <option value="50">50</option>
+                                            <option value="100">100</option>
+                                            <option value="-1">Todos</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="pagination-nav" id="clientsPaginationNav"></div>
+                            </div>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <div class="no-results" id="clientsNoResults">
+            😔 No se encontraron clientes.
+        </div>
+    </div>
+
+    <div id="clientsNewView" style="display:none;">
+        <div class="container">
+            <div class="card" style="cursor:default;">
+                <button onclick="backToClientsGrid()" class="admin-btn-back">← Volver</button>
+                <i class="fas fa-user-plus" style="font-size:2rem; color:var(--pink-accent); margin-top:0.5rem;"></i>
+                <h3 style="margin:0.5rem 0;">Nuevo Cliente</h3>
+
+                <div style="text-align:left;">
+                    <div class="floating-field">
+                        <input type="text" id="newClientName" class="floating-input" placeholder=" " autocomplete="off">
+                        <label for="newClientName" class="floating-label">Nombre: *</label>
+                    </div>
+
+                    <div class="floating-field">
+                        <input type="tel" id="newClientPhone" class="floating-input" placeholder=" " autocomplete="off">
+                        <label for="newClientPhone" class="floating-label">Teléfono: *</label>
+                    </div>
+
+                    <div class="floating-field">
+                        <input type="text" id="newClientPhoneLast4" class="floating-input" placeholder=" " autocomplete="off" readonly>
+                        <label for="newClientPhoneLast4" class="floating-label">Últimos 4</label>
+                    </div>
+
+                    <div class="floating-field">
+                        <select id="newClientStatusId" class="floating-input" style="appearance: auto;">
+                            <option value="">Cargando estados...</option>
+                        </select>
+                        <label for="newClientStatusId" class="floating-label">Estado</label>
+                    </div>
+
+                    <label class="custom-checkbox-container">
+                        <input type="checkbox" id="newClientBlacklisted">
+                        <span class="checkbox-label">Cliente bloqueado</span>
+                    </label>
+
+                    <button id="btnSaveNewClient" onclick="saveNewClient()"
+                        style="width:100%; padding:12px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer; margin-top:1rem;">
+                        Guardar Cliente
+                    </button>
+
+                    <div id="newClientError" style="margin-top:0.8rem; font-weight:bold; text-align:center;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="clientsEditView" style="display:none;">
+        <div class="container">
+            <div class="card" style="cursor:default;">
+                <button onclick="backToClientsGrid()" class="admin-btn-back">← Volver</button>
+                <i class="fas fa-pencil-alt" style="font-size:2rem; color:var(--pink-accent); margin-top:0.5rem;"></i>
+                <h3 style="margin:0.5rem 0;">Editar Cliente</h3>
+
+                <div style="text-align:left;">
+                    <div class="floating-field">
+                        <input type="text" id="editClientName" class="floating-input" placeholder=" " autocomplete="off">
+                        <label for="editClientName" class="floating-label">Nombre: *</label>
+                    </div>
+
+                    <div class="floating-field">
+                        <input type="tel" id="editClientPhone" class="floating-input" placeholder=" " autocomplete="off">
+                        <label for="editClientPhone" class="floating-label">Teléfono: *</label>
+                    </div>
+
+                    <div class="floating-field">
+                        <input type="text" id="editClientPhoneLast4" class="floating-input" placeholder=" " autocomplete="off" readonly>
+                        <label for="editClientPhoneLast4" class="floating-label">Últimos 4</label>
+                    </div>
+
+                    <div class="floating-field">
+                        <select id="editClientStatusId" class="floating-input" style="appearance: auto;">
+                            <option value="">Cargando estados...</option>
+                        </select>
+                        <label for="editClientStatusId" class="floating-label">Estado</label>
+                    </div>
+
+                    <label class="custom-checkbox-container">
+                        <input type="checkbox" id="editClientBlacklisted">
+                        <span class="checkbox-label">Cliente bloqueado</span>
+                    </label>
+
+                    <button id="btnSaveClientEdit" onclick="saveClientEdit()"
+                        style="width:100%; padding:12px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer; margin-top:1rem;">
+                        Guardar Cambios
+                    </button>
+
+                    <div id="editClientError" style="margin-top:0.8rem; font-weight:bold; text-align:center;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>

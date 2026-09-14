@@ -363,8 +363,10 @@ function renderOrders() {
             let valA = a[orderItemsSortColumn] || '';
             let valB = b[orderItemsSortColumn] || '';
 
-            if (typeof valA === 'number' && typeof valB === 'number') {
-                return orderItemsSortDir === 'asc' ? valA - valB : valB - valA;
+            const numericA = Number(valA);
+            const numericB = Number(valB);
+            if (Number.isFinite(numericA) && Number.isFinite(numericB)) {
+                return orderItemsSortDir === 'asc' ? numericA - numericB : numericB - numericA;
             }
             const comparison = String(valA).localeCompare(String(valB), 'es', { sensitivity: 'base' });
             return orderItemsSortDir === 'asc' ? comparison : -comparison;

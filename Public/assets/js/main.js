@@ -174,6 +174,7 @@ function getScriptsForPage(page) {
         'admin/order': ['assets/js/admin-rows-dropdown.js', 'assets/js/order_items-admin.js'],
         'admin/invoices': ['assets/js/admin-rows-dropdown.js', 'assets/js/invoices-admin.js'],
         'admin/payments': ['assets/js/admin-rows-dropdown.js', 'assets/js/payments-admin.js'],
+        'admin/clients': ['assets/js/admin-rows-dropdown.js', 'assets/js/clients-admin.js'],
         StoreCatalog: ['assets/js/store-catalog.js'],
         'store-catalog': ['assets/js/store-catalog.js'],
         invoice: ['assets/js/invoice.js']
@@ -303,7 +304,7 @@ async function loadPage(page, param = null) {
     
     // --- INICIO: LÓGICA DE SEGURIDAD ---
     // Lista de rutas que requieren que el usuario esté autenticado.
-    const protectedRoutes = ['admin/tracking', 'admin/catalog', 'admin/store', 'admin/order', 'admin/invoices', 'admin/payments'];
+    const protectedRoutes = ['admin/tracking', 'admin/catalog', 'admin/store', 'admin/order', 'admin/invoices', 'admin/payments', 'admin/clients'];
     // Verificamos si la página solicitada es protegida Y si el usuario NO tiene una sesión activa.
     // La función getSession() ya existe en auth.js y nos dice si hay un token válido.
     if (protectedRoutes.includes(page) && !getSession()) {
@@ -351,6 +352,7 @@ async function loadPage(page, param = null) {
                 'admin/order': 'admin/order_items-admin.html',
                 'admin/invoices': 'admin/invoices-admin.html',
                 'admin/payments': 'admin/payments-admin.html',
+                'admin/clients': 'admin/clients-admin.html',
                 'StoreCatalog': 'StoreCatalog/store-catalog.html',
                 'store-catalog': 'StoreCatalog/store-catalog.html',
                 'invoice': 'invoice/invoice.html',
@@ -401,6 +403,8 @@ async function loadPage(page, param = null) {
                 window.initInvoicePage(param);
             } else if (page === 'admin/payments' && typeof window.initPaymentsAdminPage === 'function') {
                 window.initPaymentsAdminPage();
+            } else if (page === 'admin/clients' && typeof window.initClientsAdminPage === 'function') {
+                window.initClientsAdminPage();
             } else if ((page === 'StoreCatalog' || page === 'store-catalog') && typeof window.initStoreCatalogPage === 'function') {
                 window.initStoreCatalogPage();
             }
