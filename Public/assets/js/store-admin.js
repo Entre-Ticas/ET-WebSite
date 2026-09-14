@@ -1566,6 +1566,7 @@ function renderStoreCustomerOrdersTable() {
                             const waLink = phoneDigits ? `https://wa.me/${phoneDigits}?text=${waText}` : '#';
                             const itemList = (customer.items || []).map((item) => `<div>${item.name || 'Sin nombre'}: ${Number(item.quantity || 0)}</div>`).join('');
                             const phoneValue = String(customer.phone || '');
+                            const orderGroupId = String(customer.order_group_id || '');
                             const isMatched = Boolean(customer.is_matched && customer.client_name);
                             const clientName = isMatched ? customer.client_name : 'SIN MATCH';
                             const clientPhone = isMatched ? (customer.client_phone || customer.phone || 'Sin teléfono') : (customer.phone || customer.phone_digits || 'Sin teléfono');
@@ -1587,7 +1588,7 @@ function renderStoreCustomerOrdersTable() {
                                             <button class="admin-btn-action btn-edit" type="button" title="Vincular cliente" onclick="openStoreCustomerLinkModal('${phoneValue.replace(/'/g, "\\'")}')" aria-label="Vincular cliente">
                                                 <i class="fas fa-user-plus"></i>
                                             </button>
-                                            <button class="admin-btn-action btn-copy" type="button" title="Reconfirmar por WhatsApp" onclick="markStoreCustomerOrdersAsContacted('${phoneValue.replace(/'/g, "\\'")}', '${waLink.replace(/'/g, "\\'")}')" aria-label="Reconfirmar por WhatsApp">
+                                            <button class="admin-btn-action btn-copy" type="button" title="Reconfirmar por WhatsApp" onclick="markStoreCustomerOrdersAsContacted('${phoneValue.replace(/'/g, "\\'")}', '${waLink.replace(/'/g, "\\'")}', '${orderGroupId.replace(/'/g, "\\'")}')" aria-label="Reconfirmar por WhatsApp">
                                                 <i class="fab fa-whatsapp"></i>
                                             </button>
                                         </span>
@@ -1643,6 +1644,7 @@ function renderStoreCustomerOrdersTable() {
         const waLink = phoneDigits ? `https://wa.me/${phoneDigits}?text=${waText}` : '#';
         const itemList = (customer.items || []).map((item) => `<div>${item.name || 'Sin nombre'}: ${Number(item.quantity || 0)}</div>`).join('');
         const phoneValue = String(customer.phone || '');
+        const orderGroupId = String(customer.order_group_id || '');
         const isMatched = Boolean(customer.is_matched && customer.client_name);
         const clientName = isMatched ? customer.client_name : 'SIN MATCH';
         const clientPhone = isMatched ? (customer.client_phone || customer.phone || 'Sin teléfono') : (customer.phone || customer.phone_digits || 'Sin teléfono');
@@ -1664,7 +1666,7 @@ function renderStoreCustomerOrdersTable() {
                         <button class="admin-btn-action btn-edit" type="button" title="Vincular cliente" onclick="openStoreCustomerLinkModal('${phoneValue.replace(/'/g, "\\'")}')" aria-label="Vincular cliente">
                             <i class="fas fa-user-plus"></i>
                         </button>
-                        <button class="admin-btn-action btn-copy" type="button" title="Reconfirmar por WhatsApp" onclick="markStoreCustomerOrdersAsContacted('${phoneValue.replace(/'/g, "\\'")}', '${waLink.replace(/'/g, "\\'")}')" aria-label="Reconfirmar por WhatsApp">
+                        <button class="admin-btn-action btn-copy" type="button" title="Reconfirmar por WhatsApp" onclick="markStoreCustomerOrdersAsContacted('${phoneValue.replace(/'/g, "\\'")}', '${waLink.replace(/'/g, "\\'")}', '${orderGroupId.replace(/'/g, "\\'")}')" aria-label="Reconfirmar por WhatsApp">
                             <i class="fab fa-whatsapp"></i>
                         </button>
                     </span>
@@ -1687,9 +1689,10 @@ function renderStoreCustomerOrdersTable() {
     `;
 }
 
-async function markStoreCustomerOrdersAsContacted(phoneValue, waLink) {
+async function markStoreCustomerOrdersAsContacted(phoneValue, waLink, orderGroupId) {
     const session = getSession();
     const cleanedPhone = String(phoneValue || '').trim();
+    const cleanedOrderGroupId = orderGroupId ? String(orderGroupId).trim() : null;
 
     try {
         if (!session || !cleanedPhone) {
@@ -1705,6 +1708,7 @@ async function markStoreCustomerOrdersAsContacted(phoneValue, waLink) {
             body: JSON.stringify({
                 action: 'mark-store-customer-contacted',
                 phone: cleanedPhone,
+                order_group_id: cleanedOrderGroupId,
             })
         });
 

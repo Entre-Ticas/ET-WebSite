@@ -552,7 +552,7 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
       const storeId = queryStringParameters.store_id || payload.store_id || payload.storeId;
       if (!storeId) return jsonResponse(400, { error: 'Falta store_id.' });
 
-      const orders = await supabaseRequest(`/rest/v1/store_orders?store_id=eq.${encodeURIComponent(storeId)}&select=id,client_id,client_phone,item_id,quantity,unit_price,created_at,contacted`);
+      const orders = await supabaseRequest(`/rest/v1/store_orders?store_id=eq.${encodeURIComponent(storeId)}&select=id,client_id,client_phone,item_id,quantity,unit_price,created_at,contacted,order_group_id`);
       if (!Array.isArray(orders) || !orders.length) {
         return jsonResponse(200, { customers: [] });
       }
@@ -579,12 +579,16 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
       for (const order of orders) {
         const phone = String(order.client_phone || '').trim();
         if (!phone) continue;
-        const key = phone;
+
+        const orderGroupId = order.order_group_id || String(order.id);
+        const key = `${phone}|${orderGroupId}`;
         const linkedClient = order.client_id ? clientMap[order.client_id] || null : null;
+
         if (!grouped[key]) {
           grouped[key] = {
             phone,
             phone_digits: String(phone).replace(/\D/g, ''),
+            order_group_id: orderGroupId,
             client_id: linkedClient ? linkedClient.id : null,
             client_name: linkedClient ? linkedClient.name : null,
             client_phone: linkedClient ? linkedClient.phone : null,
@@ -630,6 +634,7 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
           .map((customer) => ({
             phone: customer.phone,
             phone_digits: customer.phone_digits,
+            order_group_id: customer.order_group_id,
             client_id: customer.client_id || null,
             client_name: customer.client_name || null,
             client_phone: customer.client_phone || null,
@@ -774,6 +779,7 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
     if (httpMethod === 'POST' && action === 'mark-store-customer-contacted') {
       if (!verifyToken(token)) return jsonResponse(401, { error: 'No autorizado.' });
       const phone = String(payload.phone || '').trim();
+      const orderGroupId = payload.order_group_id || payload.orderGroupId || null;
       if (!phone) return jsonResponse(400, { error: 'Falta teléfono.' });
 
       try {
@@ -782,11 +788,13 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
         const last4 = normalizedPhone.slice(-4);
         const matches = (orders || []).filter((order) => {
           const rowPhone = normalizePhoneDigits(order.client_phone || '');
-          return rowPhone === normalizedPhone || rowPhone.endsWith(last4);
+          const samePhone = rowPhone === normalizedPhone || rowPhone.endsWith(last4);
+          const sameGroup = !orderGroupId || order.order_group_id === orderGroupId || String(order.id) === String(orderGroupId);
+          return samePhone && sameGroup;
         });
 
         if (!matches.length) {
-          return jsonResponse(200, { updated: 0, phone, message: 'No hubo coincidencias para marcar contacto.' });
+          return jsonResponse(200, { updated: 0, phone, order_group_id: orderGroupId, message: 'No hubo coincidencias para marcar contacto.' });
         }
 
         const contactField = getExistingContactField((orders || [])[0] || {});
@@ -814,7 +822,7 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
           successfulPatch.push(updated);
         }
 
-        return jsonResponse(200, { updated: successfulPatch.length, phone, contactField });
+        return jsonResponse(200, { updated: successfulPatch.length, phone, order_group_id: orderGroupId, contactField });
       } catch (error) {
         return jsonResponse(500, { error: error.message || 'No se pudo marcar como contactado.' });
       }
