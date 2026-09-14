@@ -13,6 +13,69 @@ function formatStoreStatus(status) {
     return map[status] || status || 'Borrador';
 }
 
+function isStoreItemActive(item = {}) {
+    if (!item || typeof item !== 'object') return true;
+
+    if (item.is_active !== undefined) return Boolean(item.is_active);
+    if (item.active !== undefined) return Boolean(item.active);
+
+    if (item.status && typeof item.status === 'object') {
+        if (item.status.disabled !== undefined) return !Boolean(item.status.disabled);
+        const statusName = String(item.status.status_name || item.status.name || '').toLowerCase();
+        if (statusName.includes('disabled')) return false;
+        if (statusName.includes('enabled')) return true;
+    }
+
+    if (item.disabled !== undefined) return !Boolean(item.disabled);
+
+    const statusName = String(item.status_name || item.name_status || '').toLowerCase();
+    if (statusName.includes('disabled')) return false;
+    if (statusName.includes('enabled')) return true;
+
+    const statusId = Number(item.status_id ?? item.id_status ?? 0);
+    if (statusId > 0) return statusId !== 2;
+
+    return true;
+}
+
+async function loadStoreItemStatusOptions(selectEl, selectedStatusId = null) {
+    if (!selectEl) return;
+
+    const session = getSession();
+    if (!session) return;
+
+    try {
+        const response = await fetch('/.netlify/functions/store-admin?action=item-statuses', {
+            method: 'GET',
+            headers: { 'x-admin-token': session.token }
+        });
+
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.error || 'No se pudieron cargar los estados.');
+        }
+
+        const data = await response.json();
+        const statuses = Array.isArray(data.statuses) ? data.statuses : [];
+
+        if (!statuses.length) {
+            selectEl.innerHTML = '<option value="1">Enabled</option>';
+            return;
+        }
+
+        const currentValue = Number(selectedStatusId ?? statuses[0].id_status ?? 1);
+        selectEl.innerHTML = statuses.map((status) => {
+            const statusId = Number(status.id_status);
+            const label = status.status_name || `Estado ${statusId}`;
+            const selected = statusId === currentValue ? 'selected' : '';
+            return `<option value="${statusId}" ${selected}>${label}</option>`;
+        }).join('');
+    } catch (error) {
+        console.error('loadStoreItemStatusOptions failed', error);
+        selectEl.innerHTML = '<option value="1">Enabled</option><option value="2">Disabled</option>';
+    }
+}
+
 function normalizeStoreAdminFilterText(value) {
     return String(value || '')
         .trim()
@@ -418,12 +481,21 @@ async function openStoreItemPanel(storeId) {
             <textarea id="storeItemDescription" class="floating-input" placeholder=" " autocomplete="new-password"></textarea>
             <label class="floating-label">Descripción</label>
         </div>
+        <div class="floating-field">
+            <select id="storeItemStatusId" class="floating-input" style="width:100%;"></select>
+            <label class="floating-label">Estado</label>
+        </div>
         <button onclick="saveStoreItem('${storeId}', '${session.token}')"
             style="width:100%; padding:12px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
             Guardar Cambios
         </button>
         <div id="storeItemMessage"></div>
     `;
+
+    const statusSelect = document.getElementById('storeItemStatusId');
+    if (statusSelect) {
+        loadStoreItemStatusOptions(statusSelect, 1);
+    }
 }
 
 let storeItemsCache = {};
@@ -480,12 +552,22 @@ function openEditStoreItemPanel(storeId, itemId) {
             <textarea id="storeItemDescription" class="floating-input" placeholder=" " autocomplete="new-password">${String(item.description || '')}</textarea>
             <label class="floating-label">Descripción</label>
         </div>
+        <div class="floating-field">
+            <select id="storeItemStatusId" class="floating-input" style="width:100%;"></select>
+            <label class="floating-label">Estado</label>
+        </div>
         <button onclick="saveStoreItemEdit('${storeId}', '${itemId}', '${session.token}')"
             style="width:100%; padding:12px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
             Guardar Cambios
         </button>
         <div id="storeItemMessage"></div>
     `;
+
+    const statusSelect = document.getElementById('storeItemStatusId');
+    if (statusSelect) {
+        const selectedStatusId = Number(item.status_id ?? item.id_status ?? (isStoreItemActive(item) ? 1 : 2));
+        loadStoreItemStatusOptions(statusSelect, selectedStatusId);
+    }
 }
 
 async function saveStoreItemEdit(storeId, itemId, token) {
@@ -517,6 +599,7 @@ async function saveStoreItemEdit(storeId, itemId, token) {
     }
 
     const quantityRaw = document.getElementById('storeItemQuantity').value;
+    const statusId = Number(document.getElementById('storeItemStatusId')?.value || 1);
     const payload = {
         id: itemId,
         name: document.getElementById('storeItemName').value.trim(),
@@ -524,6 +607,8 @@ async function saveStoreItemEdit(storeId, itemId, token) {
         quantity: quantityRaw === '' ? null : Number(quantityRaw),
         image_url: imageUrl,
         description: document.getElementById('storeItemDescription').value.trim(),
+        status_id: statusId,
+        is_active: statusId === 1,
     };
 
     if (!payload.name || !payload.price || payload.price <= 0) {
@@ -765,6 +850,7 @@ async function saveStoreItem(storeId, token) {
     }
 
     const quantityRaw = document.getElementById('storeItemQuantity').value;
+    const statusId = Number(document.getElementById('storeItemStatusId')?.value || 1);
     const payload = {
         store_id: storeId,
         name: document.getElementById('storeItemName').value.trim(),
@@ -772,6 +858,8 @@ async function saveStoreItem(storeId, token) {
         quantity: quantityRaw === '' ? null : Number(quantityRaw),
         image_url: imageUrl,
         description: document.getElementById('storeItemDescription').value.trim(),
+        status_id: statusId,
+        is_active: statusId === 1,
     };
 
     if (!payload.name || !payload.price || payload.price <= 0) {
@@ -1012,6 +1100,7 @@ async function viewStoreItems(storeId) {
                         <th>Nombre</th>
                         <th>Precio</th>
                         <th>Cant.</th>
+                        <th>Estado</th>
                         <th>Descripción</th>
                         <th class="col-actions">Acciones</th>
                     </tr>
@@ -1021,6 +1110,7 @@ async function viewStoreItems(storeId) {
                         const imageButton = item.image_url
                             ? `<button type="button" class="admin-table-img-btn" data-image-url="${String(item.image_url || '').replace(/"/g, '&quot;')}" title="Ver imagen"><i class="fas fa-camera"></i></button>`
                             : '';
+                        const itemIsActive = isStoreItemActive(item);
 
                         return `
                             <tr>
@@ -1029,6 +1119,7 @@ async function viewStoreItems(storeId) {
                                 <td class="store-name-cell">${item.name || 'Sin nombre'}</td>
                                 <td>₡${Number(item.price || 0).toLocaleString('es-CR')}</td>
                                 <td>${(item.quantity === null || item.quantity === undefined || Number(item.quantity) === 0) ? 'Ilimitado' : Number(item.quantity)}</td>
+                                <td>${itemIsActive ? '<span style="color:#1f7a45; font-weight:700;">Activo</span>' : '<span style="color:#b23d3d; font-weight:700;">Desactivado</span>'}</td>
                                 <td class="store-item-description">${item.description || 'Sin descripción'}</td>
                                 <td class="admin-actions-cell col-actions">
                                     <button class="admin-btn-action btn-edit" title="Editar item" onclick="openEditStoreItemPanel('${storeId}', '${item.id}')"><i class="fas fa-pen"></i></button>
@@ -1038,7 +1129,7 @@ async function viewStoreItems(storeId) {
                         `;
                     }).join('') || `
                         <tr>
-                            <td colspan="7" style="text-align:center; color:#7a5246; padding:1.2rem;">No hay items cargados.</td>
+                            <td colspan="8" style="text-align:center; color:#7a5246; padding:1.2rem;">No hay items cargados.</td>
                         </tr>
                     `}
                 </tbody>

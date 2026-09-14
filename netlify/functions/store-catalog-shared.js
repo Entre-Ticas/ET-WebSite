@@ -165,8 +165,69 @@ function firstResult(result) {
   return result ?? null;
 }
 
+async function resolveStatusIdByName(statusName = 'Enabled') {
+  const valuesToTry = [];
+  const rawValue = String(statusName ?? '').trim();
+
+  if (rawValue) {
+    valuesToTry.push(rawValue);
+    valuesToTry.push(rawValue.toLowerCase());
+    valuesToTry.push(rawValue.charAt(0).toUpperCase() + rawValue.slice(1).toLowerCase());
+  }
+
+  const booleanFriendlyNames = {
+    true: ['Enabled', 'Activo', 'Active'],
+    false: ['Disabled', 'Desactivado', 'Inactive']
+  };
+
+  if (typeof statusName === 'boolean') {
+    valuesToTry.push(...(booleanFriendlyNames[String(statusName)] || []));
+  }
+
+  const uniqueValues = [...new Set(valuesToTry.filter(Boolean))];
+
+  for (const value of uniqueValues) {
+    try {
+      const rows = await supabaseRequest(`/rest/v1/status?status_name=eq.${encodeURIComponent(value)}&select=id_status`);
+      const first = firstResult(rows);
+      if (first && first.id_status !== undefined) return Number(first.id_status);
+    } catch {
+      // continue with next candidate
+    }
+  }
+
+  const boolValue = typeof statusName === 'boolean' ? statusName : null;
+  if (boolValue !== null) {
+    try {
+      const rows = await supabaseRequest(`/rest/v1/status?disabled=eq.${String(boolValue).toLowerCase()}&select=id_status`);
+      const first = firstResult(rows);
+      if (first && first.id_status !== undefined) return Number(first.id_status);
+    } catch {
+      // fallback handled below
+    }
+  }
+
+  return null;
+}
+
+function itemIsActive(item = {}) {
+  const explicit = item.is_active;
+  if (explicit !== undefined) return Boolean(explicit);
+
+  const statusName = String(item.status_name || item.status || '').toLowerCase();
+  if (statusName.includes('activo') || statusName.includes('active')) return true;
+  if (statusName.includes('desactiv') || statusName.includes('inactive') || statusName.includes('inactivo')) return false;
+
+  const statusId = Number(item.status_id ?? item.id_status ?? 0);
+  if (statusId > 0) return statusId !== 2;
+
+  return true;
+}
+
 function normalizeItem(item = {}) {
   const safeItem = item && typeof item === 'object' ? item : {};
+  const isActive = itemIsActive(safeItem);
+
   return {
     id: safeItem.id ?? safeItem.id_store_item ?? null,
     store_id: safeItem.store_id ?? safeItem.storeId ?? null,
@@ -177,6 +238,10 @@ function normalizeItem(item = {}) {
       ? null
       : Number(safeItem.quantity),
     description: safeItem.description || '',
+    is_active: isActive,
+    status: isActive ? 'active' : 'inactive',
+    status_id: safeItem.status_id ?? safeItem.id_status ?? null,
+    status_name: safeItem.status_name || safeItem.status?.status_name || null,
   };
 }
 
@@ -229,6 +294,8 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
       }
 
       const items = await supabaseRequest(`/rest/v1/store_items?store_id=eq.${encodeURIComponent(store.id_store)}&select=*`);
+      const visibleItems = (items || []).filter((item) => itemIsActive(item));
+
       return jsonResponse(200, {
         store: {
           id_store: store.id_store,
@@ -236,7 +303,7 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
           public_token: store.public_token,
           expires_at: store.expires_at,
         },
-        items: (items || []).map(normalizeItem),
+        items: visibleItems.map(normalizeItem),
         expires_at: store.expires_at,
       });
     }
@@ -367,6 +434,11 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
 
     if (httpMethod === 'POST' && action === 'add-store-item') {
       if (!verifyToken(token)) return jsonResponse(401, { error: 'No autorizado.' });
+
+      const isActive = payload.is_active !== undefined ? Boolean(payload.is_active) : true;
+      const statusId = payload.status_id !== undefined ? Number(payload.status_id) : null;
+      const resolvedStatusId = statusId || (await resolveStatusIdByName(isActive ? 'Activo' : 'Desactivado'));
+
       const item = {
         store_id: payload.store_id || payload.storeId,
         name: payload.name || '',
@@ -377,6 +449,10 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
           : Number(payload.quantity),
         description: payload.description || '',
       };
+
+      if (resolvedStatusId !== null) {
+        item.status_id = resolvedStatusId;
+      }
 
       if (!item.store_id || !item.name || item.price <= 0) {
         return jsonResponse(400, { error: 'Faltan campos: store_id, name y price.' });
@@ -401,6 +477,14 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
         quantity: payload.quantity,
         description: payload.description,
       };
+
+      if (payload.status_id !== undefined) {
+        updates.status_id = Number(payload.status_id);
+      } else if (payload.is_active !== undefined) {
+        const resolvedStatusId = await resolveStatusIdByName(Boolean(payload.is_active) ? 'Activo' : 'Desactivado');
+        if (resolvedStatusId !== null) updates.status_id = resolvedStatusId;
+      }
+
       Object.keys(updates).forEach((key) => {
         if (updates[key] === undefined) delete updates[key];
       });
@@ -419,6 +503,19 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
 
       await supabaseRequest(`/rest/v1/store_items?id=eq.${encodeURIComponent(itemId)}`, { method: 'DELETE' });
       return jsonResponse(200, { message: 'Item eliminado.' });
+    }
+
+    if (httpMethod === 'GET' && action === 'item-statuses') {
+      if (!verifyToken(token)) return jsonResponse(401, { error: 'No autorizado.' });
+
+      const statuses = await supabaseRequest('/rest/v1/status?select=id_status,status_name,disabled&order=id_status.asc');
+      return jsonResponse(200, {
+        statuses: (statuses || []).map((status) => ({
+          id_status: status.id_status,
+          status_name: status.status_name,
+          disabled: Boolean(status.disabled),
+        }))
+      });
     }
 
     if (httpMethod === 'GET' && action === 'store-items') {
