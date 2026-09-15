@@ -13,6 +13,23 @@ let orderItemsColumnFilters = {
     price: '', status_name: '', usa_reviewed: '', invoice_id: ''
 };
 
+registerAdminRowsPerPageDropdown({
+    name: 'order',
+    dropdownId: 'orderRowsDropdown',
+    triggerId: 'rowsPerPageTrigger',
+    menuId: 'rowsPerPageMenu',
+    labelId: 'rowsPerPageSelectedLabel',
+    selectorId: 'rowsPerPageSelector',
+    toggleFnName: 'toggleOrderRowsPerPageDropdown',
+    selectFnName: 'selectOrderRowsPerPage',
+    getValue: () => rowsPerPage,
+    onSelect: (value) => {
+        rowsPerPage = parseInt(value, 10);
+        currentPage = 1;
+        renderOrders();
+    }
+});
+
 function isEmptyInvoiceFilterValue(value) {
     const normalized = String(value || '').trim().toLowerCase();
     return ['-', '—', 'null', 'sin', 'sin factura', 's/f', 'sf', 'none', 'na', 'n/a'].includes(normalized);
@@ -34,7 +51,8 @@ function resetOrderItemsViewState() {
 
     const rowsSelector = document.getElementById('rowsPerPageSelector');
     if (rowsSelector) rowsSelector.value = '10';
-    syncOrderRowsPerPageDropdown();
+    syncAdminRowsPerPageDropdown('order');
+    closeAdminRowsPerPageDropdown('order');
 
     const multiSelectToggle = document.getElementById('multiSelectToggle');
     if (multiSelectToggle) multiSelectToggle.checked = false;
@@ -345,8 +363,10 @@ function renderOrders() {
             let valA = a[orderItemsSortColumn] || '';
             let valB = b[orderItemsSortColumn] || '';
 
-            if (typeof valA === 'number' && typeof valB === 'number') {
-                return orderItemsSortDir === 'asc' ? valA - valB : valB - valA;
+            const numericA = Number(valA);
+            const numericB = Number(valB);
+            if (Number.isFinite(numericA) && Number.isFinite(numericB)) {
+                return orderItemsSortDir === 'asc' ? numericA - numericB : numericB - numericA;
             }
             const comparison = String(valA).localeCompare(String(valB), 'es', { sensitivity: 'base' });
             return orderItemsSortDir === 'asc' ? comparison : -comparison;
@@ -444,7 +464,7 @@ function renderOrderPagination(totalRows) {
     }
     if (selectorEl) {
         selectorEl.value = rowsPerPage;
-        syncOrderRowsPerPageDropdown();
+        syncAdminRowsPerPageDropdown('order');
     }
     if (navEl) {
         navEl.innerHTML = `
@@ -466,197 +486,22 @@ function changeOrderRowsPerPage(value) {
     renderOrders();
 }
 
-function closeOrderRowsPerPageDropdown() {
-    const dropdown = document.getElementById('orderRowsDropdown');
-    const trigger = document.getElementById('rowsPerPageTrigger');
-    const menu = document.getElementById('rowsPerPageMenu');
-    if (!dropdown || !trigger) return;
-    dropdown.classList.remove('open');
-    trigger.setAttribute('aria-expanded', 'false');
-    if (menu) {
-        menu.style.top = '';
-        menu.style.left = '';
-        menu.style.minWidth = '';
-    }
-}
-
-function positionOrderRowsPerPageMenu() {
-    const dropdown = document.getElementById('orderRowsDropdown');
-    const trigger = document.getElementById('rowsPerPageTrigger');
-    const menu = document.getElementById('rowsPerPageMenu');
-    if (!dropdown || !trigger || !menu || !dropdown.classList.contains('open')) return;
-
-    const rect = trigger.getBoundingClientRect();
-    const viewportPadding = 8;
-
-    menu.style.minWidth = `${Math.max(88, Math.round(rect.width))}px`;
-
-    const menuHeight = menu.offsetHeight || 180;
-    let top = rect.bottom + 6;
-
-    if (top + menuHeight > window.innerHeight - viewportPadding) {
-        top = Math.max(viewportPadding, rect.top - menuHeight - 6);
-    }
-
-    let left = rect.right - menu.offsetWidth;
-    if (left < viewportPadding) left = viewportPadding;
-    if (left + menu.offsetWidth > window.innerWidth - viewportPadding) {
-        left = Math.max(viewportPadding, window.innerWidth - menu.offsetWidth - viewportPadding);
-    }
-
-    menu.style.top = `${Math.round(top)}px`;
-    menu.style.left = `${Math.round(left)}px`;
-}
-
-function toggleOrderRowsPerPageDropdown(event) {
-    if (event) {
-        event.preventDefault();
-        event.stopPropagation();
-    }
-
-    const dropdown = document.getElementById('orderRowsDropdown');
-    const trigger = document.getElementById('rowsPerPageTrigger');
-    if (!dropdown || !trigger) return;
-
-    const shouldOpen = !dropdown.classList.contains('open');
-    closeOrderRowsPerPageDropdown();
-
-    if (shouldOpen) {
-        dropdown.classList.add('open');
-        trigger.setAttribute('aria-expanded', 'true');
-        requestAnimationFrame(positionOrderRowsPerPageMenu);
-    }
-}
-
-function selectOrderRowsPerPage(value) {
-    const selector = document.getElementById('rowsPerPageSelector');
-    if (!selector) return;
-
-    selector.value = String(value);
-    syncOrderRowsPerPageDropdown();
-    closeOrderRowsPerPageDropdown();
-    changeOrderRowsPerPage(value);
-}
-
-function syncOrderRowsPerPageDropdown() {
-    const selector = document.getElementById('rowsPerPageSelector');
-    const selectedLabel = document.getElementById('rowsPerPageSelectedLabel');
-    const menu = document.getElementById('rowsPerPageMenu');
-    if (!selector || !selectedLabel || !menu) return;
-
-    const selectedValue = String(selector.value || rowsPerPage);
-    const selectedOption = selector.querySelector(`option[value="${selectedValue}"]`);
-    selectedLabel.textContent = selectedOption ? selectedOption.textContent : selectedValue;
-
-    menu.querySelectorAll('button[data-value]').forEach((button) => {
-        const isActive = button.getAttribute('data-value') === selectedValue;
-        button.classList.toggle('is-active', isActive);
-        button.setAttribute('aria-selected', isActive ? 'true' : 'false');
-    });
-}
-
 function openOrderImageModal(encodedSrc) {
     const src = decodeURIComponent(String(encodedSrc || ''));
     if (!src) return;
     openImageModal(src);
 }
 
-function copyTextToClipboard(text) {
-    if (navigator.clipboard?.writeText) {
-        return navigator.clipboard.writeText(text);
-    }
-
-    return new Promise((resolve, reject) => {
-        const tempInput = document.createElement('input');
-        tempInput.type = 'text';
-        tempInput.value = text;
-        tempInput.setAttribute('readonly', 'readonly');
-        tempInput.style.position = 'fixed';
-        tempInput.style.opacity = '0';
-        tempInput.style.pointerEvents = 'none';
-
-        document.body.appendChild(tempInput);
-        tempInput.focus();
-        tempInput.select();
-        tempInput.setSelectionRange(0, tempInput.value.length);
-
-        const copied = document.execCommand('copy');
-        document.body.removeChild(tempInput);
-
-        if (copied) {
-            resolve();
-            return;
-        }
-
-        reject(new Error('Tu dispositivo no permitió copiar el link.'));
+function copiarLinkFactura(btn, invoiceId) {
+    return copyInvoiceLink(btn, invoiceId, {
+        missingMessage: 'Esta orden no tiene factura asignada.'
     });
 }
 
-async function getInvoicePublicRef(invoiceId) {
-    if (!invoiceId) {
-        throw new Error('Esta orden no tiene factura asignada.');
-    }
-
-    const session = getSession();
-    if (!session) throw new Error('Sesión no válida.');
-
-    const response = await fetch(`/.netlify/functions/invoices?id=${invoiceId}`, {
-        headers: { 'x-admin-token': session.token }
+function verFactura(invoiceId) {
+    return openInvoiceInNewTab(invoiceId, null, {
+        missingMessage: 'Esta orden no tiene factura asignada.'
     });
-
-    if (!response.ok) {
-        throw new Error('No se pudo generar el enlace seguro de factura.');
-    }
-
-    const payload = await response.json();
-    const publicRef = payload?.invoice?.public_ref;
-
-    if (!publicRef) {
-        throw new Error('No se encontró referencia pública para la factura.');
-    }
-
-    return publicRef;
-}
-
-async function copiarLinkFactura(btn, invoiceId) {
-    try {
-        const publicRef = await getInvoicePublicRef(invoiceId);
-        const invoiceUrl = `${window.location.origin}/invoice/${publicRef}`;
-        await copyTextToClipboard(invoiceUrl);
-
-        const icon = btn?.querySelector('i');
-        const originalClass = icon?.className;
-
-        if (icon) {
-            icon.className = 'fas fa-check';
-        }
-        if (btn) {
-            btn.style.color = '#25d366';
-            btn.title = 'Link copiado';
-        }
-
-        setTimeout(() => {
-            if (icon && originalClass) {
-                icon.className = originalClass;
-            }
-            if (btn) {
-                btn.style.color = '';
-                btn.title = 'Copiar Link de Factura';
-            }
-        }, 2000);
-    } catch (error) {
-        alert(error.message || 'No se pudo copiar el link de la factura.');
-    }
-}
-
-async function verFactura(invoiceId) {
-    try {
-        const publicRef = await getInvoicePublicRef(invoiceId);
-
-        if (typeof loadPage === 'function') loadPage('invoice', publicRef);
-    } catch (error) {
-        alert(error.message || 'No se pudo abrir la factura.');
-    }
 }
 
 function sortOrdersBy(col) {
@@ -1421,14 +1266,35 @@ function guardarEdicionCompleta() {
     guardarEdicion();
 }
 
-async function eliminarOrden(id) {
-    if (!confirm('¿Estás seguro de que deseas eliminar esta orden? Esta acción no se puede deshacer.')) {
-        return;
-    }
+function eliminarOrden(id) {
+    const orden = todasLasOrdenes.find(o => Number(o.id) === Number(id));
+    const productName = escapeDeleteText(orden?.product_name || `#${id}`);
+    const clientName = escapeDeleteText(orden?.client_name || 'Cliente no disponible');
+    const quantity = Math.max(1, parseInt(orden?.quantity, 10) || 1);
+    const unitPrice = Number(orden?.price || 0);
+    const totalAmount = unitPrice * quantity;
 
-    const status = document.getElementById('adminStatus');
-    status.innerHTML = '<div class="spinner"></div><p>Eliminando orden...</p>';
-    status.style.display = 'flex';
+    const body = `
+        <p>¿Está seguro que desea eliminar la orden <strong>${productName}</strong>?</p>
+        <p><strong>Cliente:</strong> ${clientName}</p>
+        <p><strong>Cantidad:</strong> ${quantity} | <strong>Precio unitario:</strong> ${formatDeleteCurrency(unitPrice)}</p>
+        <p><strong>Monto total:</strong> ${formatDeleteCurrency(totalAmount)}</p>
+        <p style="color:#c0392b; margin-top:8px;"><strong>⚠ Esta acción no se puede deshacer.</strong></p>
+    `;
+
+    const footer = `
+        <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
+        <button class="btn btn-danger" onclick="confirmDeleteOrder(${Number(id)})">Sí, Eliminar</button>
+    `;
+
+    openGenericModal('Confirmar Eliminación', body, footer);
+}
+
+async function confirmDeleteOrder(id) {
+    const modalBody = document.getElementById('genericModalBody');
+    const modalFooter = document.getElementById('genericModalFooter');
+    if (modalBody) modalBody.innerHTML = '<div class="spinner"></div><p>Eliminando orden...</p>';
+    if (modalFooter) modalFooter.innerHTML = '';
 
     try {
         const session = getSession();
@@ -1439,13 +1305,30 @@ async function eliminarOrden(id) {
             headers: { 'x-admin-token': session.token }
         });
 
-        if (!response.ok) throw new Error((await response.json()).error || 'No se pudo eliminar la orden.');
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'No se pudo eliminar la orden.');
+        }
 
-        await loadAdminOrders();
-
+        if (modalBody) modalBody.innerHTML = '✅ Orden eliminada con éxito.';
+        setTimeout(() => { closeGenericModal(); loadAdminOrders(); }, 900);
     } catch (error) {
-        alert(`Error al eliminar: ${error.message}`);
+        if (modalBody) modalBody.innerHTML = `⚠️ Error al eliminar: ${error.message}`;
+        if (modalFooter) modalFooter.innerHTML = '<button class="btn btn-secondary" onclick="closeGenericModal()">Cerrar</button>';
     }
+}
+
+function formatDeleteCurrency(value) {
+    return `₡${Number(value || 0).toLocaleString('es-CR')}`;
+}
+
+function escapeDeleteText(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 async function handleImageUpload(event, formType) {
@@ -1511,19 +1394,6 @@ function initOrderItemsAdminPage() {
 }
 
 window.initOrderItemsAdminPage = initOrderItemsAdminPage;
-window.toggleOrderRowsPerPageDropdown = toggleOrderRowsPerPageDropdown;
-window.selectOrderRowsPerPage = selectOrderRowsPerPage;
-
-document.addEventListener('click', (event) => {
-    const dropdown = document.getElementById('orderRowsDropdown');
-    if (!dropdown) return;
-    if (!dropdown.contains(event.target)) {
-        closeOrderRowsPerPageDropdown();
-    }
-});
-
-window.addEventListener('resize', positionOrderRowsPerPageMenu);
-window.addEventListener('scroll', positionOrderRowsPerPageMenu, true);
 
 function updateQuantity(inputId, delta) {
     const input = document.getElementById(inputId);

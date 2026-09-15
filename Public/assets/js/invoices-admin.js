@@ -11,6 +11,23 @@ let invoicesColumnFilters = {
     id: '', client_name: '', client_phone: '', invoice_date: '', status_name: '', items_count: '', paid: ''
 };
 
+registerAdminRowsPerPageDropdown({
+    name: 'invoices',
+    dropdownId: 'invoicesRowsDropdown',
+    triggerId: 'invoicesRowsPerPageTrigger',
+    menuId: 'invoicesRowsPerPageMenu',
+    labelId: 'invoicesRowsPerPageSelectedLabel',
+    selectorId: 'rowsPerPageSelector',
+    toggleFnName: 'toggleInvoicesRowsPerPageDropdown',
+    selectFnName: 'selectInvoicesRowsPerPage',
+    getValue: () => invoicesRowsPerPage,
+    onSelect: (value) => {
+        invoicesRowsPerPage = parseInt(value, 10);
+        invoicesCurrentPage = 1;
+        renderInvoices();
+    }
+});
+
 function resetInvoicesViewState() {
     invoicesGlobalSearch = '';
     invoicesCurrentPage = 1;
@@ -26,6 +43,9 @@ function resetInvoicesViewState() {
 
     const rowsSelector = document.getElementById('rowsPerPageSelector');
     if (rowsSelector) rowsSelector.value = '10';
+
+    syncAdminRowsPerPageDropdown('invoices');
+    closeAdminRowsPerPageDropdown('invoices');
 
     const multiSelectToggle = document.getElementById('multiSelectToggle');
     if (multiSelectToggle) multiSelectToggle.checked = false;
@@ -99,10 +119,14 @@ function renderInvoices() {
             let valA = a[invoicesSortColumn] || '';
             let valB = b[invoicesSortColumn] || '';
 
-            if (invoicesSortColumn === 'items_count') {
-                return invoicesSortDir === 'asc'
-                    ? String(valA).localeCompare(String(valB), 'es', { sensitivity: 'base' })
-                    : String(valB).localeCompare(String(valA), 'es', { sensitivity: 'base' });
+            const numericA = Number(valA);
+            const numericB = Number(valB);
+            if (
+                (invoicesSortColumn === 'id' || invoicesSortColumn === 'items_count') &&
+                Number.isFinite(numericA) &&
+                Number.isFinite(numericB)
+            ) {
+                return invoicesSortDir === 'asc' ? numericA - numericB : numericB - numericA;
             }
             if (invoicesSortColumn === 'invoice_date') {
                 valA = new Date(valA);
@@ -150,6 +174,7 @@ function renderInvoices() {
                 </td>
                 <td class="admin-actions-cell">
                     <button class="admin-btn-action btn-edit" onclick="openInvoiceEditForm(${f.id})" title="Editar Factura"><i class="fas fa-pencil-alt"></i></button>
+                    <button class="admin-btn-action btn-copy" onclick="copiarLinkFactura(this, ${f.id})" title="Copiar Link de Factura"><i class="fas fa-copy"></i></button>
                     <button class="admin-btn-action btn-invoice" onclick="viewInvoiceDetail('${f.public_ref || ''}', ${f.id})" title="Ver Detalle de Factura"><i class="fas fa-file-invoice-dollar"></i></button>
                     <button class="admin-btn-action btn-delete" onclick="eliminarFactura(${f.id})" title="Eliminar Factura"><i class="fas fa-trash-alt"></i></button>
                 </td>
@@ -187,6 +212,7 @@ function renderInvoicePagination(totalRows) {
 
     if (infoEl) infoEl.innerHTML = `Mostrando <strong>${startItem} - ${endItem}</strong> de <strong>${totalRows}</strong>`;
     if (selectorEl) selectorEl.value = invoicesRowsPerPage;
+    syncAdminRowsPerPageDropdown('invoices');
     if (navEl) {
         navEl.innerHTML = `
             <button onclick="changeInvoicePage(${invoicesCurrentPage - 1})" ${invoicesCurrentPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
@@ -203,38 +229,15 @@ function changeInvoicePage(newPage) {
 
 function changeInvoiceRowsPerPage(value) {
     invoicesRowsPerPage = parseInt(value, 10);
-    invoicesCurrentPage = 1;
     renderInvoices();
 }
 
+function copiarLinkFactura(btn, invoiceId) {
+    return copyInvoiceLink(btn, invoiceId);
+}
+
 async function viewInvoiceDetail(publicRef, invoiceId) {
-    try {
-        let refToUse = publicRef;
-
-        if (!refToUse) {
-            const session = getSession();
-            if (!session) throw new Error('Sesión no válida.');
-
-            const response = await fetch(`/.netlify/functions/invoices?id=${invoiceId}`, {
-                headers: { 'x-admin-token': session.token }
-            });
-
-            if (!response.ok) {
-                throw new Error('No se pudo generar el enlace seguro de factura.');
-            }
-
-            const payload = await response.json();
-            refToUse = payload?.invoice?.public_ref || null;
-        }
-
-        if (!refToUse) {
-            throw new Error('No se encontró una referencia válida para la factura.');
-        }
-
-        if (typeof loadPage === 'function') loadPage('invoice', refToUse);
-    } catch (error) {
-        alert(error.message || 'No se pudo abrir la factura.');
-    }
+    return openInvoiceInNewTab(invoiceId, publicRef);
 }
 
 function backToInvoicesGrid() {
@@ -631,8 +634,24 @@ async function handleMultiDelete() {
     const idsToDelete = getSelectedInvoiceIds();
     if (idsToDelete.length === 0) return;
 
+    const selectedInvoices = idsToDelete
+        .map(id => todasLasFacturas.find(f => Number(f.id) === Number(id)))
+        .filter(Boolean);
+    const previewRows = selectedInvoices.slice(0, 4).map((f) => {
+        const clientName = escapeInvoiceDeleteText(f.client_name || 'Cliente no disponible');
+        const clientPhone = escapeInvoiceDeleteText(f.client_phone || '--');
+        const status = f.paid ? 'Pagada' : 'Pendiente';
+        return `<li><strong>#${Number(f.id)}</strong> - ${clientName} (${clientPhone}) | Estado: ${status}</li>`;
+    }).join('');
+    const remainingCount = Math.max(0, selectedInvoices.length - 4);
+
     const title = 'Confirmar Eliminación';
-    const body = `¿Estás seguro de que deseas eliminar <strong>${idsToDelete.length}</strong> facturas? Esta acción también podría afectar a las órdenes asociadas.`;
+    const body = `
+        <p>¿Está seguro de que desea eliminar <strong>${idsToDelete.length}</strong> facturas seleccionadas?</p>
+        ${previewRows ? `<ul style="margin:8px 0 0 16px;">${previewRows}</ul>` : ''}
+        ${remainingCount > 0 ? `<p style="margin-top:6px; color:#666;">... y ${remainingCount} factura(s) más.</p>` : ''}
+        <p style="margin-top:8px; color:#c0392b;"><strong>⚠ Esta acción también podría afectar órdenes asociadas y no se puede deshacer.</strong></p>
+    `;
     const footer = `
         <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
         <button class="btn btn-danger" onclick="confirmMultiDelete()">Eliminar</button>
@@ -681,9 +700,62 @@ async function confirmMultiDelete() {
 }
 
 function eliminarFactura(id) {
-    // Reutilizamos la lógica de selección múltiple para una sola factura
-    document.querySelectorAll('.row-selector').forEach(chk => chk.checked = (Number(chk.dataset.id) === id));
-    handleMultiDelete();
+    const factura = todasLasFacturas.find(f => Number(f.id) === Number(id));
+    const clientName = escapeInvoiceDeleteText(factura?.client_name || 'Cliente no disponible');
+    const clientPhone = escapeInvoiceDeleteText(factura?.client_phone || '--');
+    const invoiceDate = factura?.invoice_date ? new Date(factura.invoice_date).toLocaleDateString('es-CR') : 'N/A';
+    const status = factura?.paid ? 'Pagada' : 'Pendiente';
+
+    const body = `
+        <p>¿Está seguro que desea eliminar la factura de <strong>${clientName}</strong>?</p>
+        <p><strong>Factura #:</strong> ${Number(id)} | <strong>Teléfono:</strong> ${clientPhone}</p>
+        <p><strong>Fecha:</strong> ${invoiceDate} | <strong>Estado:</strong> ${status}</p>
+        <p style="color:#c0392b; margin-top:8px;"><strong>⚠ Esta acción no se puede deshacer.</strong></p>
+    `;
+
+    const footer = `
+        <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
+        <button class="btn btn-danger" onclick="confirmDeleteSingleInvoice(${Number(id)})">Sí, Eliminar</button>
+    `;
+
+    openGenericModal('Confirmar Eliminación', body, footer);
+}
+
+async function confirmDeleteSingleInvoice(id) {
+    const modalBody = document.getElementById('genericModalBody');
+    const modalFooter = document.getElementById('genericModalFooter');
+    if (modalBody) modalBody.innerHTML = '<div class="spinner"></div><p>Eliminando factura...</p>';
+    if (modalFooter) modalFooter.innerHTML = '';
+
+    try {
+        const session = getSession();
+        if (!session) throw new Error('Sesión expirada.');
+
+        const response = await fetch(`/.netlify/functions/invoices?id=${id}`, {
+            method: 'DELETE',
+            headers: { 'x-admin-token': session.token }
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'No se pudo eliminar la factura.');
+        }
+
+        if (modalBody) modalBody.innerHTML = '✅ Factura eliminada con éxito.';
+        setTimeout(() => { closeGenericModal(); loadAdminInvoices(); }, 900);
+    } catch (error) {
+        if (modalBody) modalBody.innerHTML = `⚠️ Error al eliminar: ${error.message}`;
+        if (modalFooter) modalFooter.innerHTML = '<button class="btn btn-secondary" onclick="closeGenericModal()">Cerrar</button>';
+    }
+}
+
+function escapeInvoiceDeleteText(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 function initInvoicesAdminPage() {

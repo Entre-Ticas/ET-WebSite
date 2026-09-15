@@ -1,8 +1,12 @@
-const SUPABASE_URL = () => process.env.SUPABASE_URL;
-const SUPABASE_KEY = () => process.env.SUPABASE_SERVICE_ROLE_KEY;
 const ADMIN_SECRET = () => process.env.ADMIN_SECRET;
+const CLOUDFLARE_ACCOUNT_ID = () => process.env.CLOUDFLARE_ACCOUNT_ID;
+const CLOUDFLARE_R2_BUCKET = () => process.env.CLOUDFLARE_R2_BUCKET;
+const CLOUDFLARE_PUBLIC_URL = () => process.env.CLOUDFLARE_PUBLIC_URL;
+const CLOUDFLARE_R2_ACCESS_KEY_ID = () => process.env.CLOUDFLARE_R2_ACCESS_KEY_ID;
+const CLOUDFLARE_R2_SECRET_ACCESS_KEY = () => process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY;
 
-// Helper para verificar el token de administrador
+let s3Client = null;
+
 function verifyToken(token) {
     if (!token || !ADMIN_SECRET()) return false;
     try {
@@ -12,52 +16,103 @@ function verifyToken(token) {
     } catch { return false; }
 }
 
+function sanitizeFileName(fileName) {
+    const sanitized = (fileName || 'upload.jpg')
+        .replace(/[^a-zA-Z0-9._-]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+
+    return sanitized || 'upload';
+}
+
+function getR2UploadBaseUrl() {
+    const accountId = CLOUDFLARE_ACCOUNT_ID();
+    const bucket = CLOUDFLARE_R2_BUCKET();
+
+    if (!accountId || !bucket) {
+        return null;
+    }
+
+    return `https://${accountId}.r2.cloudflarestorage.com`;
+}
+
+function getPublicBaseUrl() {
+    return CLOUDFLARE_PUBLIC_URL() ||
+        (CLOUDFLARE_R2_BUCKET() ? `https://${CLOUDFLARE_R2_BUCKET()}.r2.dev` : null);
+}
+
 exports.handler = async (event) => {
-    // Verificar token de administrador
     if (!verifyToken(event.headers['x-admin-token'])) {
         return { statusCode: 401, body: JSON.stringify({ error: 'No autorizado.' }) };
     }
-    
-    // Verificar variables de entorno
-    if (!SUPABASE_URL() || !SUPABASE_KEY()) {
-        return { statusCode: 500, body: JSON.stringify({ error: 'Faltan variables de entorno de Supabase.' }) };
+
+    const accessKeyId = CLOUDFLARE_R2_ACCESS_KEY_ID();
+    const secretAccessKey = CLOUDFLARE_R2_SECRET_ACCESS_KEY();
+    const bucket = CLOUDFLARE_R2_BUCKET();
+    const uploadBaseUrl = getR2UploadBaseUrl();
+
+    if (!bucket || !uploadBaseUrl) {
+        return {
+            statusCode: 500,
+            body: JSON.stringify({
+                error: 'Faltan variables de Cloudflare R2. Define CLOUDFLARE_ACCOUNT_ID y CLOUDFLARE_R2_BUCKET.'
+            })
+        };
+    }
+
+    if (!accessKeyId || !secretAccessKey) {
+        return {
+            statusCode: 500,
+            body: JSON.stringify({
+                error: 'Para upload directo en R2 necesitas CLOUDFLARE_R2_ACCESS_KEY_ID y CLOUDFLARE_R2_SECRET_ACCESS_KEY (los da la misma pantalla del API token).'
+            })
+        };
     }
 
     try {
-        // Los datos del archivo vienen en las cabeceras
-        const fileName = event.headers['x-file-name'];
-        const contentType = event.headers['content-type'];
+        const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 
-        if (!fileName || !contentType || !event.body) {
-            return { statusCode: 400, body: JSON.stringify({ error: 'Faltan datos del archivo (nombre, tipo o cuerpo).' }) };
+        if (!s3Client) {
+            s3Client = new S3Client({
+                region: 'auto',
+                endpoint: uploadBaseUrl,
+                forcePathStyle: true,
+                credentials: {
+                    accessKeyId,
+                    secretAccessKey
+                }
+            });
         }
 
-        const bucket = 'order-items-images'; // Nombre del bucket en Supabase Storage
-        const filePath = `${Date.now()}-${fileName}`;
+        const fileName = event.headers['x-file-name'] || 'upload.jpg';
+        const contentType = event.headers['content-type'] || 'application/octet-stream';
 
-        // El cuerpo del evento viene codificado en Base64, lo convertimos a un Buffer binario.
-        const fileBuffer = Buffer.from(event.body, 'base64');
-
-        // Subimos el buffer directamente a Supabase Storage
-        const response = await fetch(`${SUPABASE_URL()}/storage/v1/object/${bucket}/${filePath}`, {
-            method: 'POST',
-            headers: {
-                'apikey': SUPABASE_KEY(),
-                'Content-Type': contentType
-            },
-            body: fileBuffer
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Error de Supabase Storage:', errorText);
-            throw new Error(`Error al subir a Supabase: ${errorText}`);
+        if (!event.body) {
+            return {
+                statusCode: 400,
+                body: JSON.stringify({ error: 'Faltan datos del archivo (cuerpo).' })
+            };
         }
 
-        const publicUrl = `${SUPABASE_URL()}/storage/v1/object/public/${bucket}/${filePath}`;
+        const key = `${Date.now()}-${sanitizeFileName(fileName)}`;
+        const fileBuffer = event.isBase64Encoded ? Buffer.from(event.body, 'base64') : Buffer.from(event.body);
 
-        return { statusCode: 200, body: JSON.stringify({ imageUrl: publicUrl }) };
+        await s3Client.send(new PutObjectCommand({
+            Bucket: bucket,
+            Key: key,
+            Body: fileBuffer,
+            ContentType: contentType
+        }));
 
+        const publicBaseUrl = getPublicBaseUrl();
+        const imageUrl = publicBaseUrl
+            ? `${publicBaseUrl.replace(/\/$/, '')}/${key}`
+            : `${uploadBaseUrl}/${bucket}/${key}`;
+
+        return {
+            statusCode: 200,
+            body: JSON.stringify({ imageUrl })
+        };
     } catch (error) {
         console.error('Error en upload-image:', error);
         return { statusCode: 500, body: JSON.stringify({ error: error.message }) };

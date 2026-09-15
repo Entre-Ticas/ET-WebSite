@@ -10,6 +10,23 @@ let paymentsColumnFilters = {
     id: '', invoice_id: '', client_name: '', client_phone: '', amount: '', payment_method: '', reference_code: '', payment_date: ''
 };
 
+registerAdminRowsPerPageDropdown({
+    name: 'payments',
+    dropdownId: 'paymentsRowsDropdown',
+    triggerId: 'paymentsRowsPerPageTrigger',
+    menuId: 'paymentsRowsPerPageMenu',
+    labelId: 'paymentsRowsPerPageSelectedLabel',
+    selectorId: 'paymentsRowsPerPageSelector',
+    toggleFnName: 'togglePaymentsRowsPerPageDropdown',
+    selectFnName: 'selectPaymentsRowsPerPage',
+    getValue: () => paymentsRowsPerPage,
+    onSelect: (value) => {
+        paymentsRowsPerPage = parseInt(value, 10);
+        paymentsCurrentPage = 1;
+        renderPayments();
+    }
+});
+
 function normalizeInvoiceSearchText(value) {
     return String(value ?? '')
         .trim()
@@ -154,6 +171,8 @@ function resetPaymentsViewState() {
 
     const rowsSelector = document.getElementById('paymentsRowsPerPageSelector');
     if (rowsSelector) rowsSelector.value = '10';
+    syncAdminRowsPerPageDropdown('payments');
+    closeAdminRowsPerPageDropdown('payments');
 
     document.querySelectorAll('.admin-filter-row input').forEach(input => { input.value = ''; });
 }
@@ -226,10 +245,15 @@ function renderPayments() {
                 valB = new Date(valB);
                 return paymentsSortDir === 'asc' ? valA - valB : valB - valA;
             }
-            if (paymentsSortColumn === 'amount') {
-                valA = Number(valA) || 0;
-                valB = Number(valB) || 0;
-                return paymentsSortDir === 'asc' ? valA - valB : valB - valA;
+
+            const numericA = Number(valA);
+            const numericB = Number(valB);
+            if (
+                (paymentsSortColumn === 'id' || paymentsSortColumn === 'invoice_id' || paymentsSortColumn === 'amount') &&
+                Number.isFinite(numericA) &&
+                Number.isFinite(numericB)
+            ) {
+                return paymentsSortDir === 'asc' ? numericA - numericB : numericB - numericA;
             }
 
             const comparison = String(valA).localeCompare(String(valB), 'es', { sensitivity: 'base' });
@@ -262,6 +286,8 @@ function renderPayments() {
             <td style="text-align:center;"><input type="checkbox" id="bankrev-cb-${p.id}" onclick="confirmTogglePaymentBank(${p.id}, this)" ${p.bank_reviewed ? 'checked' : ''}></td>
             <td class="admin-actions-cell">
                 <button class="admin-btn-action btn-edit" onclick="openPaymentEditForm(${p.id})" title="Editar Abono"><i class="fas fa-pencil-alt"></i></button>
+                <button class="admin-btn-action btn-copy" onclick="copiarLinkFactura(this, ${p.invoice_id ?? 'null'})" title="Copiar Link de Factura"><i class="fas fa-copy"></i></button>
+                <button class="admin-btn-action btn-invoice" onclick="verFactura(${p.invoice_id ?? 'null'})" title="Ir a Factura"><i class="fas fa-file-invoice-dollar"></i></button>
                 <button class="admin-btn-action btn-delete" onclick="deletePayment(${p.id})" title="Eliminar Abono"><i class="fas fa-trash-alt"></i></button>
             </td>
         </tr>
@@ -296,6 +322,7 @@ function renderPaymentsPagination(totalRows) {
 
     if (infoEl) infoEl.innerHTML = `Mostrando <strong>${startItem} - ${endItem}</strong> de <strong>${totalRows}</strong>`;
     if (selectorEl) selectorEl.value = paymentsRowsPerPage;
+    syncAdminRowsPerPageDropdown('payments');
     if (navEl) {
         navEl.innerHTML = `
             <button onclick="changePaymentsPage(${paymentsCurrentPage - 1})" ${paymentsCurrentPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
@@ -303,6 +330,18 @@ function renderPaymentsPagination(totalRows) {
             <button onclick="changePaymentsPage(${paymentsCurrentPage + 1})" ${paymentsCurrentPage >= totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>
         `;
     }
+}
+
+function copiarLinkFactura(btn, invoiceId) {
+    return copyInvoiceLink(btn, invoiceId, {
+        missingMessage: 'Este abono no tiene factura asociada.'
+    });
+}
+
+function verFactura(invoiceId) {
+    return openInvoiceInNewTab(invoiceId, null, {
+        missingMessage: 'Este abono no tiene factura asociada.'
+    });
 }
 
 function toLocalDateTimeInputValue(value) {
@@ -602,13 +641,35 @@ async function togglePaymentReviewStatus(paymentId, field, checkbox) {
     }
 }
 function deletePayment(id) {
+    const payment = todosLosPayments.find(p => Number(p.id) === Number(id));
+    const clientName = escapePaymentDeleteText(payment?.client_name || 'Cliente no disponible');
+    const invoiceId = payment?.invoice_id ?? '--';
+    const paymentMethod = escapePaymentDeleteText(payment?.payment_method || 'Sin método');
+    const referenceCode = payment?.reference_code ? escapePaymentDeleteText(payment.reference_code) : 'Sin referencia';
+    const amount = `₡${Number(payment?.amount || 0).toLocaleString('es-CR')}`;
+
     const title = 'Confirmar Eliminación';
-    const body = '¿Estás seguro de que deseas eliminar este abono? Esta acción no se puede deshacer.';
+    const body = `
+        <p>¿Está seguro que desea eliminar el abono de <strong>${clientName}</strong>?</p>
+        <p><strong>Factura #:</strong> ${invoiceId} | <strong>Método:</strong> ${paymentMethod}</p>
+        <p><strong>Referencia:</strong> ${referenceCode}</p>
+        <p><strong>Monto:</strong> ${amount}</p>
+        <p style="color:#c0392b; margin-top:8px;"><strong>⚠ Esta acción no se puede deshacer.</strong></p>
+    `;
     const footer = `
         <button class="btn btn-secondary" onclick="closeGenericModal()">Cancelar</button>
         <button class="btn btn-danger" onclick="confirmDeletePayment(${Number(id)})">Eliminar</button>
     `;
     openGenericModal(title, body, footer);
+}
+
+function escapePaymentDeleteText(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 async function confirmDeletePayment(id) {

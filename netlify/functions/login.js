@@ -28,15 +28,30 @@ exports.handler = async (event) => {
                 }
             }
         );
-        const rows = await response.json();
 
-        // Si no hay usuario, devolvemos un error genérico para no dar pistas.
-        if (!rows || rows.length === 0) {
+        const payload = await response.json();
+
+        if (!response.ok) {
+            const details = typeof payload === 'string' ? payload : JSON.stringify(payload);
+            return {
+                statusCode: response.status,
+                body: JSON.stringify({ error: `No se pudo consultar la tabla users. ${details}` })
+            };
+        }
+
+        if (!Array.isArray(payload) || payload.length === 0) {
             return { statusCode: 401, body: JSON.stringify({ error: 'Credenciales incorrectas.' }) };
         }
 
-        const userData = rows[0];
-        const hashedPasswordFromDB = userData.Contraseña;
+        const userData = payload[0];
+        const hashedPasswordFromDB = userData?.Contraseña;
+
+        if (!hashedPasswordFromDB) {
+            return {
+                statusCode: 500,
+                body: JSON.stringify({ error: 'La columna Contraseña no existe o no tiene valor en users.' })
+            };
+        }
 
         // 2. Usamos argon2 para verificar si la contraseña ingresada coincide con el hash.
         if (await argon2.verify(hashedPasswordFromDB, password)) {

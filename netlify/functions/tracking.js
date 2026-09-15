@@ -4,6 +4,7 @@ const ADMIN_SECRET    = () => process.env.ADMIN_SECRET;
 
 const sbHeaders = () => ({
     'apikey': SUPABASE_KEY(),
+    'Authorization': `Bearer ${SUPABASE_KEY()}`,
     'Content-Type': 'application/json',
 });
 
@@ -29,7 +30,8 @@ exports.handler = async (event) => {
     }
 
     const method = event.httpMethod;
-    const num    = event.queryStringParameters?.num;
+    const fallbackPathNum = (event.path || '').split('/').filter(Boolean).slice(-1)[0];
+    const num = (event.queryStringParameters?.num || fallbackPathNum || '').trim();
 
     // ── GET individual ──────────────────────────────────────────────────────
     if (method === 'GET' && num) {

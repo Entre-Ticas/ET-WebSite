@@ -5,6 +5,23 @@ let catalogRowsPerPage = 10;
 // NOTA: El ordenamiento y filtro por columna no están implementados aún en esta vista.
 // Se deja preparado para el futuro.
 
+registerAdminRowsPerPageDropdown({
+    name: 'catalog',
+    dropdownId: 'catalogRowsDropdown',
+    triggerId: 'catalogRowsPerPageTrigger',
+    menuId: 'catalogRowsPerPageMenu',
+    labelId: 'catalogRowsPerPageSelectedLabel',
+    selectorId: 'rowsPerPageSelector',
+    toggleFnName: 'toggleCatalogRowsPerPageDropdown',
+    selectFnName: 'selectCatalogRowsPerPage',
+    getValue: () => catalogRowsPerPage,
+    onSelect: (value) => {
+        catalogRowsPerPage = parseInt(value, 10);
+        catalogCurrentPage = 1;
+        filtrarProductos();
+    }
+});
+
 function resetCatalogViewState() {
     catalogCurrentPage = 1;
     catalogRowsPerPage = 10;
@@ -14,6 +31,9 @@ function resetCatalogViewState() {
 
     const rowsSelector = document.getElementById('rowsPerPageSelector');
     if (rowsSelector) rowsSelector.value = '10';
+
+    syncAdminRowsPerPageDropdown('catalog');
+    closeAdminRowsPerPageDropdown('catalog');
 }
 
 async function loadAdminProducts() {
@@ -89,10 +109,12 @@ function displayAdminProducts(products) {
                 <td>${p.category}</td>
                 <td>₡${p.price ? p.price.toLocaleString('es-CR') : '0'}</td>
                 <td><span class="status-dot ${p.stock === 'entrega inmediata' ? 'available' : 'unavailable'}"></span> ${p.stock}</td>
-                <td>
-                    <button class="admin-btn-action btn-edit" onclick="catalogOpenEditForm(${p.id})" title="Editar Producto"><i class="fas fa-pencil-alt"></i></button>
-                    <button class="admin-btn-action btn-update" onclick="catalogOpenStatusForm(${p.id})" title="Actualizar Estado"><i class="fa fa-edit"></i></button>
-                    <button class="admin-btn-action btn-delete" onclick="eliminarProducto(${p.id}, '${imageUrl}')" title="Eliminar Producto"><i class="fas fa-trash-alt"></i></button>
+                <td class="admin-actions-cell">
+                    <div class="admin-actions-inline">
+                        <button class="admin-btn-action btn-edit" onclick="catalogOpenEditForm(${p.id})" title="Editar Producto"><i class="fas fa-pencil-alt"></i></button>
+                        <button class="admin-btn-action btn-update" onclick="catalogOpenStatusForm(${p.id})" title="Actualizar Estado"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button class="admin-btn-action btn-delete" onclick="eliminarProducto(${p.id}, '${imageUrl}')" title="Eliminar Producto"><i class="fas fa-trash-alt"></i></button>
+                    </div>
                 </td>
             </tr>
         `;
@@ -133,6 +155,7 @@ function renderCatalogPagination(totalRows) {
     // Esta versión es más directa y robusta.
     infoEl.innerHTML = `Mostrando <strong>${startItem} - ${endItem}</strong> de <strong>${totalRows}</strong>`;
     selectorEl.value = catalogRowsPerPage;
+    syncAdminRowsPerPageDropdown('catalog');
     
     navEl.innerHTML = `
         <button onclick="changeCatalogPage(${catalogCurrentPage - 1})" ${catalogCurrentPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>

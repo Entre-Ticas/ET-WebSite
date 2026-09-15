@@ -138,6 +138,143 @@
 }
 .admin-btn-agregar:hover { opacity: 0.85; }
 
+.store-admin-grid {
+    width: 100%;
+    margin-top: 1rem;
+}
+
+.store-name-cell {
+    font-weight: 700;
+    color: #4d342f;
+    font-size: 0.96rem;
+}
+
+.store-token-cell {
+    color: #7d5a57;
+    font-family: monospace;
+    font-size: 0.74rem;
+    word-break: break-all;
+}
+
+.store-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 90px;
+    padding: 0.32rem 0.55rem;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1;
+    background: #f5e7e1;
+    color: #7b5448;
+}
+
+.store-client-name {
+    font-weight: 700;
+    color: #4d342f;
+    font-size: 0.94rem;
+    line-height: 1.3;
+}
+
+.store-client-meta {
+    display: block;
+    margin-top: 0.18rem;
+    color: #7d5a57;
+    font-size: 0.7rem;
+    letter-spacing: 0.02em;
+}
+
+.store-match-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 0.25rem;
+    margin-bottom: 0.12rem;
+    padding: 0.12rem 0.38rem;
+    border-radius: 999px;
+    font-size: 0.56rem;
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+.store-match-badge.matched {
+    background: #e8f7ee;
+    color: #266c45;
+}
+
+.store-match-badge.unmatched {
+    background: #f8e3e3;
+    color: #9d4a4a;
+}
+
+.store-badge.draft { background: #f4e8e3; color: #7c5d52; }
+.store-badge.active { background: #e8f7ee; color: #266c45; }
+.store-badge.expired { background: #f8e3e3; color: #9d4a4a; }
+
+/* Vistas de listado (Item de la tienda, Compras de la tienda): sin card blanca,
+   igual que el grid principal de tiendas (fondo transparente). */
+.store-items-detail-view {
+    margin-top: 1rem;
+}
+
+/* Paneles de formulario (Cargar Item, Editar Item, Editar Tienda): mismo estilo
+   transparente que "Editar Factura" (.container > .card), sin fondo blanco. */
+.store-item-panel {
+    background: transparent;
+    border: 1px solid var(--pink-light);
+    border-radius: 14px;
+    padding: 1.25rem;
+    margin-top: 1rem;
+}
+
+.store-item-detail-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    position: relative;
+    min-height: 42px;
+}
+
+.store-item-detail-header .admin-btn-back {
+    position: absolute;
+    left: 0;
+}
+
+.store-item-detail-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    font-weight: 800;
+    color: #56392f;
+}
+
+.store-items-thumbnail {
+    width: 54px;
+    height: 54px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 1px solid rgba(116, 83, 71, 0.12);
+    background: #fff;
+}
+
+.store-item-description {
+    max-width: 260px;
+    color: #5f3b2c;
+}
+
+.empty-state {
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px dashed rgba(95, 59, 44, 0.3);
+    border-radius: 14px;
+    padding: 1.4rem;
+    text-align: center;
+    color: #7a5246;
+}
+
 .admin-search-bar {
     display: flex;
     gap: 10px;
@@ -146,17 +283,74 @@
 }
 .admin-search-bar input { flex: 1; margin-bottom: 0; }
 
+.admin-filter-chips {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin: 0.75rem 0 1rem;
+    color: var(--brown-text);
+}
+
+.admin-filter-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.45rem 0.8rem;
+    border: 1px solid var(--pink-light);
+    border-radius: 999px;
+    background: #fff8f8;
+    color: var(--brown-text);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.admin-filter-option:hover {
+    border-color: var(--pink-accent);
+    background: #fff2f3;
+}
+
+.admin-filter-option input {
+    accent-color: var(--pink-accent);
+    margin: 0;
+}
+
 /* Fila de filtros por columna */
 .admin-filter-row { background: #fdf0f1 !important; }
 .admin-filter-row td { padding: 6px 8px; }
-.admin-filter-row input {
+.admin-filter-row input,
+.admin-filter-row select {
     width: 100%;
     padding: 5px 8px;
-    border: 1px solid var(--pink-light);
+    border: 1px solid #dfe3e8;
     border-radius: 6px;
     font-size: 0.78rem;
     box-sizing: border-box;
     background: white;
+    color: var(--brown-text);
+    min-height: 30px;
+    box-shadow: none;
+    outline: none;
+}
+
+.admin-filter-row select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: none;
+    padding-right: 8px;
+    cursor: pointer;
+}
+
+.admin-filter-row input:focus,
+.admin-filter-row select:focus {
+    border-color: var(--pink-accent);
+    box-shadow: 0 0 0 2px rgba(225, 155, 157, 0.12);
+}
+
+.store-admin-status-filter {
+    cursor: pointer;
 }
 
 /* Header ordenable */

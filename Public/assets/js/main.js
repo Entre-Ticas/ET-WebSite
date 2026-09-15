@@ -2,6 +2,7 @@
 
 let homeContentCache = null;
 let autofillObserver = null;
+const loadedScriptPromises = new Map();
 
 function ensureAutofillTrap(enabled) {
     const existing = document.getElementById('browserAutofillTrap');
@@ -25,8 +26,10 @@ function ensureAutofillTrap(enabled) {
     trap.style.pointerEvents = 'none';
 
     trap.innerHTML = [
+        '<form onsubmit="return false;">',
         '<input type="text" name="username" autocomplete="username" tabindex="-1">',
-        '<input type="password" name="password" autocomplete="current-password" tabindex="-1">'
+        '<input type="password" name="password" autocomplete="current-password" tabindex="-1">',
+        '</form>'
     ].join('');
 
     document.body.appendChild(trap);
@@ -137,21 +140,47 @@ function updateMobileNavColumns() {
     nav.style.setProperty('--mobile-nav-cols', String(cols));
 }
 
-async function loadHeaderImage() {
-    const logoImg = document.querySelector('header .logo');
-    if (!logoImg) return;
-
-    try {
-        const response = await fetch(`/.netlify/functions/info-image?id=ImagenET`);
-        if (!response.ok) return; // Si falla, simplemente se queda la imagen por defecto.
-
-        const { imageUrl } = await response.json();
-        if (imageUrl) {
-            logoImg.src = imageUrl;
-        }
-    } catch (error) {
-        console.error('Error al cargar la imagen del encabezado:', error);
+function loadScriptOnce(src) {
+    if (document.querySelector(`script[src="${src}"]`)) {
+        return Promise.resolve();
     }
+
+    if (loadedScriptPromises.has(src)) {
+        return loadedScriptPromises.get(src);
+    }
+
+    const promise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = false;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error(`No se pudo cargar ${src}`));
+        document.head.appendChild(script);
+    });
+
+    loadedScriptPromises.set(src, promise);
+    return promise;
+}
+
+function getScriptsForPage(page) {
+    const scriptMap = {
+        catalog: ['assets/js/catalog.js'],
+        tracking: ['assets/js/tracking.js'],
+        info: ['assets/js/infoImg.js'],
+        informacion: ['assets/js/infoImg.js'],
+        'admin/tracking': ['assets/js/admin-rows-dropdown.js', 'assets/js/tracking-admin.js'],
+        'admin/catalog': ['assets/js/admin-rows-dropdown.js', 'assets/js/catalog-admin.js'],
+        'admin/store': ['assets/js/store-admin.js'],
+        'admin/order': ['assets/js/admin-rows-dropdown.js', 'assets/js/order_items-admin.js'],
+        'admin/invoices': ['assets/js/admin-rows-dropdown.js', 'assets/js/invoices-admin.js'],
+        'admin/payments': ['assets/js/admin-rows-dropdown.js', 'assets/js/payments-admin.js'],
+        'admin/clients': ['assets/js/admin-rows-dropdown.js', 'assets/js/clients-admin.js'],
+        StoreCatalog: ['assets/js/store-catalog.js'],
+        'store-catalog': ['assets/js/store-catalog.js'],
+        invoice: ['assets/js/invoice.js']
+    };
+
+    return scriptMap[page] || [];
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -175,7 +204,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('btnFacebookFlotante').href = `https://www.facebook.com/${Facebook_user}`;
     }
 
-    loadHeaderImage();
     updateMobileNavColumns();
     initializeAutofillObserver();
     applyGlobalInputHardening(document.getElementById('content-area') || document);
@@ -203,6 +231,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (pageToLoad === 'admin' && parts.length > 1) {
             pageToLoad = `admin/${parts[1]}`; // Construye la ruta completa: 'admin/catalog'
             paramToLoad = parts[2] || null; // El siguiente sería el parámetro
+        }
+
+        if (paramToLoad) {
+            try {
+                paramToLoad = decodeURIComponent(paramToLoad);
+            } catch (_error) {
+                // Mantener valor original si no es un URI componente válido.
+            }
         }
 
         // Si estamos en la página de inicio, no hacemos nada para evitar el bucle de recarga.
@@ -268,7 +304,7 @@ async function loadPage(page, param = null) {
     
     // --- INICIO: LÓGICA DE SEGURIDAD ---
     // Lista de rutas que requieren que el usuario esté autenticado.
-    const protectedRoutes = ['admin/tracking', 'admin/catalog', 'admin/order', 'admin/invoices', 'admin/payments'];
+    const protectedRoutes = ['admin/tracking', 'admin/catalog', 'admin/store', 'admin/order', 'admin/invoices', 'admin/payments', 'admin/clients'];
     // Verificamos si la página solicitada es protegida Y si el usuario NO tiene una sesión activa.
     // La función getSession() ya existe en auth.js y nos dice si hay un token válido.
     if (protectedRoutes.includes(page) && !getSession()) {
@@ -283,6 +319,13 @@ async function loadPage(page, param = null) {
 
     setTimeout(async () => {
         try {
+            const scriptsToLoad = getScriptsForPage(page);
+            if (scriptsToLoad.length > 0) {
+                for (const src of scriptsToLoad) {
+                    await loadScriptOnce(src);
+                }
+            }
+
             if (page === 'home') {
                 history.pushState({}, '', '/');
                 container.innerHTML = homeContentCache || (await fetch('/index.html').then(r => r.text())).match(/<div id="content-area">([\s\S]*)<\/div>/)[1];
@@ -305,12 +348,16 @@ async function loadPage(page, param = null) {
                 'tracking': 'Tracking/tracking.html',
                 'admin/tracking': 'admin/tracking-admin.html',
                 'admin/catalog': 'admin/catalog-admin.html',
-                'admin/order': 'admin/order_items-admin.html', // Nueva ruta estándar
+                'admin/store': 'admin/store-admin.html',
+                'admin/order': 'admin/order_items-admin.html',
                 'admin/invoices': 'admin/invoices-admin.html',
                 'admin/payments': 'admin/payments-admin.html',
+                'admin/clients': 'admin/clients-admin.html',
+                'StoreCatalog': 'StoreCatalog/store-catalog.html',
+                'store-catalog': 'StoreCatalog/store-catalog.html',
                 'invoice': 'invoice/invoice.html',
-                'info': 'InformationImg/info.html',
-                'informacion': 'InformationImg/infoImg.html'
+                'info': 'InformationImg/Info.html',
+                'informacion': 'InformationImg/InfoImg.html'
             };
             const url = routes[page];
             if (!url) {
@@ -346,6 +393,8 @@ async function loadPage(page, param = null) {
                 window.initTrackingAdminPage();
             } else if (page === 'admin/catalog' && typeof window.initCatalogAdminPage === 'function') {
                 window.initCatalogAdminPage();
+            } else if (page === 'admin/store' && typeof window.initStoreAdminPage === 'function') {
+                window.initStoreAdminPage();
             } else if (page === 'admin/order' && typeof window.initOrderItemsAdminPage === 'function') {
                 window.initOrderItemsAdminPage();
             } else if (page === 'admin/invoices' && typeof window.initInvoicesAdminPage === 'function') {
@@ -354,6 +403,10 @@ async function loadPage(page, param = null) {
                 window.initInvoicePage(param);
             } else if (page === 'admin/payments' && typeof window.initPaymentsAdminPage === 'function') {
                 window.initPaymentsAdminPage();
+            } else if (page === 'admin/clients' && typeof window.initClientsAdminPage === 'function') {
+                window.initClientsAdminPage();
+            } else if ((page === 'StoreCatalog' || page === 'store-catalog') && typeof window.initStoreCatalogPage === 'function') {
+                window.initStoreCatalogPage();
             }
 
         } catch (error) {
