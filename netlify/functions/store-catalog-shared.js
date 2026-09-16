@@ -318,6 +318,17 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
       return jsonResponse(200, { stores: (stores || []).map(normalizeStore) });
     }
 
+    if (httpMethod === 'GET' && action === 'list-active-stores') {
+      await syncExpiredStoresFromTimestamps();
+      const stores = await supabaseRequest('/rest/v1/store?select=*');
+      const activeStores = (stores || [])
+        .map(normalizeStore)
+        .filter((store) => store.status === 'active' && store.public_token && store.expires_at && new Date(store.expires_at).getTime() > Date.now())
+        .sort((a, b) => new Date(a.expires_at).getTime() - new Date(b.expires_at).getTime());
+
+      return jsonResponse(200, { stores: activeStores });
+    }
+
     if (httpMethod === 'POST' && action === 'sync-store-statuses') {
       if (!verifyToken(token)) return jsonResponse(401, { error: 'No autorizado.' });
       const syncedIds = await syncExpiredStoresFromTimestamps();

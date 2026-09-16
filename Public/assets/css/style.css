@@ -175,6 +175,105 @@ body {
             background: rgba(255,255,255,0.35);
         }
 
+        #catalogNavContainer {
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .catalog-nav-dropdown {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .catalog-nav-trigger {
+            color: var(--white);
+            text-decoration: none;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.82rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            background: rgba(255,255,255,0.08);
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: none;
+            transition: background 0.2s;
+            appearance: none;
+            font-family: inherit;
+        }
+
+        .catalog-nav-trigger:hover,
+        .catalog-nav-dropdown.open .catalog-nav-trigger {
+            background: rgba(255,255,255,0.35);
+        }
+
+        .catalog-nav-menu {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            min-width: 220px;
+            background: #fffafc;
+            border: 1px solid rgba(112, 78, 54, 0.12);
+            box-shadow: 0 12px 28px rgba(112, 78, 54, 0.12);
+            border-radius: 12px;
+            padding: 0.4rem;
+            display: none;
+            flex-direction: column;
+            z-index: 1100;
+        }
+
+        .catalog-nav-dropdown.open .catalog-nav-menu {
+            display: flex;
+        }
+
+        .catalog-nav-item,
+        .catalog-nav-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            width: 100%;
+            text-align: left;
+            padding: 0.58rem 0.7rem;
+            border-radius: 10px;
+            color: var(--brown-text);
+            text-decoration: none;
+            font-size: 0.76rem;
+            font-weight: 600;
+            background: transparent;
+            box-sizing: border-box;
+        }
+
+        .catalog-nav-option {
+            background: rgba(225, 155, 157, 0.12);
+            color: var(--brown-text);
+        }
+
+        .catalog-nav-item:hover,
+        .catalog-nav-option:hover {
+            background: rgba(225, 155, 157, 0.17);
+        }
+
+        .catalog-nav-store-name {
+            display: inline-flex;
+            align-items: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .catalog-nav-countdown {
+            color: var(--brown-text);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            white-space: nowrap;
+        }
+
         @media (max-width: 768px) {
             header {
                 padding: 0.7rem 0.5rem;
