@@ -1,3 +1,65 @@
+<style>
+    .store-phone-form .floating-field {
+        position: relative;
+        width: 100%;
+        margin-bottom: 0.8rem;
+    }
+
+    .store-phone-form .floating-input {
+        display: block;
+        width: 100%;
+        height: 44px;
+        padding: 14px 10px 9px;
+        line-height: 1.2;
+        font: inherit;
+        border-radius: 10px;
+        border: 1px solid var(--pink-light, #f3d7df);
+        box-sizing: border-box;
+        background: #fff;
+        color: var(--brown-text, #5f2a43);
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .store-phone-form .floating-input:focus {
+        outline: none;
+        border-color: var(--pink-accent, #e19b9d);
+        box-shadow: 0 0 0 3px rgba(225, 155, 157, 0.18);
+    }
+
+    .store-phone-form .floating-label {
+        position: absolute;
+        left: 10px;
+        top: calc(50% + 1px);
+        transform: translateY(-50%);
+        padding: 0 6px;
+        height: 1.05rem;
+        display: inline-flex;
+        align-items: center;
+        line-height: 1.05;
+        background: transparent;
+        color: #8f7b80;
+        font-size: 0.9rem;
+        font-weight: 600;
+        pointer-events: none;
+        transform-origin: left center;
+        transition: top 0.2s ease, transform 0.2s ease, color 0.2s ease, font-size 0.2s ease;
+    }
+
+    .store-phone-form .floating-input:focus + .floating-label,
+    .store-phone-form .floating-input:not(:placeholder-shown) + .floating-label {
+        top: 0;
+        transform: translateY(-52%) scale(0.92);
+        background: var(--pink-light, #f3d7df);
+        border-radius: 6px;
+        color: var(--pink-accent, #e19b9d);
+        font-size: 0.82rem;
+    }
+
+    .store-phone-form .floating-input::placeholder {
+        color: transparent;
+    }
+</style>
+
 <div class="store-catalog-shell" style="max-width: 1100px; margin: 0 auto; padding: 1.5rem 1rem 3rem; position:relative;">
     <div id="storeTopbarActions" style="display:inline-flex; align-items:center; vertical-align:middle; white-space:nowrap; gap:0.6rem; padding:0.35rem 0.45rem; border-radius:999px; background:rgba(255, 245, 250, 0.9); border:1px solid rgba(225, 155, 157, 0.2); box-shadow:0 8px 22px rgba(177, 73, 120, 0.08); position:sticky; top:calc(var(--site-nav-height, 0px) + 0.9rem); z-index:1002; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); float:right; margin-top:calc(1.5rem + 0.1rem); width:max-content; box-sizing:border-box;">
         <div id="storeCountdown" style="display:inline-block; vertical-align:middle; flex:0 0 auto; font-weight:700; color:#b33b7b; background:#fff3f7; padding:0.55rem 0.85rem; border-radius:999px; min-width:70px; text-align:center; margin-right:0.6rem;">34:38</div>
@@ -8,29 +70,40 @@
 
     <div class="store-catalog-topbar" style="display:flex; justify-content:flex-start; align-items:flex-start; gap:1rem; flex-wrap:nowrap; margin-bottom:0.35rem; min-height:52px;">
         <div style="display:inline-block; vertical-align:middle; min-width:0; flex:1 1 auto;">
-            <h2 id="storeCatalogTitle" style="margin:0; font-size:2.1rem; line-height:1.1; display:inline-block; vertical-align:middle;">Nike</h2>
+            <h2 id="storeCatalogTitle" style="margin:0; font-size:2.1rem; line-height:1.1; display:inline-block; vertical-align:middle;">Tienda</h2>
         </div>
     </div>
 
-    <div id="storePhoneConfirmedLabel" style="display:none; margin:0; font-weight:700; color:#7a3d5d; display:inline-block; vertical-align:middle; white-space:nowrap;">
-        <span>Nombre: <span id="storeNameConfirmedValue">-</span> | Teléfono: <span id="storePhoneConfirmedValue">8888-8883</span></span>
-        <button id="storePhoneEditBtn" type="button" style="display:inline-block; vertical-align:middle; padding:0.38rem 0.75rem; background:#f2d6e1; border:none; border-radius:999px; color:#5c2039; font-weight:700; cursor:pointer; margin-left:0.6rem;">Editar</button>
+    <div id="storePhoneConfirmedLabel" style="display:none; margin:0; font-weight:700; color:#7a3d5d; display:inline-flex; flex-direction:column; align-items:flex-start; gap:0.18rem; vertical-align:middle; white-space:normal; line-height:1.35;">
+        <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
+            <span><strong>Nombre:</strong> <span id="storeNameConfirmedValue">-</span></span>
+        </div>
+        <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
+            <span><strong>Teléfono:</strong> <span id="storePhoneConfirmedValue">8888-8883</span></span>
+            <button id="storePhoneEditBtn" type="button" style="display:inline-block; vertical-align:middle; padding:0.38rem 0.75rem; background:#f2d6e1; border:none; border-radius:999px; color:#5c2039; font-weight:700; cursor:pointer;">Editar</button>
+        </div>
     </div>
 
     <div id="storeCatalogStatus" class="catalog-status" style="display:flex;"><div class="spinner"></div><p>Cargando catálogo...</p></div>
     <div id="storeCatalogGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:1rem;"></div>
 
     <div id="storePhoneModal" class="modal-overlay" style="display:flex; z-index:10000; background:rgba(77, 60, 71, 0.68);">
-        <div class="modal-content" style="max-width:520px; width:min(92vw, 520px); background:#f7e8ef; border:2px solid #f0bfd0; border-radius:20px; box-shadow:0 18px 40px rgba(85, 35, 58, 0.25); padding:1.5rem 1.4rem;">
+        <div class="modal-content store-phone-form" style="max-width:520px; width:min(92vw, 520px); background:#f7e8ef; border:2px solid #f0bfd0; border-radius:20px; box-shadow:0 18px 40px rgba(85, 35, 58, 0.25); padding:1.5rem 1.4rem;">
             <div style="text-align:center; margin-bottom:1rem;">
                 <h3 style="margin:0; color:#6b2d4a; font-size:2rem;">Tus datos de contacto</h3>
             </div>
             <div style="margin-bottom:0.8rem;">
-                <input id="storeClientName" type="text" value="" placeholder="Nombre completo" maxlength="80" style="width:100%; padding:0.9rem 1rem; font-size:1.1rem; border:2px solid #e5b9c7; border-radius:12px; background:#fff; outline:none; box-sizing:border-box; margin-bottom:0.7rem;" autocomplete="off" />
-                <input id="storeClientPhone" type="tel" value="" placeholder="Ej: 8888-0000" maxlength="9" inputmode="numeric" pattern="[0-9]{4}-?[0-9]{4}" style="width:100%; padding:0.9rem 1rem; font-size:1.1rem; border:2px solid #e5b9c7; border-radius:12px; background:#fff; outline:none; box-sizing:border-box;" autocomplete="off" />
+                <div class="floating-field" style="margin-bottom:0.8rem;">
+                    <input id="storeClientName" class="floating-input" type="text" value="" placeholder=" " maxlength="80" style="width:100%;" autocomplete="off" />
+                    <label for="storeClientName" class="floating-label">Nombre</label>
+                </div>
+                <div class="floating-field" style="margin-bottom:0.8rem;">
+                    <input id="storeClientPhone" class="floating-input" type="tel" value="" placeholder=" " maxlength="9" inputmode="numeric" pattern="[0-9]{4}-?[0-9]{4}" style="width:100%;" autocomplete="off" />
+                    <label for="storeClientPhone" class="floating-label">Teléfono Ej: 8888-8888</label>
+                </div>
             </div>
             <div id="storePhoneError" style="display:none; color:#b00020; font-size:0.88rem; margin-bottom:0.8rem;">Debes ingresar un nombre y un teléfono válido (8 dígitos) antes de continuar.</div>
-            <button id="storePhoneSaveBtn" type="button" style="width:100%; padding:0.9rem 1rem; background:#f7b8d0; color:#5c2039; border:none; border-radius:999px; font-size:1.1rem; font-weight:700; cursor:pointer;">Guardar</button>
+            <button id="storePhoneSaveBtn" type="button" style="width:100%; padding:0.9rem 1rem; background:var(--pink-accent, #e19b9d); color:#fff; border:none; border-radius:999px; font-size:1.1rem; font-weight:700; cursor:pointer; box-shadow:0 10px 20px rgba(177,73,120,0.18);">Guardar</button>
         </div>
     </div>
 

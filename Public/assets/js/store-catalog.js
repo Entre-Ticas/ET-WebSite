@@ -311,64 +311,95 @@ function renderStoreCart() {
     const customerName = getStoreClientName() || 'Sin nombre';
     const customerPhone = getStoreClientPhone() || 'Sin teléfono';
     body.innerHTML = `
-        <div style="display:flex; flex-direction:column; gap:0.9rem;">
-            <div style="padding:0.85rem 1rem; border:1px solid #f0dfe5; border-radius:16px; background:#fff9fb; box-shadow:0 8px 18px rgba(177,73,120,0.04); display:flex; flex-direction:column; gap:0.35rem;">
+        <div style="display:flex; flex-direction:column; gap:0.9rem; max-height:min(72vh, 700px);">
+            <div style="padding:0.85rem 1rem; border:1px solid #f0dfe5; border-radius:16px; background:#fff9fb; box-shadow:0 8px 18px rgba(177,73,120,0.04); display:flex; flex-direction:column; gap:0.35rem; flex-shrink:0;">
                 <div style="font-size:0.75rem; letter-spacing:0.08em; text-transform:uppercase; color:#a64b7b; font-weight:800; margin-bottom:0.1rem;">Cliente</div>
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:0.8rem; flex-wrap:nowrap; white-space:nowrap;">
                     <div style="display:inline-block; white-space:nowrap;"><strong>Nombre:</strong> ${customerName}</div>
                     <div style="display:inline-block; white-space:nowrap;"><strong>Número:</strong> ${customerPhone}</div>
                 </div>
             </div>
-            <div style="padding:0.85rem 1rem; border:1px solid #f0dfe5; border-radius:16px; background:linear-gradient(180deg, #fffafc 0%, #fff0f6 100%); box-shadow:0 8px 18px rgba(177,73,120,0.05);">
-                <div style="font-size:0.75rem; letter-spacing:0.08em; text-transform:uppercase; color:#a64b7b; font-weight:800; margin-bottom:0.5rem;">Productos</div>
-                ${items.map(([id, item]) => {
-                    const { hasLimit, maxQty } = getCatalogItemStockLimit(id);
-                    const reachedLimit = hasLimit && Number(item.qty || 0) >= maxQty;
-                    return `
-                    <div style="display:flex; justify-content:space-between; gap:1rem; align-items:center; border-bottom:1px solid #f0dfe5; padding-bottom:0.7rem; margin-bottom:0.7rem;">
-                        <div style="display:flex; align-items:center; gap:0.8rem; flex:1; min-width:0;">
-                            <img src="${item.image || 'https://placehold.co/80x80?text=No+img'}" style="width:48px; height:48px; object-fit:cover; border-radius:10px; border:1px solid rgba(177,73,120,0.12);" />
-                            <div style="min-width:0; flex:1;">
-                                <div style="font-weight:700; color:#5d2d42; word-break:break-word;">${item.name}</div>
-                                <div style="display:flex; align-items:center; gap:0.5rem; margin-top:0.35rem;">
-                                    <div style="display:flex; flex-direction:column; align-items:flex-start; gap:0.2rem;">
-                                        <div style="display:flex; align-items:center; transform:scale(0.9); transform-origin:left center;">
-                                            <button type="button" onclick="decreaseFromCart('${id}')" style="background-color:#fceaf1; border:1px solid #e19b9d; color:#5d2d42; cursor:pointer; font-size:1.2rem; font-weight:bold; width:34px; height:34px; border-radius:10px 0 0 10px;">−</button>
-                                            <input type="number" value="${item.qty}" readonly min="0" style="width:56px; height:34px; text-align:center; border:1px solid #e19b9d; border-left:none; border-right:none; font-size:1rem; font-weight:bold; border-radius:0; margin:0; box-sizing:border-box; appearance:textfield; -moz-appearance:textfield; color:#5d2d42; background:#fff;" />
-                                            <button type="button" onclick="increaseCartItem('${id}')" ${reachedLimit ? 'disabled' : ''} style="background-color:#fceaf1; border:1px solid #e19b9d; color:#5d2d42; cursor:pointer; font-size:1.2rem; font-weight:bold; width:34px; height:34px; border-radius:0 10px 10px 0; ${reachedLimit ? 'opacity:0.45; cursor:not-allowed;' : ''}">+</button>
+            <div style="padding:0.85rem 1rem; border:1px solid #f0dfe5; border-radius:16px; background:linear-gradient(180deg, #fffafc 0%, #fff0f6 100%); box-shadow:0 8px 18px rgba(177,73,120,0.05); display:flex; flex-direction:column; min-height:0;">
+                <div style="font-size:0.75rem; letter-spacing:0.08em; text-transform:uppercase; color:#a64b7b; font-weight:800; margin-bottom:0.5rem; flex-shrink:0;">Productos</div>
+                <div style="max-height:34vh; overflow-y:auto; padding-right:0.2rem; display:flex; flex-direction:column; min-height:0;">
+                    ${items.map(([id, item]) => {
+                        const { hasLimit, maxQty } = getCatalogItemStockLimit(id);
+                        const reachedLimit = hasLimit && Number(item.qty || 0) >= maxQty;
+                        return `
+                        <div style="display:flex; justify-content:space-between; gap:1rem; align-items:center; border-bottom:1px solid #f0dfe5; padding-bottom:0.7rem; margin-bottom:0.7rem;">
+                            <div style="display:flex; align-items:center; gap:0.8rem; flex:1; min-width:0;">
+                                <img src="${item.image || 'https://placehold.co/80x80?text=No+img'}" style="width:48px; height:48px; object-fit:cover; border-radius:10px; border:1px solid rgba(177,73,120,0.12);" />
+                                <div style="min-width:0; flex:1;">
+                                    <div style="font-weight:700; color:#5d2d42; word-break:break-word;">${item.name}</div>
+                                    <div style="display:flex; align-items:center; gap:0.5rem; margin-top:0.35rem;">
+                                        <div style="display:flex; flex-direction:column; align-items:flex-start; gap:0.2rem;">
+                                            <div style="display:flex; align-items:center; transform:scale(0.9); transform-origin:left center;">
+                                                <button type="button" onclick="decreaseFromCart('${id}')" style="background-color:#fceaf1; border:1px solid #e19b9d; color:#5d2d42; cursor:pointer; font-size:1.2rem; font-weight:bold; width:34px; height:34px; border-radius:10px 0 0 10px;">−</button>
+                                                <input type="number" value="${item.qty}" readonly min="0" style="width:56px; height:34px; text-align:center; border:1px solid #e19b9d; border-left:none; border-right:none; font-size:1rem; font-weight:bold; border-radius:0; margin:0; box-sizing:border-box; appearance:textfield; -moz-appearance:textfield; color:#5d2d42; background:#fff;" />
+                                                <button type="button" onclick="increaseCartItem('${id}')" ${reachedLimit ? 'disabled' : ''} style="background-color:#fceaf1; border:1px solid #e19b9d; color:#5d2d42; cursor:pointer; font-size:1.2rem; font-weight:bold; width:34px; height:34px; border-radius:0 10px 10px 0; ${reachedLimit ? 'opacity:0.45; cursor:not-allowed;' : ''}">+</button>
+                                            </div>
                                         </div>
+                                        <button type="button" onclick="removeCartItem('${id}')" title="Eliminar del carrito" style="width:28px; height:28px; border:1px solid rgba(220,53,69,0.4); border-radius:9px; background:#fff5f5; color:#dc3545; font-size:0.85rem; line-height:1; cursor:pointer; margin-top:0; align-self:center;"><i class="fas fa-trash-alt"></i></button>
                                     </div>
-                                    <button type="button" onclick="removeCartItem('${id}')" title="Eliminar del carrito" style="width:28px; height:28px; border:1px solid rgba(220,53,69,0.4); border-radius:9px; background:#fff5f5; color:#dc3545; font-size:0.85rem; line-height:1; cursor:pointer; margin-top:0; align-self:center;"><i class="fas fa-trash-alt"></i></button>
                                 </div>
                             </div>
+                            <div style="font-weight:800; color:#6d2d4a; white-space:nowrap;">₡${(Number(item.price || 0) * Number(item.qty || 0)).toLocaleString('es-CR')}</div>
                         </div>
-                        <div style="font-weight:800; color:#6d2d4a; white-space:nowrap;">₡${(Number(item.price || 0) * Number(item.qty || 0)).toLocaleString('es-CR')}</div>
-                    </div>
-                `;
-                }).join('')}
+                    `;
+                    }).join('')}
+                </div>
             </div>
         
-            <div style="display:flex; justify-content:space-between; align-items:center; font-weight:700; padding-top:0.2rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; font-weight:700; padding-top:0.2rem; flex-shrink:0;">
                 <span>Total</span>
                 <span>₡${total.toLocaleString('es-CR')}</span>
             </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; font-weight:800; font-size:1.9rem; line-height:1.2; color:#a42169; padding-top:0.2rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; font-weight:800; font-size:1.9rem; line-height:1.2; color:#a42169; padding-top:0.2rem; flex-shrink:0;">
                 <span>Depósito (50%)</span>
                 <span>₡${deposit.toLocaleString('es-CR')}</span>
             </div>
         </div>
     `;
+
+    const modal = document.getElementById('storeCartModal');
+    const modalContent = modal ? modal.querySelector('.modal-content') : null;
+    if (modalContent) {
+        modalContent.style.maxHeight = '82vh';
+        modalContent.style.overflow = 'hidden';
+        modalContent.style.display = 'flex';
+        modalContent.style.flexDirection = 'column';
+    }
+}
+
+function setBodyScrollLocked(locked) {
+    document.body.style.overflow = locked ? 'hidden' : '';
+    document.documentElement.style.overflow = locked ? 'hidden' : '';
 }
 
 function openStoreCart() {
     renderStoreCart();
     const modal = document.getElementById('storeCartModal');
-    if (modal) modal.style.display = 'flex';
+    if (modal) {
+        modal.style.display = 'flex';
+        setBodyScrollLocked(true);
+        const modalContent = modal.querySelector('.modal-content');
+        if (modalContent) {
+            modalContent.style.maxHeight = '82vh';
+            modalContent.style.overflow = 'hidden';
+            modalContent.style.display = 'flex';
+            modalContent.style.flexDirection = 'column';
+        }
+    }
 }
 
 function closeStoreCart() {
     const modal = document.getElementById('storeCartModal');
     if (modal) modal.style.display = 'none';
+    const confirmModal = document.getElementById('storeConfirmModal');
+    if (confirmModal && confirmModal.style.display === 'flex') {
+        return;
+    }
+    setBodyScrollLocked(false);
 }
 
 function openOrderConfirmModal() {
@@ -395,11 +426,17 @@ function openOrderConfirmModal() {
     nameValue.textContent = name;
     phoneValue.textContent = phone;
     modal.style.display = 'flex';
+    setBodyScrollLocked(true);
 }
 
 function closeOrderConfirmModal() {
     const modal = document.getElementById('storeConfirmModal');
     if (modal) modal.style.display = 'none';
+    const cartModal = document.getElementById('storeCartModal');
+    if (cartModal && cartModal.style.display === 'flex') {
+        return;
+    }
+    setBodyScrollLocked(false);
 }
 
 async function confirmStoreOrder() {
@@ -566,9 +603,10 @@ function startStoreCatalogCountdown(expiresAt) {
     const tick = () => {
         const remaining = Math.max(0, new Date(expiresAt).getTime() - Date.now());
         const totalSeconds = Math.ceil(remaining / 1000);
-        const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+        const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+        const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
         const seconds = String(totalSeconds % 60).padStart(2, '0');
-        el.textContent = `${minutes}:${seconds}`;
+        el.textContent = `${hours}:${minutes}:${seconds}`;
 
         if (totalSeconds <= 300) {
             el.style.background = '#fff1d6';

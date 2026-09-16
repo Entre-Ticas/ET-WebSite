@@ -1561,10 +1561,14 @@ function renderStoreCustomerOrdersTable() {
                     <tbody id="storeCustomerOrdersTableBody">
                         ${paginatedCustomers.length ? paginatedCustomers.map((customer) => {
                             const phoneDigits = normalizeStoreClientPhoneForWa(customer.phone_digits || customer.phone || '');
-                            const adminSummary = (customer.items || []).map((item) => `- ${item.name || 'Item'}: ${Number(item.quantity || 0)} x ${formatStoreCurrency(Number(item.unit_price || item.price || 0))}`).join('\n');
-                            const waText = encodeURIComponent(`Hola!\n\nYa agregamos tu pedido.\nLo que incluimos fue lo siguiente:\n\n${adminSummary || '- Productos sin detalle'}\n\nMuchas gracias por tu compra.`);
+                            const customerItems = customer.items || [];
+                            const totalAmount = customerItems.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.unit_price || item.price || 0)), 0);
+                            const fiftyPercentAmount = totalAmount / 2;
+                            const reminderLine = `Recorda que el monto total es ${formatStoreCurrency(totalAmount)} y el monto del 50% es ${formatStoreCurrency(fiftyPercentAmount)}`;
+                            const adminSummary = customerItems.map((item) => `- ${item.name || 'Item'}: ${Number(item.quantity || 0)} x ${formatStoreCurrency(Number(item.unit_price || item.price || 0))}`).join('\n');
+                            const waText = encodeURIComponent(`Hola!\n\nYa agregamos tu pedido.\n\n${reminderLine}\n\nLo que incluimos fue lo siguiente:\n\n${adminSummary || '- Productos sin detalle'}\n\nMuchas gracias por tu compra.`);
                             const waLink = phoneDigits ? `https://wa.me/${phoneDigits}?text=${waText}` : '#';
-                            const itemList = (customer.items || []).map((item) => `<div>${item.name || 'Sin nombre'}: ${Number(item.quantity || 0)}</div>`).join('');
+                            const itemList = customerItems.map((item) => `<div>${item.name || 'Sin nombre'}: ${Number(item.quantity || 0)}</div>`).join('');
                             const phoneValue = String(customer.phone || '');
                             const orderGroupId = String(customer.order_group_id || '');
                             const isMatched = Boolean(customer.is_matched && customer.client_name);
@@ -1639,10 +1643,14 @@ function renderStoreCustomerOrdersTable() {
 
     tableBody.innerHTML = paginatedCustomers.length ? paginatedCustomers.map((customer) => {
         const phoneDigits = normalizeStoreClientPhoneForWa(customer.phone_digits || customer.phone || '');
-        const adminSummary = (customer.items || []).map((item) => `- ${item.name || 'Item'}: ${Number(item.quantity || 0)} x ${formatStoreCurrency(Number(item.unit_price || item.price || 0))}`).join('\n');
-        const waText = encodeURIComponent(`Hola!\n\nYa agregamos tu pedido.\nLo que incluimos fue lo siguiente:\n\n${adminSummary || '- Productos sin detalle'}\n\nMuchas gracias por tu compra.`);
+        const customerItems = customer.items || [];
+        const totalAmount = customerItems.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.unit_price || item.price || 0)), 0);
+        const fiftyPercentAmount = totalAmount / 2;
+        const reminderLine = `Recorda que el monto total es ${formatStoreCurrency(totalAmount)} y el monto del 50% es ${formatStoreCurrency(fiftyPercentAmount)}`;
+        const adminSummary = customerItems.map((item) => `- ${item.name || 'Item'}: ${Number(item.quantity || 0)} x ${formatStoreCurrency(Number(item.unit_price || item.price || 0))}`).join('\n');
+        const waText = encodeURIComponent(`Hola!\n\nYa agregamos tu pedido.\n\n${reminderLine}\n\nLo que incluimos fue lo siguiente:\n\n${adminSummary || '- Productos sin detalle'}\n\nMuchas gracias por tu compra.`);
         const waLink = phoneDigits ? `https://wa.me/${phoneDigits}?text=${waText}` : '#';
-        const itemList = (customer.items || []).map((item) => `<div>${item.name || 'Sin nombre'}: ${Number(item.quantity || 0)}</div>`).join('');
+        const itemList = customerItems.map((item) => `<div>${item.name || 'Sin nombre'}: ${Number(item.quantity || 0)}</div>`).join('');
         const phoneValue = String(customer.phone || '');
         const orderGroupId = String(customer.order_group_id || '');
         const isMatched = Boolean(customer.is_matched && customer.client_name);

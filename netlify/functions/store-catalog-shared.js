@@ -865,13 +865,16 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
       });
 
       const waNumber = (process.env.WHATSAPP_NUMBER || '70328006').replace(/\D/g, '');
+      const totalAmount = items.reduce((sum, item) => sum + (Number(item.quantity || 1) * Number(item.price || 0)), 0);
+      const fiftyPercentAmount = totalAmount / 2;
+      const reminderLine = `Recorda que el monto total es ${formatStoreCurrency(totalAmount)} y el monto del 50% es ${formatStoreCurrency(fiftyPercentAmount)}`;
       const summary = items.map((item) => {
         const quantity = Number(item.quantity || 1);
         const price = Number(item.price || 0);
         return `${item.name || 'Item'}: ${quantity} x ${formatStoreCurrency(price)}`;
       }).join('\n');
       const customerGreeting = clientName ? `Hola soy *${clientName}*\n` : 'Hola\n';
-      const message = encodeURIComponent(`${customerGreeting}Quiero confirmar mi pedido de la tienda ${store.nombre_tienda}.\n${summary}\n\nCódigo de pedido: ${orderGroupId}`);
+      const message = encodeURIComponent(`${customerGreeting}Quiero confirmar mi pedido de la tienda ${store.nombre_tienda}.\n\n${reminderLine}\n\n${summary}\n\nCódigo de pedido: ${orderGroupId}`);
       return jsonResponse(201, {
         message: 'Pedido registrado.',
         order_group_id: orderGroupId,
