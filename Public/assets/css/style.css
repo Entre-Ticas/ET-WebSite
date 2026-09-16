@@ -549,6 +549,8 @@ body {
 .admin-btn-action.btn-customers { background: #c9b5f0; }
 .admin-btn-action.btn-activate { background: #a8d8b9; }
 .admin-btn-action.btn-invoice { background: #a8d8b9; }
+.admin-btn-action.btn-catalog { background: #9dd9b4; }
+.admin-btn-action.btn-link-copy { background: #d9c0f7; }
 .admin-btn-action.btn-delete { background: #bfeaf8; }
 
 .admin-btn-action.btn-edit:hover,
@@ -560,6 +562,8 @@ body {
 .admin-btn-action.btn-customers:hover,
 .admin-btn-action.btn-activate:hover,
 .admin-btn-action.btn-invoice:hover,
+.admin-btn-action.btn-catalog:hover,
+.admin-btn-action.btn-link-copy:hover,
 .admin-btn-action.btn-delete:hover {
     opacity: 0.85;
 }

@@ -355,8 +355,8 @@ async function renderStoreAdminList(stores) {
                                 <button class="admin-btn-action btn-customers" title="Ver clientes" onclick="viewStoreCustomerOrders('${store.id_store}')"><i class="fas fa-user"></i></button>
                                 ${store.status === 'draft' ? `<button class="admin-btn-action btn-activate" title="Activar" onclick="activateStoreById('${store.id_store}')"><i class="fas fa-check"></i></button>` : ''}
                                 ${store.status === 'expired' ? `<button class="admin-btn-action btn-update" title="Reabrir como borrador" onclick="reopenStoreById('${store.id_store}')"><i class="fas fa-rotate-left"></i></button>` : ''}
-                                ${store.status === 'active' ? `<button class="admin-btn-action btn-copy" title="Ir al catálogo" onclick="openStorePublicLink('${store.public_token}')"><i class="fas fa-external-link-alt"></i></button>` : ''}
-                                ${store.status === 'active' ? `<button class="admin-btn-action btn-copy" title="Copiar link" onclick="copyStoreLink('${store.public_token}')"><i class="fas fa-link"></i></button>` : ''}
+                                ${store.status === 'active' ? `<button class="admin-btn-action btn-catalog" title="Ir al catálogo" onclick="openStorePublicLink('${store.public_token}')"><i class="fas fa-external-link-alt"></i></button>` : ''}
+                                ${store.status === 'active' ? `<button class="admin-btn-action btn-link-copy" title="Copiar link" onclick="copyStoreLink('${store.public_token}')"><i class="fas fa-link"></i></button>` : ''}
                             </td>
                         </tr>
                     `).join('') : `
