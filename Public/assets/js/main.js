@@ -163,7 +163,7 @@ function formatCatalogCountdown(expiresAt) {
 }
 
 function updateCatalogCountdowns() {
-    const countdownEls = document.querySelectorAll('.catalog-nav-countdown');
+    const countdownEls = document.querySelectorAll('.catalog-nav-countdown, .active-store-countdown, .home-store-time-countdown');
     countdownEls.forEach((el) => {
         const expiresAt = el.dataset.expiresAt;
         if (!expiresAt) {
@@ -252,6 +252,32 @@ async function fetchActiveCatalogStores() {
 async function refreshCatalogNavState() {
     const stores = await fetchActiveCatalogStores();
     renderCatalogNavButton(stores);
+
+    const homeStoreCard = document.getElementById('homeStoreTimeCard');
+    const homeStoreTimer = document.getElementById('homeStoreTimeCountdown');
+    const homeStoreName = document.getElementById('homeStoreTimeName');
+    if (homeStoreCard && homeStoreTimer && homeStoreName) {
+        const activeStore = (stores || [])
+            .filter((store) => store && store.public_token && store.status === 'active' && store.expires_at)
+            .sort((a, b) => new Date(b.expires_at).getTime() - new Date(a.expires_at).getTime())
+            [0] || null;
+
+        if (activeStore) {
+            homeStoreCard.style.display = '';
+            homeStoreName.textContent = activeStore.nombre_tienda || 'Tienda por tiempo';
+            homeStoreTimer.dataset.expiresAt = activeStore.expires_at;
+            homeStoreTimer.textContent = formatCatalogCountdown(activeStore.expires_at);
+            homeStoreCard.onclick = () => {
+                window.location.href = getCatalogPublicUrl(activeStore.public_token);
+            };
+        } else {
+            homeStoreName.textContent = 'Tienda por tiempo';
+            homeStoreTimer.dataset.expiresAt = '';
+            homeStoreTimer.textContent = '00:00';
+            homeStoreCard.style.display = 'none';
+        }
+    }
+
     updateCatalogCountdowns();
 }
 
