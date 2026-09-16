@@ -1,0 +1,100 @@
+<link rel="stylesheet" href="../assets/css/order_items-admin.css">
+
+<div class="admin-wrapper">
+    <div id="storeOrdersGridView">
+        <div class="admin-header">
+            <h2>🧾 Compras por tienda</h2>
+            <p>Administra todas las compras de cada tienda con filtro por tienda y CRUD.</p>
+        </div>
+
+        <div class="admin-search-bar">
+            <input type="text" id="storeOrdersSearchInput" placeholder="🔍 Buscar por tienda, item, teléfono o ID..." oninput="searchStoreOrdersAdmin(this.value)" />
+            <select id="storeOrdersStoreSelector" class="floating-input" style="max-width: 360px; min-width: 240px;">
+                <option value="">Cargando tiendas...</option>
+            </select>
+            <button class="admin-btn-agregar" type="button" onclick="openNewStoreOrderForm()">+ Nueva compra</button>
+        </div>
+
+        <div id="storeOrdersStatus" class="catalog-status">
+            <div class="spinner"></div>
+            <p>Cargando compras...</p>
+        </div>
+
+        <div id="storeOrdersGrid" class="admin-grid">
+            <table class="admin-table" style="display: none;">
+                <thead>
+                    <tr class="admin-main-header">
+                        <th>ID</th>
+                        <th>Tienda</th>
+                        <th>Item</th>
+                        <th>Teléfono</th>
+                        <th>Cantidad</th>
+                        <th>Precio</th>
+                        <th>Total</th>
+                        <th>Contacto</th>
+                        <th>Fecha</th>
+                        <th>Acciones</th>
+                    </tr>
+                    <tr class="admin-filter-row">
+                        <td><input type="text" placeholder="Filtrar..." oninput="setStoreOrdersColumnFilter('id', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setStoreOrdersColumnFilter('store_name', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setStoreOrdersColumnFilter('item_name', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setStoreOrdersColumnFilter('client_phone', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setStoreOrdersColumnFilter('quantity', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setStoreOrdersColumnFilter('unit_price', this.value)" /></td>
+                        <td><input type="text" placeholder="Filtrar..." oninput="setStoreOrdersColumnFilter('total', this.value)" /></td>
+                        <td>
+                            <select class="admin-filter-select" onchange="setStoreOrdersColumnFilter('contacted', this.value)">
+                                <option value="">Todos</option>
+                                <option value="true">Sí</option>
+                                <option value="false">No</option>
+                            </select>
+                        </td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                </thead>
+                <tbody id="storeOrdersTbody"></tbody>
+                <tfoot id="storeOrdersTableFooter" style="display: none;">
+                    <tr>
+                        <td id="storeOrdersFooterColspan" colspan="10">
+                            <div class="admin-pagination-container order-pagination-layout" style="margin-top: 0;">
+                                <div class="pagination-info" id="storeOrdersPaginationInfo"></div>
+                                <div class="pagination-rows-selector order-pagination-rows">
+                                    <span>Filas:</span>
+                                    <div class="order-rows-dropdown" id="storeOrdersRowsDropdown">
+                                        <button type="button" class="order-rows-trigger" id="storeOrdersRowsPerPageTrigger" aria-haspopup="listbox" aria-expanded="false" onclick="toggleStoreOrdersRowsPerPageDropdown(event)">
+                                            <span id="storeOrdersRowsPerPageSelectedLabel">10</span>
+                                            <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                                        </button>
+                                        <div class="order-rows-menu" id="storeOrdersRowsPerPageMenu" role="listbox" aria-label="Filas por página">
+                                            <button type="button" data-value="10" role="option" onclick="selectStoreOrdersRowsPerPage('10')">10</button>
+                                            <button type="button" data-value="30" role="option" onclick="selectStoreOrdersRowsPerPage('30')">30</button>
+                                            <button type="button" data-value="50" role="option" onclick="selectStoreOrdersRowsPerPage('50')">50</button>
+                                            <button type="button" data-value="100" role="option" onclick="selectStoreOrdersRowsPerPage('100')">100</button>
+                                            <button type="button" data-value="-1" role="option" onclick="selectStoreOrdersRowsPerPage('-1')">Todos</button>
+                                        </div>
+                                        <select id="storeOrdersRowsPerPageSelector" class="order-rows-native-select" onchange="changeStoreOrdersRowsPerPage(this.value)">
+                                            <option value="10">10</option>
+                                            <option value="30">30</option>
+                                            <option value="50">50</option>
+                                            <option value="100">100</option>
+                                            <option value="-1">Todos</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="pagination-nav" id="storeOrdersPaginationNav"></div>
+                            </div>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <div class="no-results" id="storeOrdersNoResults">
+            😔 No se encontraron compras con esa búsqueda.
+        </div>
+    </div>
+
+    <div id="storeOrdersFormPanel" class="store-item-panel" style="display:none;"></div>
+</div>

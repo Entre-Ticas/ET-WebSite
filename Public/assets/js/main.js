@@ -171,6 +171,7 @@ function getScriptsForPage(page) {
         'admin/tracking': ['assets/js/admin-rows-dropdown.js', 'assets/js/tracking-admin.js'],
         'admin/catalog': ['assets/js/admin-rows-dropdown.js', 'assets/js/catalog-admin.js'],
         'admin/store': ['assets/js/store-admin.js'],
+        'admin/store-orders': ['assets/js/store-orders-admin.js'],
         'admin/order': ['assets/js/admin-rows-dropdown.js', 'assets/js/order_items-admin.js'],
         'admin/invoices': ['assets/js/admin-rows-dropdown.js', 'assets/js/invoices-admin.js'],
         'admin/payments': ['assets/js/admin-rows-dropdown.js', 'assets/js/payments-admin.js'],
@@ -304,7 +305,7 @@ async function loadPage(page, param = null) {
     
     // --- INICIO: LÓGICA DE SEGURIDAD ---
     // Lista de rutas que requieren que el usuario esté autenticado.
-    const protectedRoutes = ['admin/tracking', 'admin/catalog', 'admin/store', 'admin/order', 'admin/invoices', 'admin/payments', 'admin/clients'];
+    const protectedRoutes = ['admin/tracking', 'admin/catalog', 'admin/store', 'admin/store-orders', 'admin/order', 'admin/invoices', 'admin/payments', 'admin/clients'];
     // Verificamos si la página solicitada es protegida Y si el usuario NO tiene una sesión activa.
     // La función getSession() ya existe en auth.js y nos dice si hay un token válido.
     if (protectedRoutes.includes(page) && !getSession()) {
@@ -349,6 +350,7 @@ async function loadPage(page, param = null) {
                 'admin/tracking': 'admin/tracking-admin.html',
                 'admin/catalog': 'admin/catalog-admin.html',
                 'admin/store': 'admin/store-admin.html',
+                'admin/store-orders': 'admin/store-orders-admin.html',
                 'admin/order': 'admin/order_items-admin.html',
                 'admin/invoices': 'admin/invoices-admin.html',
                 'admin/payments': 'admin/payments-admin.html',
@@ -395,6 +397,8 @@ async function loadPage(page, param = null) {
                 window.initCatalogAdminPage();
             } else if (page === 'admin/store' && typeof window.initStoreAdminPage === 'function') {
                 window.initStoreAdminPage();
+            } else if (page === 'admin/store-orders' && typeof window.initStoreOrdersAdminPage === 'function') {
+                window.initStoreOrdersAdminPage();
             } else if (page === 'admin/order' && typeof window.initOrderItemsAdminPage === 'function') {
                 window.initOrderItemsAdminPage();
             } else if (page === 'admin/invoices' && typeof window.initInvoicesAdminPage === 'function') {

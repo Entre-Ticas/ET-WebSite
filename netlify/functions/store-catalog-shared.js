@@ -831,6 +831,104 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
       }
     }
 
+    if (httpMethod === 'GET' && action === 'store-orders-admin-list') {
+      if (!verifyToken(token)) return jsonResponse(401, { error: 'No autorizado.' });
+      const storeId = queryStringParameters.store_id || payload.store_id || payload.storeId;
+      if (!storeId) return jsonResponse(400, { error: 'Falta store_id.' });
+
+      const orders = await supabaseRequest(`/rest/v1/store_orders?store_id=eq.${encodeURIComponent(storeId)}&select=*`);
+      const items = await supabaseRequest(`/rest/v1/store_items?store_id=eq.${encodeURIComponent(storeId)}&select=id,name,price`);
+      const itemMap = {};
+      (items || []).forEach((item) => {
+        itemMap[item.id] = item;
+      });
+
+      return jsonResponse(200, {
+        orders: (orders || []).map((order) => ({
+          id: order.id,
+          store_id: order.store_id,
+          item_id: order.item_id,
+          item_name: itemMap[order.item_id]?.name || 'Item no encontrado',
+          client_phone: order.client_phone || '',
+          quantity: Number(order.quantity || 0),
+          unit_price: Number(order.unit_price || 0),
+          contacted: Boolean(order.contacted || order.confirmado || order.contactado || order.is_contacted),
+          created_at: order.created_at || null,
+          order_group_id: order.order_group_id || null,
+        })).sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+      });
+    }
+
+    if (httpMethod === 'POST' && action === 'create-store-order') {
+      if (!verifyToken(token)) return jsonResponse(401, { error: 'No autorizado.' });
+      const storeId = payload.store_id || payload.storeId;
+      const itemId = payload.item_id || payload.itemId;
+      const clientPhone = String(payload.client_phone || payload.phone || '').trim();
+      const quantity = Number(payload.quantity || 1);
+      const unitPrice = Number(payload.unit_price || payload.price || 0);
+
+      if (!storeId || !itemId || !clientPhone) {
+        return jsonResponse(400, { error: 'Faltan store_id, item_id o client_phone.' });
+      }
+
+      const row = {
+        store_id: Number(storeId),
+        item_id: Number(itemId),
+        client_phone: clientPhone,
+        quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
+        unit_price: Number.isFinite(unitPrice) ? unitPrice : 0,
+        created_at: new Date().toISOString(),
+        order_group_id: payload.order_group_id || payload.orderGroupId || `store-order-${Date.now()}`,
+        contacted: Boolean(payload.contacted || payload.contactado || payload.confirmado || false),
+      };
+
+      const inserted = await supabaseRequest('/rest/v1/store_orders', {
+        method: 'POST',
+        body: JSON.stringify(row)
+      });
+
+      return jsonResponse(201, { message: 'Compra creada.', order: firstResult(inserted) || row });
+    }
+
+    if (httpMethod === 'PATCH' && action === 'update-store-order') {
+      if (!verifyToken(token)) return jsonResponse(401, { error: 'No autorizado.' });
+      const orderId = payload.id || payload.order_id || payload.orderId;
+      if (!orderId) return jsonResponse(400, { error: 'Falta id de la compra.' });
+
+      const patch = {};
+      if (payload.store_id !== undefined) patch.store_id = Number(payload.store_id);
+      if (payload.item_id !== undefined) patch.item_id = Number(payload.item_id);
+      if (payload.client_phone !== undefined) patch.client_phone = String(payload.client_phone || '').trim();
+      if (payload.quantity !== undefined) patch.quantity = Number(payload.quantity || 1);
+      if (payload.unit_price !== undefined) patch.unit_price = Number(payload.unit_price || 0);
+      if (payload.order_group_id !== undefined) patch.order_group_id = payload.order_group_id;
+      if (payload.contacted !== undefined) patch.contacted = Boolean(payload.contacted);
+      if (payload.confirmado !== undefined) patch.confirmado = Boolean(payload.confirmado);
+      if (payload.contactado !== undefined) patch.contactado = Boolean(payload.contactado);
+      if (payload.is_contacted !== undefined) patch.is_contacted = Boolean(payload.is_contacted);
+
+      if (!Object.keys(patch).length) return jsonResponse(400, { error: 'No hay cambios para guardar.' });
+
+      const updated = await supabaseRequest(`/rest/v1/store_orders?id=eq.${encodeURIComponent(orderId)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(patch)
+      });
+
+      return jsonResponse(200, { message: 'Compra actualizada.', order: firstResult(updated) || patch });
+    }
+
+    if (httpMethod === 'DELETE' && action === 'delete-store-order') {
+      if (!verifyToken(token)) return jsonResponse(401, { error: 'No autorizado.' });
+      const orderId = queryStringParameters.id || payload.id || payload.order_id || payload.orderId;
+      if (!orderId) return jsonResponse(400, { error: 'Falta id de la compra.' });
+
+      await supabaseRequest(`/rest/v1/store_orders?id=eq.${encodeURIComponent(orderId)}`, {
+        method: 'DELETE'
+      });
+
+      return jsonResponse(200, { message: 'Compra eliminada.' });
+    }
+
     if (httpMethod === 'POST' && action === 'create-order') {
       const publicToken = payload.public_token || payload.publicToken || queryStringParameters.public_token;
       const clientPhone = payload.client_phone || payload.phone || payload.clientPhone;

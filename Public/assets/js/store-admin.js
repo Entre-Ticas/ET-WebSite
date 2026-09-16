@@ -289,6 +289,12 @@ function openStorePublicLink(publicToken) {
     window.open(link, '_blank', 'noopener,noreferrer');
 }
 
+function openStoreOrdersAdminPage(storeId) {
+    if (!storeId) return;
+    localStorage.setItem('selected_store_orders_id', String(storeId));
+    loadPage('admin/store-orders');
+}
+
 async function renderStoreAdminList(stores) {
     const root = document.getElementById('storeAdminGrid');
     if (!root) return;
@@ -342,11 +348,12 @@ async function renderStoreAdminList(stores) {
                             <td><span class="store-badge ${store.status}">${formatStoreStatus(store.status)}</span></td>
                             <td class="admin-actions-cell">
                                 <button class="admin-btn-action btn-edit" title="Editar tienda" onclick="openEditStorePanel('${store.id_store}')"><i class="fas fa-pen"></i></button>
-                                <button class="admin-btn-action btn-edit" title="Agregar item a la tienda" onclick="openStoreItemPanel('${store.id_store}')"><i class="fas fa-plus"></i></button>
+                                <button class="admin-btn-action btn-store-add" title="Agregar item a la tienda" onclick="openStoreItemPanel('${store.id_store}')"><i class="fas fa-plus"></i></button>
                                 <button class="admin-btn-action btn-invoice" title="Ver items" onclick="viewStoreItems('${store.id_store}')"><i class="fas fa-boxes"></i></button>
                                 <button class="admin-btn-action btn-copy" title="Ver compras" onclick="viewStoreOrders('${store.id_store}')"><i class="fas fa-receipt"></i></button>
-                                <button class="admin-btn-action btn-update" title="Ver clientes" onclick="viewStoreCustomerOrders('${store.id_store}')"><i class="fas fa-user"></i></button>
-                                ${store.status === 'draft' ? `<button class="admin-btn-action btn-update" title="Activar" onclick="activateStoreById('${store.id_store}')"><i class="fas fa-check"></i></button>` : ''}
+                                <button class="admin-btn-action btn-order-admin" title="Compras" onclick="openStoreOrdersAdminPage('${store.id_store}')"><i class="fas fa-bag-shopping"></i></button>
+                                <button class="admin-btn-action btn-customers" title="Ver clientes" onclick="viewStoreCustomerOrders('${store.id_store}')"><i class="fas fa-user"></i></button>
+                                ${store.status === 'draft' ? `<button class="admin-btn-action btn-activate" title="Activar" onclick="activateStoreById('${store.id_store}')"><i class="fas fa-check"></i></button>` : ''}
                                 ${store.status === 'expired' ? `<button class="admin-btn-action btn-update" title="Reabrir como borrador" onclick="reopenStoreById('${store.id_store}')"><i class="fas fa-rotate-left"></i></button>` : ''}
                                 ${store.status === 'active' ? `<button class="admin-btn-action btn-copy" title="Ir al catálogo" onclick="openStorePublicLink('${store.public_token}')"><i class="fas fa-external-link-alt"></i></button>` : ''}
                                 ${store.status === 'active' ? `<button class="admin-btn-action btn-copy" title="Copiar link" onclick="copyStoreLink('${store.public_token}')"><i class="fas fa-link"></i></button>` : ''}
@@ -1948,6 +1955,7 @@ window.closeEditStorePanel = closeEditStorePanel;
 window.saveStoreEdit = saveStoreEdit;
 window.viewStoreOrders = viewStoreOrders;
 window.viewStoreCustomerOrders = viewStoreCustomerOrders;
+window.openStoreOrdersAdminPage = openStoreOrdersAdminPage;
 window.closeStoreOrdersPanel = closeStoreOrdersPanel;
 window.saveStoreItem = saveStoreItem;
 window.viewStoreItems = viewStoreItems;
