@@ -1,6 +1,7 @@
 /admin/tracking   /index.html 200
 /admin/catalog    /index.html 200
 /admin/store      /index.html 200
+/admin/store-orders /index.html 200
 /admin/order      /index.html 200
 /admin/invoices   /index.html 200
 /admin/payments   /index.html 200

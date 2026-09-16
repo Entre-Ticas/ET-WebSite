@@ -140,6 +140,147 @@ function updateMobileNavColumns() {
     nav.style.setProperty('--mobile-nav-cols', String(cols));
 }
 
+// ==============================
+// NAV / CATÁLOGO ACTIVADO
+// ==============================
+function getCatalogPublicUrl(publicToken) {
+    const origin = window.location && window.location.origin ? window.location.origin : 'https://entreticas.netlify.app';
+    return `${origin}/StoreCatalog/${encodeURIComponent(publicToken || '')}`;
+}
+
+function formatCatalogCountdown(expiresAt) {
+    if (!expiresAt) return '00:00';
+
+    const expiryMs = new Date(expiresAt).getTime();
+    const diffMs = Math.max(expiryMs - Date.now(), 0);
+    const totalSeconds = Math.ceil(diffMs / 1000);
+
+    if (totalSeconds <= 0) return '00:00';
+
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+function updateCatalogCountdowns() {
+    const countdownEls = document.querySelectorAll('.catalog-nav-countdown, .active-store-countdown, .home-store-time-countdown');
+    countdownEls.forEach((el) => {
+        const expiresAt = el.dataset.expiresAt;
+        if (!expiresAt) {
+            el.textContent = '00:00';
+            return;
+        }
+        el.textContent = formatCatalogCountdown(expiresAt);
+    });
+}
+
+function renderCatalogNavButton(activeStores = []) {
+    const container = document.getElementById('catalogNavContainer');
+    if (!container) return;
+
+    const validStores = (activeStores || [])
+        .filter((store) => store && store.public_token && store.status === 'active' && store.expires_at)
+        .sort((a, b) => new Date(a.expires_at).getTime() - new Date(b.expires_at).getTime())
+        .slice(0, 3);
+
+    if (!validStores.length) {
+        container.innerHTML = '<a onclick="loadPage(\'catalog\')">Catálogo</a>';
+        return;
+    }
+
+    const storeItems = validStores.map((store) => {
+        const name = (store.nombre_tienda || 'Tienda').trim() || 'Tienda';
+        const publicUrl = getCatalogPublicUrl(store.public_token);
+        const countdown = formatCatalogCountdown(store.expires_at);
+        return `
+            <a href="${publicUrl}" class="catalog-nav-item" data-store-id="${store.id_store || store.public_token}" onclick="event.preventDefault(); window.location.href='${publicUrl}';">
+                <span class="catalog-nav-store-name">Tienda ${name}</span>
+                <span class="catalog-nav-countdown" data-expires-at="${store.expires_at}">${countdown}</span>
+            </a>
+        `;
+    }).join('');
+
+    const defaultUrl = 'javascript:void(0)';
+    container.innerHTML = `
+        <div class="catalog-nav-dropdown">
+            <button type="button" class="catalog-nav-trigger" onclick="this.parentElement.classList.toggle('open'); this.setAttribute('aria-expanded', String(this.parentElement.classList.contains('open')));" aria-expanded="false">
+                <span>Catálogo</span>
+                <i class="fas fa-chevron-down"></i>
+            </button>
+            <div class="catalog-nav-menu">
+                <a href="${defaultUrl}" class="catalog-nav-option" onclick="event.preventDefault(); loadPage('catalog');">
+                    <span>Venta Inmediata</span>
+                </a>
+                ${storeItems}
+            </div>
+        </div>
+    `;
+}
+
+async function fetchActiveCatalogStores() {
+    try {
+        const response = await fetch('/.netlify/functions/store-admin?action=list-active-stores', { cache: 'no-store' });
+        if (response.ok) {
+            const data = await response.json().catch(() => ({}));
+            const stores = Array.isArray(data.stores) ? data.stores : [];
+            if (stores.length) {
+                return stores;
+            }
+        }
+    } catch (error) {
+        console.warn('No se pudo cargar la lista pública de tiendas activas.', error);
+    }
+
+    const session = getSession();
+    if (!session) return [];
+
+    try {
+        const response = await fetch('/.netlify/functions/store-admin?action=list-stores', {
+            method: 'GET',
+            headers: { 'x-admin-token': session.token }
+        });
+        if (!response.ok) return [];
+        const data = await response.json().catch(() => ({}));
+        const stores = Array.isArray(data.stores) ? data.stores : [];
+        return stores.filter((store) => store && store.status === 'active' && store.public_token && store.expires_at);
+    } catch (error) {
+        console.warn('No se pudo cargar la lista de tiendas activas como admin.', error);
+        return [];
+    }
+}
+
+async function refreshCatalogNavState() {
+    const stores = await fetchActiveCatalogStores();
+    renderCatalogNavButton(stores);
+
+    const homeStoreCard = document.getElementById('homeStoreTimeCard');
+    const homeStoreTimer = document.getElementById('homeStoreTimeCountdown');
+    const homeStoreName = document.getElementById('homeStoreTimeName');
+    if (homeStoreCard && homeStoreTimer && homeStoreName) {
+        const activeStore = (stores || [])
+            .filter((store) => store && store.public_token && store.status === 'active' && store.expires_at)
+            .sort((a, b) => new Date(b.expires_at).getTime() - new Date(a.expires_at).getTime())
+            [0] || null;
+
+        if (activeStore) {
+            homeStoreCard.style.display = '';
+            homeStoreName.textContent = activeStore.nombre_tienda || 'Tienda por tiempo';
+            homeStoreTimer.dataset.expiresAt = activeStore.expires_at;
+            homeStoreTimer.textContent = formatCatalogCountdown(activeStore.expires_at);
+            homeStoreCard.onclick = () => {
+                window.location.href = getCatalogPublicUrl(activeStore.public_token);
+            };
+        } else {
+            homeStoreName.textContent = 'Tienda por tiempo';
+            homeStoreTimer.dataset.expiresAt = '';
+            homeStoreTimer.textContent = '00:00';
+            homeStoreCard.style.display = 'none';
+        }
+    }
+
+    updateCatalogCountdowns();
+}
+
 function loadScriptOnce(src) {
     if (document.querySelector(`script[src="${src}"]`)) {
         return Promise.resolve();
@@ -171,6 +312,7 @@ function getScriptsForPage(page) {
         'admin/tracking': ['assets/js/admin-rows-dropdown.js', 'assets/js/tracking-admin.js'],
         'admin/catalog': ['assets/js/admin-rows-dropdown.js', 'assets/js/catalog-admin.js'],
         'admin/store': ['assets/js/store-admin.js'],
+        'admin/store-orders': ['assets/js/store-orders-admin.js'],
         'admin/order': ['assets/js/admin-rows-dropdown.js', 'assets/js/order_items-admin.js'],
         'admin/invoices': ['assets/js/admin-rows-dropdown.js', 'assets/js/invoices-admin.js'],
         'admin/payments': ['assets/js/admin-rows-dropdown.js', 'assets/js/payments-admin.js'],
@@ -205,6 +347,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     updateMobileNavColumns();
+    refreshCatalogNavState();
+    setInterval(updateCatalogCountdowns, 1000);
     initializeAutofillObserver();
     applyGlobalInputHardening(document.getElementById('content-area') || document);
 
@@ -260,6 +404,12 @@ document.addEventListener('DOMContentLoaded', () => {
             toggleSocialMenu();
         }
 
+        const dropdown = e.target.closest('.catalog-nav-dropdown');
+        const allDropdowns = document.querySelectorAll('.catalog-nav-dropdown');
+        allDropdowns.forEach((item) => {
+            if (item !== dropdown) item.classList.remove('open');
+        });
+
         // --- LÓGICA GLOBAL PARA CERRAR MODAL DE IMAGEN ---
         // Si se hace clic en el fondo oscuro del modal...
         if (e.target.id === 'imgModal') {
@@ -304,7 +454,7 @@ async function loadPage(page, param = null) {
     
     // --- INICIO: LÓGICA DE SEGURIDAD ---
     // Lista de rutas que requieren que el usuario esté autenticado.
-    const protectedRoutes = ['admin/tracking', 'admin/catalog', 'admin/store', 'admin/order', 'admin/invoices', 'admin/payments', 'admin/clients'];
+    const protectedRoutes = ['admin/tracking', 'admin/catalog', 'admin/store', 'admin/store-orders', 'admin/order', 'admin/invoices', 'admin/payments', 'admin/clients'];
     // Verificamos si la página solicitada es protegida Y si el usuario NO tiene una sesión activa.
     // La función getSession() ya existe en auth.js y nos dice si hay un token válido.
     if (protectedRoutes.includes(page) && !getSession()) {
@@ -349,6 +499,7 @@ async function loadPage(page, param = null) {
                 'admin/tracking': 'admin/tracking-admin.html',
                 'admin/catalog': 'admin/catalog-admin.html',
                 'admin/store': 'admin/store-admin.html',
+                'admin/store-orders': 'admin/store-orders-admin.html',
                 'admin/order': 'admin/order_items-admin.html',
                 'admin/invoices': 'admin/invoices-admin.html',
                 'admin/payments': 'admin/payments-admin.html',
@@ -395,6 +546,8 @@ async function loadPage(page, param = null) {
                 window.initCatalogAdminPage();
             } else if (page === 'admin/store' && typeof window.initStoreAdminPage === 'function') {
                 window.initStoreAdminPage();
+            } else if (page === 'admin/store-orders' && typeof window.initStoreOrdersAdminPage === 'function') {
+                window.initStoreOrdersAdminPage();
             } else if (page === 'admin/order' && typeof window.initOrderItemsAdminPage === 'function') {
                 window.initOrderItemsAdminPage();
             } else if (page === 'admin/invoices' && typeof window.initInvoicesAdminPage === 'function') {

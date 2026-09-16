@@ -289,6 +289,12 @@ function openStorePublicLink(publicToken) {
     window.open(link, '_blank', 'noopener,noreferrer');
 }
 
+function openStoreOrdersAdminPage(storeId) {
+    if (!storeId) return;
+    localStorage.setItem('selected_store_orders_id', String(storeId));
+    loadPage('admin/store-orders');
+}
+
 async function renderStoreAdminList(stores) {
     const root = document.getElementById('storeAdminGrid');
     if (!root) return;
@@ -342,14 +348,15 @@ async function renderStoreAdminList(stores) {
                             <td><span class="store-badge ${store.status}">${formatStoreStatus(store.status)}</span></td>
                             <td class="admin-actions-cell">
                                 <button class="admin-btn-action btn-edit" title="Editar tienda" onclick="openEditStorePanel('${store.id_store}')"><i class="fas fa-pen"></i></button>
-                                <button class="admin-btn-action btn-edit" title="Agregar item a la tienda" onclick="openStoreItemPanel('${store.id_store}')"><i class="fas fa-plus"></i></button>
+                                <button class="admin-btn-action btn-store-add" title="Agregar item a la tienda" onclick="openStoreItemPanel('${store.id_store}')"><i class="fas fa-plus"></i></button>
                                 <button class="admin-btn-action btn-invoice" title="Ver items" onclick="viewStoreItems('${store.id_store}')"><i class="fas fa-boxes"></i></button>
                                 <button class="admin-btn-action btn-copy" title="Ver compras" onclick="viewStoreOrders('${store.id_store}')"><i class="fas fa-receipt"></i></button>
-                                <button class="admin-btn-action btn-update" title="Ver clientes" onclick="viewStoreCustomerOrders('${store.id_store}')"><i class="fas fa-user"></i></button>
-                                ${store.status === 'draft' ? `<button class="admin-btn-action btn-update" title="Activar" onclick="activateStoreById('${store.id_store}')"><i class="fas fa-check"></i></button>` : ''}
+                                <button class="admin-btn-action btn-order-admin" title="Compras" onclick="openStoreOrdersAdminPage('${store.id_store}')"><i class="fas fa-bag-shopping"></i></button>
+                                <button class="admin-btn-action btn-customers" title="Ver clientes" onclick="viewStoreCustomerOrders('${store.id_store}')"><i class="fas fa-user"></i></button>
+                                ${store.status === 'draft' ? `<button class="admin-btn-action btn-activate" title="Activar" onclick="activateStoreById('${store.id_store}')"><i class="fas fa-check"></i></button>` : ''}
                                 ${store.status === 'expired' ? `<button class="admin-btn-action btn-update" title="Reabrir como borrador" onclick="reopenStoreById('${store.id_store}')"><i class="fas fa-rotate-left"></i></button>` : ''}
-                                ${store.status === 'active' ? `<button class="admin-btn-action btn-copy" title="Ir al catálogo" onclick="openStorePublicLink('${store.public_token}')"><i class="fas fa-external-link-alt"></i></button>` : ''}
-                                ${store.status === 'active' ? `<button class="admin-btn-action btn-copy" title="Copiar link" onclick="copyStoreLink('${store.public_token}')"><i class="fas fa-link"></i></button>` : ''}
+                                ${store.status === 'active' ? `<button class="admin-btn-action btn-catalog" title="Ir al catálogo" onclick="openStorePublicLink('${store.public_token}')"><i class="fas fa-external-link-alt"></i></button>` : ''}
+                                ${store.status === 'active' ? `<button class="admin-btn-action btn-link-copy" title="Copiar link" onclick="copyStoreLink('${store.public_token}')"><i class="fas fa-link"></i></button>` : ''}
                             </td>
                         </tr>
                     `).join('') : `
@@ -475,7 +482,7 @@ async function openStoreItemPanel(storeId) {
         </div>
         <div class="floating-field">
             <input id="storeItemQuantity" class="floating-input" type="number" min="0" placeholder=" " autocomplete="new-password" />
-            <label class="floating-label">Cantidad (0 o vacío = ilimitado)</label>
+            <label class="floating-label">Cantidad (NULL = ilimitado)</label>
         </div>
         <div class="floating-field">
             <textarea id="storeItemDescription" class="floating-input" placeholder=" " autocomplete="new-password"></textarea>
@@ -546,7 +553,7 @@ function openEditStoreItemPanel(storeId, itemId) {
         </div>
         <div class="floating-field">
             <input id="storeItemQuantity" class="floating-input" type="number" min="0" placeholder=" " autocomplete="new-password" value="${(item.quantity === null || item.quantity === undefined) ? '' : Number(item.quantity)}" />
-            <label class="floating-label">Cantidad (0 o vacío = ilimitado)</label>
+            <label class="floating-label">Cantidad (NULL = ilimitado)</label>
         </div>
         <div class="floating-field">
             <textarea id="storeItemDescription" class="floating-input" placeholder=" " autocomplete="new-password">${String(item.description || '')}</textarea>
@@ -604,7 +611,7 @@ async function saveStoreItemEdit(storeId, itemId, token) {
         id: itemId,
         name: document.getElementById('storeItemName').value.trim(),
         price: Number(document.getElementById('storeItemPrice').value || 0),
-        quantity: quantityRaw === '' ? null : Number(quantityRaw),
+        quantity: quantityRaw === '' ? 0 : Number(quantityRaw),
         image_url: imageUrl,
         description: document.getElementById('storeItemDescription').value.trim(),
         status_id: statusId,
@@ -855,7 +862,7 @@ async function saveStoreItem(storeId, token) {
         store_id: storeId,
         name: document.getElementById('storeItemName').value.trim(),
         price: Number(document.getElementById('storeItemPrice').value || 0),
-        quantity: quantityRaw === '' ? null : Number(quantityRaw),
+        quantity: quantityRaw === '' ? 0 : Number(quantityRaw),
         image_url: imageUrl,
         description: document.getElementById('storeItemDescription').value.trim(),
         status_id: statusId,
@@ -1529,8 +1536,12 @@ function renderStoreCustomerOrdersTable() {
                     <h3>Clientes con compras</h3>
                 </div>
             </div>
-            <div class="admin-search-bar">
-                <input id="storeCustomerOrdersSearchInput" type="text" placeholder="🔍 Buscar por cliente, teléfono, item o total..." value="${String(storeCustomerOrdersState.globalSearch || '').replace(/"/g, '&quot;')}" oninput="setStoreCustomerOrdersGlobalSearch(this.value)" />
+            <div class="admin-search-bar" style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+                <input id="storeCustomerOrdersSearchInput" type="text" placeholder="🔍 Buscar por cliente, teléfono, item o total..." value="${String(storeCustomerOrdersState.globalSearch || '').replace(/"/g, '&quot;')}" oninput="setStoreCustomerOrdersGlobalSearch(this.value)" style="flex:1 1 280px; min-width:220px;" />
+                <button type="button" class="btn btn-secondary" onclick="resetStoreCustomerOrdersFilters()" style="display:inline-flex; align-items:center; justify-content:center; gap:0.45rem; white-space:nowrap;">
+                    <i class="fas fa-broom" aria-hidden="true"></i>
+                    <span>Limpiar todo</span>
+                </button>
             </div>
             <div class="admin-filter-chips">
                 <label class="admin-filter-option">
@@ -1561,10 +1572,14 @@ function renderStoreCustomerOrdersTable() {
                     <tbody id="storeCustomerOrdersTableBody">
                         ${paginatedCustomers.length ? paginatedCustomers.map((customer) => {
                             const phoneDigits = normalizeStoreClientPhoneForWa(customer.phone_digits || customer.phone || '');
-                            const adminSummary = (customer.items || []).map((item) => `- ${item.name || 'Item'}: ${Number(item.quantity || 0)} x ${formatStoreCurrency(Number(item.unit_price || item.price || 0))}`).join('\n');
-                            const waText = encodeURIComponent(`Hola!\n\nYa agregamos tu pedido.\nLo que incluimos fue lo siguiente:\n\n${adminSummary || '- Productos sin detalle'}\n\nMuchas gracias por tu compra.`);
+                            const customerItems = customer.items || [];
+                            const totalAmount = customerItems.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.unit_price || item.price || 0)), 0);
+                            const fiftyPercentAmount = totalAmount / 2;
+                            const reminderLine = `Recorda que el monto total es ${formatStoreCurrency(totalAmount)} y el monto del 50% es ${formatStoreCurrency(fiftyPercentAmount)}`;
+                            const adminSummary = customerItems.map((item) => `- ${item.name || 'Item'}: ${Number(item.quantity || 0)} x ${formatStoreCurrency(Number(item.unit_price || item.price || 0))}`).join('\n');
+                            const waText = encodeURIComponent(`Hola!\n\nYa agregamos tu pedido.\n\n${reminderLine}\n\nLo que incluimos fue lo siguiente:\n\n${adminSummary || '- Productos sin detalle'}\n\nMuchas gracias por tu compra.`);
                             const waLink = phoneDigits ? `https://wa.me/${phoneDigits}?text=${waText}` : '#';
-                            const itemList = (customer.items || []).map((item) => `<div>${item.name || 'Sin nombre'}: ${Number(item.quantity || 0)}</div>`).join('');
+                            const itemList = customerItems.map((item) => `<div>${item.name || 'Sin nombre'}: ${Number(item.quantity || 0)}</div>`).join('');
                             const phoneValue = String(customer.phone || '');
                             const orderGroupId = String(customer.order_group_id || '');
                             const isMatched = Boolean(customer.is_matched && customer.client_name);
@@ -1639,10 +1654,14 @@ function renderStoreCustomerOrdersTable() {
 
     tableBody.innerHTML = paginatedCustomers.length ? paginatedCustomers.map((customer) => {
         const phoneDigits = normalizeStoreClientPhoneForWa(customer.phone_digits || customer.phone || '');
-        const adminSummary = (customer.items || []).map((item) => `- ${item.name || 'Item'}: ${Number(item.quantity || 0)} x ${formatStoreCurrency(Number(item.unit_price || item.price || 0))}`).join('\n');
-        const waText = encodeURIComponent(`Hola!\n\nYa agregamos tu pedido.\nLo que incluimos fue lo siguiente:\n\n${adminSummary || '- Productos sin detalle'}\n\nMuchas gracias por tu compra.`);
+        const customerItems = customer.items || [];
+        const totalAmount = customerItems.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.unit_price || item.price || 0)), 0);
+        const fiftyPercentAmount = totalAmount / 2;
+        const reminderLine = `Recorda que el monto total es ${formatStoreCurrency(totalAmount)} y el monto del 50% es ${formatStoreCurrency(fiftyPercentAmount)}`;
+        const adminSummary = customerItems.map((item) => `- ${item.name || 'Item'}: ${Number(item.quantity || 0)} x ${formatStoreCurrency(Number(item.unit_price || item.price || 0))}`).join('\n');
+        const waText = encodeURIComponent(`Hola!\n\nYa agregamos tu pedido.\n\n${reminderLine}\n\nLo que incluimos fue lo siguiente:\n\n${adminSummary || '- Productos sin detalle'}\n\nMuchas gracias por tu compra.`);
         const waLink = phoneDigits ? `https://wa.me/${phoneDigits}?text=${waText}` : '#';
-        const itemList = (customer.items || []).map((item) => `<div>${item.name || 'Sin nombre'}: ${Number(item.quantity || 0)}</div>`).join('');
+        const itemList = customerItems.map((item) => `<div>${item.name || 'Sin nombre'}: ${Number(item.quantity || 0)}</div>`).join('');
         const phoneValue = String(customer.phone || '');
         const orderGroupId = String(customer.order_group_id || '');
         const isMatched = Boolean(customer.is_matched && customer.client_name);
@@ -1735,6 +1754,33 @@ async function markStoreCustomerOrdersAsContacted(phoneValue, waLink, orderGroup
             console.error(message);
         }
     }
+}
+
+function resetStoreCustomerOrdersFilters() {
+    storeCustomerOrdersState.globalSearch = '';
+    storeCustomerOrdersState.filters = { client: '', phone: '', items: '', total: '' };
+    storeCustomerOrdersState.currentPage = 1;
+    storeCustomerOrdersState.rowsPerPage = 10;
+    storeCustomerOrdersState.showOnlyUncontacted = true;
+
+    const searchInput = document.getElementById('storeCustomerOrdersSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    const clientInput = document.getElementById('storeCustomerOrdersClientFilter');
+    const itemsInput = document.getElementById('storeCustomerOrdersItemsFilter');
+    const totalInput = document.getElementById('storeCustomerOrdersTotalFilter');
+    const rowsPerPageSelect = document.getElementById('storeCustomerOrdersRowsPerPage');
+
+    if (clientInput) clientInput.value = '';
+    if (itemsInput) itemsInput.value = '';
+    if (totalInput) totalInput.value = '';
+    if (rowsPerPageSelect) rowsPerPageSelect.value = '10';
+
+    document.querySelectorAll('input[name="storeCustomerOrdersContactFilter"]').forEach((radio) => {
+        radio.checked = radio.value === 'pending';
+    });
+
+    renderStoreCustomerOrdersTable();
 }
 
 function setStoreCustomerOrdersGlobalSearch(value) {
@@ -1909,6 +1955,7 @@ window.closeEditStorePanel = closeEditStorePanel;
 window.saveStoreEdit = saveStoreEdit;
 window.viewStoreOrders = viewStoreOrders;
 window.viewStoreCustomerOrders = viewStoreCustomerOrders;
+window.openStoreOrdersAdminPage = openStoreOrdersAdminPage;
 window.closeStoreOrdersPanel = closeStoreOrdersPanel;
 window.saveStoreItem = saveStoreItem;
 window.viewStoreItems = viewStoreItems;

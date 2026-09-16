@@ -228,15 +228,18 @@ function normalizeItem(item = {}) {
   const safeItem = item && typeof item === 'object' ? item : {};
   const isActive = itemIsActive(safeItem);
 
+  const rawQuantity = safeItem.quantity;
+  const numericQuantity = rawQuantity === null || rawQuantity === undefined || rawQuantity === ''
+    ? 0
+    : Number(rawQuantity);
+
   return {
     id: safeItem.id ?? safeItem.id_store_item ?? null,
     store_id: safeItem.store_id ?? safeItem.storeId ?? null,
     name: safeItem.name || 'Sin nombre',
     price: Number(safeItem.price || 0),
     image_url: safeItem.image_url || '',
-    quantity: (safeItem.quantity === null || safeItem.quantity === undefined || safeItem.quantity === '')
-      ? null
-      : Number(safeItem.quantity),
+    quantity: Number.isFinite(numericQuantity) ? numericQuantity : 0,
     description: safeItem.description || '',
     is_active: isActive,
     status: isActive ? 'active' : 'inactive',
@@ -313,6 +316,17 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
       await syncExpiredStoresFromTimestamps();
       const stores = await supabaseRequest('/rest/v1/store?select=*');
       return jsonResponse(200, { stores: (stores || []).map(normalizeStore) });
+    }
+
+    if (httpMethod === 'GET' && action === 'list-active-stores') {
+      await syncExpiredStoresFromTimestamps();
+      const stores = await supabaseRequest('/rest/v1/store?select=*');
+      const activeStores = (stores || [])
+        .map(normalizeStore)
+        .filter((store) => store.status === 'active' && store.public_token && store.expires_at && new Date(store.expires_at).getTime() > Date.now())
+        .sort((a, b) => new Date(a.expires_at).getTime() - new Date(b.expires_at).getTime());
+
+      return jsonResponse(200, { stores: activeStores });
     }
 
     if (httpMethod === 'POST' && action === 'sync-store-statuses') {
@@ -444,8 +458,8 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
         name: payload.name || '',
         price: Number(payload.price || 0),
         image_url: payload.image_url || payload.imageUrl || '',
-        quantity: (payload.quantity === null || payload.quantity === undefined || payload.quantity === '')
-          ? null
+        quantity: payload.quantity === null || payload.quantity === undefined || payload.quantity === ''
+          ? 0
           : Number(payload.quantity),
         description: payload.description || '',
       };
@@ -828,6 +842,104 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
       }
     }
 
+    if (httpMethod === 'GET' && action === 'store-orders-admin-list') {
+      if (!verifyToken(token)) return jsonResponse(401, { error: 'No autorizado.' });
+      const storeId = queryStringParameters.store_id || payload.store_id || payload.storeId;
+      if (!storeId) return jsonResponse(400, { error: 'Falta store_id.' });
+
+      const orders = await supabaseRequest(`/rest/v1/store_orders?store_id=eq.${encodeURIComponent(storeId)}&select=*`);
+      const items = await supabaseRequest(`/rest/v1/store_items?store_id=eq.${encodeURIComponent(storeId)}&select=id,name,price`);
+      const itemMap = {};
+      (items || []).forEach((item) => {
+        itemMap[item.id] = item;
+      });
+
+      return jsonResponse(200, {
+        orders: (orders || []).map((order) => ({
+          id: order.id,
+          store_id: order.store_id,
+          item_id: order.item_id,
+          item_name: itemMap[order.item_id]?.name || 'Item no encontrado',
+          client_phone: order.client_phone || '',
+          quantity: Number(order.quantity || 0),
+          unit_price: Number(order.unit_price || 0),
+          contacted: Boolean(order.contacted || order.confirmado || order.contactado || order.is_contacted),
+          created_at: order.created_at || null,
+          order_group_id: order.order_group_id || null,
+        })).sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+      });
+    }
+
+    if (httpMethod === 'POST' && action === 'create-store-order') {
+      if (!verifyToken(token)) return jsonResponse(401, { error: 'No autorizado.' });
+      const storeId = payload.store_id || payload.storeId;
+      const itemId = payload.item_id || payload.itemId;
+      const clientPhone = String(payload.client_phone || payload.phone || '').trim();
+      const quantity = Number(payload.quantity || 1);
+      const unitPrice = Number(payload.unit_price || payload.price || 0);
+
+      if (!storeId || !itemId || !clientPhone) {
+        return jsonResponse(400, { error: 'Faltan store_id, item_id o client_phone.' });
+      }
+
+      const row = {
+        store_id: Number(storeId),
+        item_id: Number(itemId),
+        client_phone: clientPhone,
+        quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
+        unit_price: Number.isFinite(unitPrice) ? unitPrice : 0,
+        created_at: new Date().toISOString(),
+        order_group_id: payload.order_group_id || payload.orderGroupId || `store-order-${Date.now()}`,
+        contacted: Boolean(payload.contacted || payload.contactado || payload.confirmado || false),
+      };
+
+      const inserted = await supabaseRequest('/rest/v1/store_orders', {
+        method: 'POST',
+        body: JSON.stringify(row)
+      });
+
+      return jsonResponse(201, { message: 'Compra creada.', order: firstResult(inserted) || row });
+    }
+
+    if (httpMethod === 'PATCH' && action === 'update-store-order') {
+      if (!verifyToken(token)) return jsonResponse(401, { error: 'No autorizado.' });
+      const orderId = payload.id || payload.order_id || payload.orderId;
+      if (!orderId) return jsonResponse(400, { error: 'Falta id de la compra.' });
+
+      const patch = {};
+      if (payload.store_id !== undefined) patch.store_id = Number(payload.store_id);
+      if (payload.item_id !== undefined) patch.item_id = Number(payload.item_id);
+      if (payload.client_phone !== undefined) patch.client_phone = String(payload.client_phone || '').trim();
+      if (payload.quantity !== undefined) patch.quantity = Number(payload.quantity || 1);
+      if (payload.unit_price !== undefined) patch.unit_price = Number(payload.unit_price || 0);
+      if (payload.order_group_id !== undefined) patch.order_group_id = payload.order_group_id;
+      if (payload.contacted !== undefined) patch.contacted = Boolean(payload.contacted);
+      if (payload.confirmado !== undefined) patch.confirmado = Boolean(payload.confirmado);
+      if (payload.contactado !== undefined) patch.contactado = Boolean(payload.contactado);
+      if (payload.is_contacted !== undefined) patch.is_contacted = Boolean(payload.is_contacted);
+
+      if (!Object.keys(patch).length) return jsonResponse(400, { error: 'No hay cambios para guardar.' });
+
+      const updated = await supabaseRequest(`/rest/v1/store_orders?id=eq.${encodeURIComponent(orderId)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(patch)
+      });
+
+      return jsonResponse(200, { message: 'Compra actualizada.', order: firstResult(updated) || patch });
+    }
+
+    if (httpMethod === 'DELETE' && action === 'delete-store-order') {
+      if (!verifyToken(token)) return jsonResponse(401, { error: 'No autorizado.' });
+      const orderId = queryStringParameters.id || payload.id || payload.order_id || payload.orderId;
+      if (!orderId) return jsonResponse(400, { error: 'Falta id de la compra.' });
+
+      await supabaseRequest(`/rest/v1/store_orders?id=eq.${encodeURIComponent(orderId)}`, {
+        method: 'DELETE'
+      });
+
+      return jsonResponse(200, { message: 'Compra eliminada.' });
+    }
+
     if (httpMethod === 'POST' && action === 'create-order') {
       const publicToken = payload.public_token || payload.publicToken || queryStringParameters.public_token;
       const clientPhone = payload.client_phone || payload.phone || payload.clientPhone;
@@ -865,13 +977,16 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
       });
 
       const waNumber = (process.env.WHATSAPP_NUMBER || '70328006').replace(/\D/g, '');
+      const totalAmount = items.reduce((sum, item) => sum + (Number(item.quantity || 1) * Number(item.price || 0)), 0);
+      const fiftyPercentAmount = totalAmount / 2;
+      const reminderLine = `Recorda que el monto total es ${formatStoreCurrency(totalAmount)} y el monto del 50% es ${formatStoreCurrency(fiftyPercentAmount)}`;
       const summary = items.map((item) => {
         const quantity = Number(item.quantity || 1);
         const price = Number(item.price || 0);
         return `${item.name || 'Item'}: ${quantity} x ${formatStoreCurrency(price)}`;
       }).join('\n');
       const customerGreeting = clientName ? `Hola soy *${clientName}*\n` : 'Hola\n';
-      const message = encodeURIComponent(`${customerGreeting}Quiero confirmar mi pedido de la tienda ${store.nombre_tienda}.\n${summary}\n\nCódigo de pedido: ${orderGroupId}`);
+      const message = encodeURIComponent(`${customerGreeting}Quiero confirmar mi pedido de la tienda ${store.nombre_tienda}.\n\n${reminderLine}\n\n${summary}\n\nCódigo de pedido: ${orderGroupId}`);
       return jsonResponse(201, {
         message: 'Pedido registrado.',
         order_group_id: orderGroupId,

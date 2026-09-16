@@ -11,6 +11,7 @@
   "workspace": {
     "packageJson": {
       "dependencies": [
+        "npm:@aws-sdk/client-s3@^3.893.0",
         "npm:@capacitor/android@^8.4.2",
         "npm:@capacitor/assets@^3.0.5",
         "npm:@capacitor/cli@^8.4.2",

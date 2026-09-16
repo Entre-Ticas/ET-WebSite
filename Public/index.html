@@ -28,13 +28,14 @@
 
     <nav>
         <a onclick="loadPage('home')"><i class="fas fa-home"></i></a>
-        <a onclick="loadPage('catalog')">Catálogo</a>
+        <div id="catalogNavContainer"></div>
         <a onclick="loadPage('calc')">Calculadora</a>
         <a onclick="loadPage('tracking')">Rastreo</a>
         <a onclick="loadPage('info')">Info</a>
         <a class="navAdminLink" onclick="loadPage('admin/tracking')" style="display:none;">Tracking-Admin</a>
         <a class="navAdminLink" onclick="loadPage('admin/catalog')" style="display:none;">Catalog-Admin</a>
         <a class="navAdminLink" onclick="loadPage('admin/store')" style="display:none;">STORE-ADMIN</a>
+        <a class="navAdminLink" onclick="loadPage('admin/store-orders')" style="display: none;">Compras</a>
         <a class="navAdminLink" onclick="loadPage('admin/order')" style="display: none;">Órdenes</a>
         <a class="navAdminLink" onclick="loadPage('admin/invoices')" style="display: none;">Facturas</a>
         <a class="navAdminLink" onclick="loadPage('admin/payments')" style="display: none;">Abonos</a>
@@ -68,6 +69,12 @@
                 <div style="font-size: 2rem;">🛍️</div>
                 <h3>Catálogo</h3>
                 <p>Explora y agrega artículos.</p>
+            </div>
+            <div id="homeStoreTimeCard" class="card home-store-time-card" onclick="loadPage('catalog')">
+                <div style="font-size: 2rem;">⏱️</div>
+                <h3 id="homeStoreTimeName">Tienda por tiempo</h3>
+                <p>Disponibilidad y tiempo limitado</p>
+                <div id="homeStoreTimeCountdown" class="home-store-time-countdown" data-expires-at="">00:00</div>
             </div>
         </div>
     </div>

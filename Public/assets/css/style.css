@@ -175,6 +175,105 @@ body {
             background: rgba(255,255,255,0.35);
         }
 
+        #catalogNavContainer {
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .catalog-nav-dropdown {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .catalog-nav-trigger {
+            color: var(--white);
+            text-decoration: none;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.82rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            background: rgba(255,255,255,0.08);
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: none;
+            transition: background 0.2s;
+            appearance: none;
+            font-family: inherit;
+        }
+
+        .catalog-nav-trigger:hover,
+        .catalog-nav-dropdown.open .catalog-nav-trigger {
+            background: rgba(255,255,255,0.35);
+        }
+
+        .catalog-nav-menu {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            min-width: 220px;
+            background: #fffafc;
+            border: 1px solid rgba(112, 78, 54, 0.12);
+            box-shadow: 0 12px 28px rgba(112, 78, 54, 0.12);
+            border-radius: 12px;
+            padding: 0.4rem;
+            display: none;
+            flex-direction: column;
+            z-index: 1100;
+        }
+
+        .catalog-nav-dropdown.open .catalog-nav-menu {
+            display: flex;
+        }
+
+        .catalog-nav-item,
+        .catalog-nav-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            width: 100%;
+            text-align: left;
+            padding: 0.58rem 0.7rem;
+            border-radius: 10px;
+            color: var(--brown-text);
+            text-decoration: none;
+            font-size: 0.76rem;
+            font-weight: 600;
+            background: transparent;
+            box-sizing: border-box;
+        }
+
+        .catalog-nav-option {
+            background: rgba(225, 155, 157, 0.12);
+            color: var(--brown-text);
+        }
+
+        .catalog-nav-item:hover,
+        .catalog-nav-option:hover {
+            background: rgba(225, 155, 157, 0.17);
+        }
+
+        .catalog-nav-store-name {
+            display: inline-flex;
+            align-items: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .catalog-nav-countdown {
+            color: var(--brown-text);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            white-space: nowrap;
+        }
+
         @media (max-width: 768px) {
             header {
                 padding: 0.7rem 0.5rem;
@@ -255,6 +354,34 @@ body {
         .card:hover {
             transform: translateY(-5px);
             background-color: var(--pink-light);
+        }
+
+        .home-store-time-card {
+            border-color: rgba(225, 155, 157, 0.5);
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .home-store-time-card h3 {
+            margin-bottom: 0.45rem;
+        }
+
+        .home-store-time-card p {
+            margin-bottom: 0.9rem;
+        }
+
+        .home-store-time-countdown {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 86px;
+            padding: 0.5rem 0.8rem;
+            border-radius: 999px;
+            border: 1px solid rgba(112, 78, 54, 0.15);
+            background: rgba(255, 255, 255, 0.38);
+            color: var(--brown-text);
+            font-size: 0.9rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
         }
 
         /* Contenedor de Redes Flotantes */
@@ -515,54 +642,57 @@ body {
 /* ESTILOS ESTANDARIZADOS PARA BOTONES ADMIN */
 /* ========================================= */
 .admin-btn-action {
-    background: none; 
-    border: 1px solid rgba(112, 78, 54, 0.2);
-    color: var(--brown-text);
+    background: #efb7c3;
+    border: none;
+    color: white;
     cursor: pointer;
-    padding: 5px 8px;
-    border-radius: 6px;
+    padding: 5px;
+    border-radius: 8px;
     margin: 0 2px;
-    transition: all 0.2s ease;
-    font-size: 0.8rem;
+    transition: opacity 0.2s ease;
+    font-size: 0.75rem;
     text-decoration: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     line-height: 1;
+    min-width: 28px;
+    min-height: 28px;
+    box-shadow: none;
 }
 
 .admin-btn-action:hover {
-    background-color: #fdf0f1; /* Un rosado muy pálido al pasar el mouse */
-    border-color: var(--pink-accent);
-    color: var(--pink-accent);
-    transform: translateY(-1px);
+    opacity: 0.9;
+    transform: none;
 }
 
-/* Colores específicos para cada tipo de botón, como en Tracking Admin */
-.admin-btn-action.btn-edit { background-color: #f3bfc1; color: white; }
-.admin-btn-action.btn-update { background-color: var(--pink-accent); color: white; }
-.admin-btn-action.btn-track { background-color: #f3bfc1; color: white; }
-.admin-btn-action.btn-copy { background-color: #8db8d9; color: white; } /* Azul suave para copiar link */
-.admin-btn-action.btn-invoice { background-color: #a8d8b9; color: white; } /* Verde para facturas */
-.admin-btn-action.btn-delete { background-color: #f5c6cb; color: white; } 
+/* Colores más fuertes y parecidos a la referencia visual */
+.admin-btn-action.btn-edit { background: #f3bfc1; }
+.admin-btn-action.btn-store-add { background: #8db8d9; }
+.admin-btn-action.btn-update { background: #8ad7a8; }
+.admin-btn-action.btn-track { background: #f1d98b; }
+.admin-btn-action.btn-copy { background: #8db8d9; }
+.admin-btn-action.btn-order-admin { background: #bfeaf8; }
+.admin-btn-action.btn-customers { background: #c9b5f0; }
+.admin-btn-action.btn-activate { background: #a8d8b9; }
+.admin-btn-action.btn-invoice { background: #a8d8b9; }
+.admin-btn-action.btn-catalog { background: #9dd9b4; }
+.admin-btn-action.btn-link-copy { background: #d9c0f7; }
+.admin-btn-action.btn-delete { background: #bfeaf8; }
 
 .admin-btn-action.btn-edit:hover,
+.admin-btn-action.btn-store-add:hover,
 .admin-btn-action.btn-update:hover,
+.admin-btn-action.btn-track:hover,
+.admin-btn-action.btn-copy:hover,
+.admin-btn-action.btn-order-admin:hover,
+.admin-btn-action.btn-customers:hover,
+.admin-btn-action.btn-activate:hover,
 .admin-btn-action.btn-invoice:hover,
-.admin-btn-action.btn-track:hover { opacity: 0.85; background-color: var(--pink-accent); }
-
-.admin-btn-action.btn-copy:hover {
-    opacity: 0.9;
-    background-color: #6fa5cd;
-    border-color: #5d95bf;
-    color: white;
-}
-
-/* Colores específicos para acciones comunes */
+.admin-btn-action.btn-catalog:hover,
+.admin-btn-action.btn-link-copy:hover,
 .admin-btn-action.btn-delete:hover {
-    background-color: #ffdddd;
-    border-color: #dc3545;
-    color: #dc3545;
+    opacity: 0.85;
 }
 
 
