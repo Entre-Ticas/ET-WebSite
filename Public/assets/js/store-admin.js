@@ -475,7 +475,7 @@ async function openStoreItemPanel(storeId) {
         </div>
         <div class="floating-field">
             <input id="storeItemQuantity" class="floating-input" type="number" min="0" placeholder=" " autocomplete="new-password" />
-            <label class="floating-label">Cantidad (0 o vacío = ilimitado)</label>
+            <label class="floating-label">Cantidad (NULL = ilimitado)</label>
         </div>
         <div class="floating-field">
             <textarea id="storeItemDescription" class="floating-input" placeholder=" " autocomplete="new-password"></textarea>
@@ -546,7 +546,7 @@ function openEditStoreItemPanel(storeId, itemId) {
         </div>
         <div class="floating-field">
             <input id="storeItemQuantity" class="floating-input" type="number" min="0" placeholder=" " autocomplete="new-password" value="${(item.quantity === null || item.quantity === undefined) ? '' : Number(item.quantity)}" />
-            <label class="floating-label">Cantidad (0 o vacío = ilimitado)</label>
+            <label class="floating-label">Cantidad (NULL = ilimitado)</label>
         </div>
         <div class="floating-field">
             <textarea id="storeItemDescription" class="floating-input" placeholder=" " autocomplete="new-password">${String(item.description || '')}</textarea>
@@ -604,7 +604,7 @@ async function saveStoreItemEdit(storeId, itemId, token) {
         id: itemId,
         name: document.getElementById('storeItemName').value.trim(),
         price: Number(document.getElementById('storeItemPrice').value || 0),
-        quantity: quantityRaw === '' ? null : Number(quantityRaw),
+        quantity: quantityRaw === '' ? 0 : Number(quantityRaw),
         image_url: imageUrl,
         description: document.getElementById('storeItemDescription').value.trim(),
         status_id: statusId,
@@ -855,7 +855,7 @@ async function saveStoreItem(storeId, token) {
         store_id: storeId,
         name: document.getElementById('storeItemName').value.trim(),
         price: Number(document.getElementById('storeItemPrice').value || 0),
-        quantity: quantityRaw === '' ? null : Number(quantityRaw),
+        quantity: quantityRaw === '' ? 0 : Number(quantityRaw),
         image_url: imageUrl,
         description: document.getElementById('storeItemDescription').value.trim(),
         status_id: statusId,
@@ -1529,8 +1529,12 @@ function renderStoreCustomerOrdersTable() {
                     <h3>Clientes con compras</h3>
                 </div>
             </div>
-            <div class="admin-search-bar">
-                <input id="storeCustomerOrdersSearchInput" type="text" placeholder="🔍 Buscar por cliente, teléfono, item o total..." value="${String(storeCustomerOrdersState.globalSearch || '').replace(/"/g, '&quot;')}" oninput="setStoreCustomerOrdersGlobalSearch(this.value)" />
+            <div class="admin-search-bar" style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+                <input id="storeCustomerOrdersSearchInput" type="text" placeholder="🔍 Buscar por cliente, teléfono, item o total..." value="${String(storeCustomerOrdersState.globalSearch || '').replace(/"/g, '&quot;')}" oninput="setStoreCustomerOrdersGlobalSearch(this.value)" style="flex:1 1 280px; min-width:220px;" />
+                <button type="button" class="btn btn-secondary" onclick="resetStoreCustomerOrdersFilters()" style="display:inline-flex; align-items:center; justify-content:center; gap:0.45rem; white-space:nowrap;">
+                    <i class="fas fa-broom" aria-hidden="true"></i>
+                    <span>Limpiar todo</span>
+                </button>
             </div>
             <div class="admin-filter-chips">
                 <label class="admin-filter-option">
@@ -1743,6 +1747,33 @@ async function markStoreCustomerOrdersAsContacted(phoneValue, waLink, orderGroup
             console.error(message);
         }
     }
+}
+
+function resetStoreCustomerOrdersFilters() {
+    storeCustomerOrdersState.globalSearch = '';
+    storeCustomerOrdersState.filters = { client: '', phone: '', items: '', total: '' };
+    storeCustomerOrdersState.currentPage = 1;
+    storeCustomerOrdersState.rowsPerPage = 10;
+    storeCustomerOrdersState.showOnlyUncontacted = true;
+
+    const searchInput = document.getElementById('storeCustomerOrdersSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    const clientInput = document.getElementById('storeCustomerOrdersClientFilter');
+    const itemsInput = document.getElementById('storeCustomerOrdersItemsFilter');
+    const totalInput = document.getElementById('storeCustomerOrdersTotalFilter');
+    const rowsPerPageSelect = document.getElementById('storeCustomerOrdersRowsPerPage');
+
+    if (clientInput) clientInput.value = '';
+    if (itemsInput) itemsInput.value = '';
+    if (totalInput) totalInput.value = '';
+    if (rowsPerPageSelect) rowsPerPageSelect.value = '10';
+
+    document.querySelectorAll('input[name="storeCustomerOrdersContactFilter"]').forEach((radio) => {
+        radio.checked = radio.value === 'pending';
+    });
+
+    renderStoreCustomerOrdersTable();
 }
 
 function setStoreCustomerOrdersGlobalSearch(value) {

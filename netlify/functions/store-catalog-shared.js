@@ -228,15 +228,18 @@ function normalizeItem(item = {}) {
   const safeItem = item && typeof item === 'object' ? item : {};
   const isActive = itemIsActive(safeItem);
 
+  const rawQuantity = safeItem.quantity;
+  const numericQuantity = rawQuantity === null || rawQuantity === undefined || rawQuantity === ''
+    ? 0
+    : Number(rawQuantity);
+
   return {
     id: safeItem.id ?? safeItem.id_store_item ?? null,
     store_id: safeItem.store_id ?? safeItem.storeId ?? null,
     name: safeItem.name || 'Sin nombre',
     price: Number(safeItem.price || 0),
     image_url: safeItem.image_url || '',
-    quantity: (safeItem.quantity === null || safeItem.quantity === undefined || safeItem.quantity === '')
-      ? null
-      : Number(safeItem.quantity),
+    quantity: Number.isFinite(numericQuantity) ? numericQuantity : 0,
     description: safeItem.description || '',
     is_active: isActive,
     status: isActive ? 'active' : 'inactive',
@@ -444,8 +447,8 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
         name: payload.name || '',
         price: Number(payload.price || 0),
         image_url: payload.image_url || payload.imageUrl || '',
-        quantity: (payload.quantity === null || payload.quantity === undefined || payload.quantity === '')
-          ? null
+        quantity: payload.quantity === null || payload.quantity === undefined || payload.quantity === ''
+          ? 0
           : Number(payload.quantity),
         description: payload.description || '',
       };

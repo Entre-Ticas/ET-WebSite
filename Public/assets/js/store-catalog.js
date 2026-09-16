@@ -155,8 +155,10 @@ function getCatalogItemStockLimit(itemId) {
     const items = window.__storeCatalogItems || [];
     const catalogItem = items.find((it) => String(it.id) === String(itemId));
     if (!catalogItem) return { hasLimit: false, maxQty: null };
-    const hasLimit = catalogItem.quantity !== null && catalogItem.quantity !== undefined && Number(catalogItem.quantity) > 0;
-    return { hasLimit, maxQty: hasLimit ? Number(catalogItem.quantity) : null };
+
+    const quantityValue = Number(catalogItem.quantity ?? 0);
+    const hasLimit = Number.isFinite(quantityValue) && quantityValue > 0;
+    return { hasLimit, maxQty: hasLimit ? quantityValue : null };
 }
 
 function addToCart(itemId, itemName, itemPrice, itemImage, maxQty) {
@@ -503,8 +505,9 @@ function renderStoreCatalogGrid() {
         const qty = cart[item.id]?.qty || 0;
         const itemName = String(item.name).replace(/"/g, '&quot;');
         const itemImage = String(item.image_url || '').replace(/"/g, '&quot;');
-        const hasLimit = item.quantity !== null && item.quantity !== undefined && Number(item.quantity) > 0;
-        const maxQty = hasLimit ? Number(item.quantity) : null;
+        const quantityValue = Number(item.quantity ?? 0);
+        const hasLimit = Number.isFinite(quantityValue) && quantityValue > 0;
+        const maxQty = hasLimit ? quantityValue : null;
         const reachedLimit = hasLimit && qty >= maxQty;
 
         const quantityControls = `
