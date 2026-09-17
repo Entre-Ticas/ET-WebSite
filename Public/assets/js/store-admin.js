@@ -254,6 +254,156 @@ async function reopenStoreById(storeId) {
     await initStoreAdminPage();
 }
 
+async function checkStoreDeleteRisk(storeId) {
+    const session = getSession();
+    if (!session) return { items: 0, orders: 0, hasRisk: false };
+
+    try {
+        const [itemsRes, ordersRes] = await Promise.all([
+            fetch(`/.netlify/functions/store-admin?action=store-items&store_id=${encodeURIComponent(storeId)}`, {
+                headers: { 'x-admin-token': session.token }
+            }),
+            fetch(`/.netlify/functions/store-admin?action=store-orders-summary&store_id=${encodeURIComponent(storeId)}`, {
+                headers: { 'x-admin-token': session.token }
+            })
+        ]);
+
+        const itemsData = itemsRes.ok ? await itemsRes.json().catch(() => ({ items: [] })) : { items: [] };
+        const ordersData = ordersRes.ok ? await ordersRes.json().catch(() => ({ items: [] })) : { items: [] };
+
+        const itemsCount = Array.isArray(itemsData.items) ? itemsData.items.length : 0;
+        const ordersCount = Array.isArray(ordersData.items) ? ordersData.items.length : 0;
+        return {
+            items: itemsCount,
+            orders: ordersCount,
+            hasRisk: itemsCount > 0 || ordersCount > 0
+        };
+    } catch (error) {
+        console.error('checkStoreDeleteRisk failed', error);
+        return { items: 0, orders: 0, hasRisk: false };
+    }
+}
+
+async function deleteStoreById(storeId) {
+    if (!storeId) return;
+
+    const store = storeAdminCache[storeId] || {};
+    const storeName = String(store.nombre_tienda || 'esta tienda').replace(/</g, '&lt;');
+    const risk = await checkStoreDeleteRisk(storeId);
+
+    if (risk.hasRisk) {
+        openGenericModal(
+            'Conflicto al eliminar tienda',
+            `
+                <p>Antes de borrar la tienda <strong>${storeName}</strong> debes eliminar los items y/o las orders asociadas.</p>
+                <p style="color:#c0392b; margin-top:8px;"><strong>Si desea eliminar toda la información, confirme la acción a continuación.</strong></p>
+            `,
+            `
+                <button class="btn btn-secondary" type="button" onclick="closeGenericModal()">Cancelar</button>
+                <button class="btn btn-danger" type="button" onclick="closeGenericModal(); confirmDeleteStoreById(${Number(storeId)}, true)">Eliminar toda la información</button>
+            `
+        );
+        return;
+    }
+
+    openGenericModal(
+        'Confirmar Eliminación',
+        `
+            <p>¿Está seguro que desea eliminar la tienda <strong>${storeName}</strong>?</p>
+            <p style="color:#c0392b; margin-top:8px;"><strong>⚠ Esta acción no se puede deshacer.</strong></p>
+        `,
+        `
+            <button class="btn btn-secondary" type="button" onclick="closeGenericModal()">Cancelar</button>
+            <button class="btn btn-danger" type="button" onclick="closeGenericModal(); confirmDeleteStoreById(${Number(storeId)})">Sí, Eliminar</button>
+        `
+    );
+}
+
+async function confirmDeleteStoreById(storeId, forceDelete = false) {
+    const modalBody = document.getElementById('genericModalBody');
+    const modalFooter = document.getElementById('genericModalFooter');
+    const store = storeAdminCache[storeId] || {};
+    const storeName = String(store.nombre_tienda || 'esta tienda').replace(/</g, '&lt;');
+    const normalizedForceDelete = forceDelete === true || forceDelete === 'true' || forceDelete === 1;
+
+    if (!normalizedForceDelete) {
+        const risk = await checkStoreDeleteRisk(storeId);
+        if (risk.hasRisk) {
+            openGenericModal(
+                'Conflicto al eliminar tienda',
+                `
+                    <p>Antes de borrar la tienda <strong>${storeName}</strong> debes eliminar los items y/o las orders asociadas.</p>
+                    <p style="color:#c0392b; margin-top:8px;"><strong>Si desea eliminar toda la información, confirme la acción a continuación.</strong></p>
+                `,
+                `
+                    <button class="btn btn-secondary" type="button" onclick="closeGenericModal()">Cancelar</button>
+                    <button class="btn btn-danger" type="button" onclick="closeGenericModal(); confirmDeleteStoreById(${Number(storeId)}, true)">Eliminar toda la información</button>
+                `
+            );
+            return;
+        }
+    }
+
+    if (modalBody) modalBody.innerHTML = '<div class="spinner"></div><p>Procesando eliminación...</p>';
+    if (modalFooter) modalFooter.innerHTML = '';
+
+    try {
+        const session = getSession();
+        if (!session) throw new Error('Sesión expirada.');
+
+        const response = await fetch('/.netlify/functions/store-admin?action=delete-store', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-token': session.token,
+            },
+            body: JSON.stringify({ store_id: storeId, force_delete: normalizedForceDelete })
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (response.status === 409 || response.status >= 500) {
+            const errorMessage = data.error || 'Debe eliminar primero los items y las orders asociadas.';
+            if (modalBody) {
+                modalBody.innerHTML = `
+                    <p style="color:#c0392b;"><strong>Hay conflicto al eliminar la tienda ${storeName}.</strong></p>
+                    <p>${errorMessage}</p>
+                    <p>Si desea eliminar toda la información de la tienda, vuelva a confirmar la acción.</p>
+                `;
+            }
+            if (modalFooter) {
+                modalFooter.innerHTML = `
+                    <button class="btn btn-secondary" type="button" onclick="closeGenericModal()">Cancelar</button>
+                    <button class="btn btn-danger" type="button" onclick="closeGenericModal(); confirmDeleteStoreById(${Number(storeId)}, true)">Eliminar toda la información</button>
+                `;
+            }
+            return;
+        }
+
+        if (!response.ok) {
+            if (modalBody) {
+                modalBody.innerHTML = `<p style="color:#c0392b;">${data.error || 'No se pudo eliminar la tienda.'}</p>`;
+            }
+            if (modalFooter) modalFooter.innerHTML = '<button class="btn btn-secondary" type="button" onclick="closeGenericModal()">Cerrar</button>';
+            return;
+        }
+
+        if (modalBody) {
+            modalBody.innerHTML = `<p style="color:#2e7d32;">${data.message || 'Tienda eliminada correctamente.'}</p>`;
+        }
+        if (modalFooter) modalFooter.innerHTML = '<button class="btn btn-secondary" type="button" onclick="closeGenericModal(); initStoreAdminPage();">Cerrar</button>';
+
+        setTimeout(() => {
+            closeGenericModal();
+            initStoreAdminPage();
+        }, 900);
+    } catch (error) {
+        console.error('confirmDeleteStoreById failed', error);
+        if (modalBody) modalBody.innerHTML = '<p style="color:#c0392b;">No se pudo eliminar la tienda.</p>';
+        if (modalFooter) modalFooter.innerHTML = '<button class="btn btn-secondary" type="button" onclick="closeGenericModal()">Cerrar</button>';
+    }
+}
+
 function getStorePublicLink(publicToken) {
     const origin = window.location && window.location.origin ? window.location.origin : 'https://entreticas.netlify.app';
     return `${origin}/StoreCatalog/${publicToken}`;
@@ -748,7 +898,12 @@ function openEditStorePanel(storeId) {
     panel.style.display = 'block';
     panel.dataset.storeId = storeId;
     panel.innerHTML = `
-        <button onclick="closeEditStorePanel()" class="admin-btn-back">← Volver</button>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px;">
+            <button onclick="closeEditStorePanel()" class="admin-btn-back">← Volver</button>
+            <button type="button" onclick="deleteStoreById('${storeId}')" title="Eliminar tienda" aria-label="Eliminar tienda" style="width:42px; height:42px; border:none; border-radius:10px; background:#c94848; color:white; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 6px 18px rgba(201,72,72,0.2);">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
         <h3>Editar tienda</h3>
         <div class="floating-field">
             <input id="storeEditName" class="floating-input" type="text" placeholder=" " autocomplete="new-password" value="${String(store.nombre_tienda || '').replace(/"/g, '&quot;')}" />
@@ -770,7 +925,7 @@ function openEditStorePanel(storeId) {
             <input id="storeEditExpiresAt" class="floating-input" type="datetime-local" placeholder=" " value="${toDatetimeLocalValue(store.expires_at)}" />
             <label class="floating-label">Expira en</label>
         </div>
-        <button onclick="saveStoreEdit('${storeId}')"
+        <button type="button" onclick="saveStoreEdit('${storeId}')"
             style="width:100%; padding:12px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
             Guardar Cambios
         </button>
@@ -1946,6 +2101,8 @@ window.syncStoreStatusFromTimestamps = syncStoreStatusFromTimestamps;
 window.createStoreFromAdmin = createStoreFromAdmin;
 window.activateStoreById = activateStoreById;
 window.reopenStoreById = reopenStoreById;
+window.deleteStoreById = deleteStoreById;
+window.confirmDeleteStoreById = confirmDeleteStoreById;
 window.copyStoreLink = copyStoreLink;
 window.openStorePublicLink = openStorePublicLink;
 window.openStoreItemPanel = openStoreItemPanel;

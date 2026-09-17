@@ -397,6 +397,95 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
       return jsonResponse(200, { message: 'Tienda actualizada.', store: normalizeStore(firstResult(updated)) });
     }
 
+    if (httpMethod === 'POST' && action === 'delete-store') {
+      try {
+        if (!verifyToken(token)) return jsonResponse(401, { error: 'No autorizado.' });
+        const storeId = payload.store_id || payload.storeId || payload.id_store || payload.id || queryStringParameters.store_id || queryStringParameters.id;
+        const forceDelete = Boolean(payload.force_delete || payload.forceDelete || queryStringParameters.force_delete === 'true');
+        if (!storeId) return jsonResponse(400, { error: 'Falta store_id.' });
+
+        const storeRows = await supabaseRequest(`/rest/v1/store?id_store=eq.${encodeURIComponent(storeId)}&select=*`);
+        const store = firstResult(storeRows);
+        if (!store) return jsonResponse(404, { error: 'No se encontró la tienda.' });
+
+        const itemRows = await supabaseRequest(`/rest/v1/store_items?store_id=eq.${encodeURIComponent(storeId)}&select=id&limit=1`);
+        const orderRows = await supabaseRequest(`/rest/v1/store_orders?store_id=eq.${encodeURIComponent(storeId)}&select=id&limit=1`);
+        const hasRelatedRows = (Array.isArray(itemRows) && itemRows.length > 0) || (Array.isArray(orderRows) && orderRows.length > 0);
+
+        if (hasRelatedRows && !forceDelete) {
+          return jsonResponse(409, {
+            error: 'Hay conflicto: la tienda tiene items o compras asociadas.',
+            message: 'Hay conflicto: la tienda tiene items o compras asociadas.',
+            force_required: true
+          });
+        }
+
+        if (Array.isArray(orderRows) && orderRows.length) {
+          await supabaseRequest(`/rest/v1/store_orders?store_id=eq.${encodeURIComponent(storeId)}`, { method: 'DELETE' });
+        }
+
+        if (Array.isArray(itemRows) && itemRows.length) {
+          await supabaseRequest(`/rest/v1/store_items?store_id=eq.${encodeURIComponent(storeId)}`, { method: 'DELETE' });
+        }
+
+        await supabaseRequest(`/rest/v1/store?id_store=eq.${encodeURIComponent(storeId)}`, {
+          method: 'DELETE'
+        });
+
+        return jsonResponse(200, { message: 'Tienda eliminada correctamente.' });
+      } catch (error) {
+        return jsonResponse(409, {
+          error: 'No se pudo completar la eliminación. Debe eliminar primero los items y las orders asociadas.',
+          message: error.message || 'No se pudo completar la eliminación. Debe eliminar primero los items y las orders asociadas.',
+          force_required: true
+        });
+      }
+    }
+
+    if (httpMethod === 'DELETE' && action === 'delete-store') {
+      try {
+        if (!verifyToken(token)) return jsonResponse(401, { error: 'No autorizado.' });
+        const storeId = queryStringParameters.store_id || queryStringParameters.id || payload.store_id || payload.storeId || payload.id_store || payload.id;
+        const forceDelete = queryStringParameters.force_delete === 'true' || payload.force_delete === true || payload.forceDelete === true;
+        if (!storeId) return jsonResponse(400, { error: 'Falta store_id.' });
+
+        const storeRows = await supabaseRequest(`/rest/v1/store?id_store=eq.${encodeURIComponent(storeId)}&select=*`);
+        if (!firstResult(storeRows)) return jsonResponse(404, { error: 'No se encontró la tienda.' });
+
+        const itemRows = await supabaseRequest(`/rest/v1/store_items?store_id=eq.${encodeURIComponent(storeId)}&select=id&limit=1`);
+        const orderRows = await supabaseRequest(`/rest/v1/store_orders?store_id=eq.${encodeURIComponent(storeId)}&select=id&limit=1`);
+        const hasRelatedRows = (Array.isArray(itemRows) && itemRows.length > 0) || (Array.isArray(orderRows) && orderRows.length > 0);
+
+        if (hasRelatedRows && !forceDelete) {
+          return jsonResponse(409, {
+            error: 'Hay conflicto: la tienda tiene items o compras asociadas.',
+            message: 'Hay conflicto: la tienda tiene items o compras asociadas.',
+            force_required: true
+          });
+        }
+
+        if (Array.isArray(orderRows) && orderRows.length) {
+          await supabaseRequest(`/rest/v1/store_orders?store_id=eq.${encodeURIComponent(storeId)}`, { method: 'DELETE' });
+        }
+
+        if (Array.isArray(itemRows) && itemRows.length) {
+          await supabaseRequest(`/rest/v1/store_items?store_id=eq.${encodeURIComponent(storeId)}`, { method: 'DELETE' });
+        }
+
+        await supabaseRequest(`/rest/v1/store?id_store=eq.${encodeURIComponent(storeId)}`, {
+          method: 'DELETE'
+        });
+
+        return jsonResponse(200, { message: 'Tienda eliminada correctamente.' });
+      } catch (error) {
+        return jsonResponse(409, {
+          error: 'No se pudo completar la eliminación. Debe eliminar primero los items y las orders asociadas.',
+          message: error.message || 'No se pudo completar la eliminación. Debe eliminar primero los items y las orders asociadas.',
+          force_required: true
+        });
+      }
+    }
+
     if (httpMethod === 'POST' && action === 'activate-store') {
       if (!verifyToken(token)) return jsonResponse(401, { error: 'No autorizado.' });
       const storeId = payload.store_id || payload.storeId || payload.id_store || payload.id;
