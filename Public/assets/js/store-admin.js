@@ -1741,6 +1741,40 @@ async function saveStoreCustomerFromModal(phoneValue, nameValue = '') {
     );
 }
 
+function escapeStoreCustomerHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function openStoreCustomerItemsModal(items) {
+    const safeItems = Array.isArray(items) ? items : [];
+    const listHtml = safeItems.length
+        ? safeItems.map((item) => `
+            <li style="display:flex; justify-content:space-between; gap:0.8rem; padding:0.45rem 0; border-bottom:1px solid rgba(112,82,66,0.12); color:#452d2c;">
+                <span>${escapeStoreCustomerHtml(item.name || 'Sin nombre')}</span>
+                <strong>x${Number(item.quantity || 0)}</strong>
+            </li>
+        `).join('')
+        : '<li style="padding:0.5rem 0; color:#6f4d4b;">Sin items.</li>';
+
+    openGenericModal(
+        'Items de la compra',
+        `
+            <div style="display:grid; gap:0.5rem;">
+                <p style="margin:0; font-weight:700; color:#5c3d34;">Detalle completo de los artículos</p>
+                <ul style="list-style:none; margin:0; padding:0; display:grid; gap:0;">
+                    ${listHtml}
+                </ul>
+            </div>
+        `,
+        '<button class="btn btn-primary" type="button" onclick="closeGenericModal()">Cerrar</button>'
+    );
+}
+
 function getFilteredStoreCustomerOrders(customers) {
     const searchTerm = normalizeStoreCustomerOrdersSearch(storeCustomerOrdersState.globalSearch);
     const phoneFilter = normalizeStoreCustomerOrdersSearch(storeCustomerOrdersState.filters.phone);
@@ -1849,7 +1883,9 @@ function renderStoreCustomerOrdersTable() {
                             const adminSummary = customerItems.map((item) => `- ${item.name || 'Item'}: ${Number(item.quantity || 0)} x ${formatStoreCurrency(Number(item.unit_price || item.price || 0))}`).join('\n');
                             const waText = encodeURIComponent(`Hola!\n\nYa agregamos tu pedido.\n\n${reminderLine}\n\nLo que incluimos fue lo siguiente:\n\n${adminSummary || '- Productos sin detalle'}\n\nMuchas gracias por tu compra.`);
                             const waLink = phoneDigits ? `https://wa.me/${phoneDigits}?text=${waText}` : '#';
-                            const itemList = customerItems.map((item) => `<div>${item.name || 'Sin nombre'}: ${Number(item.quantity || 0)}</div>`).join('');
+                            const itemPreview = customerItems.slice(0, 2).map((item) => `<div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeStoreCustomerHtml(item.name || 'Sin nombre')} x${Number(item.quantity || 0)}</div>`).join('');
+                            const hasMoreItems = customerItems.length > 2;
+                            const itemsJson = JSON.stringify(customerItems).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
                             const phoneValue = String(customer.phone || '');
                             const orderGroupId = String(customer.order_group_id || '');
                             const hasDbMatch = Boolean(customer.client_id || customer.is_matched);
@@ -1867,7 +1903,12 @@ function renderStoreCustomerOrdersTable() {
                                             <small class="store-client-meta">${clientPhone}</small>
                                         `}
                                     </td>
-                                    <td>${itemList || '<span style="color:#7a5246;">Sin items</span>'}</td>
+                                    <td style="max-width:340px; min-width:220px;">
+                                        <div style="display:flex; flex-direction:column; gap:0.22rem; min-height:56px; max-height:72px; overflow:hidden; line-height:1.3;">
+                                            ${itemPreview || '<span style="color:#7a5246;">Sin items</span>'}
+                                            ${hasMoreItems ? `<button type="button" class="store-customer-item-btn" data-items='${itemsJson}' style="margin-top:0.18rem; border:none; background:#eef9f0; color:#266c45; border-radius:999px; padding:0.22rem 0.5rem; font-size:0.66rem; font-weight:700; cursor:pointer; max-width:max-content;">Ver + items</button>` : ''}
+                                        </div>
+                                    </td>
                                     <td>${Number(customer.total_quantity || 0)}</td>
                                     <td class="admin-actions-cell">
                                         <span class="admin-actions-inline">
@@ -1938,7 +1979,9 @@ function renderStoreCustomerOrdersTable() {
         const adminSummary = customerItems.map((item) => `- ${item.name || 'Item'}: ${Number(item.quantity || 0)} x ${formatStoreCurrency(Number(item.unit_price || item.price || 0))}`).join('\n');
         const waText = encodeURIComponent(`Hola!\n\nYa agregamos tu pedido.\n\n${reminderLine}\n\nLo que incluimos fue lo siguiente:\n\n${adminSummary || '- Productos sin detalle'}\n\nMuchas gracias por tu compra.`);
         const waLink = phoneDigits ? `https://wa.me/${phoneDigits}?text=${waText}` : '#';
-        const itemList = customerItems.map((item) => `<div>${item.name || 'Sin nombre'}: ${Number(item.quantity || 0)}</div>`).join('');
+        const itemPreview = customerItems.slice(0, 2).map((item) => `<div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeStoreCustomerHtml(item.name || 'Sin nombre')} x${Number(item.quantity || 0)}</div>`).join('');
+        const hasMoreItems = customerItems.length > 2;
+        const itemsJson = JSON.stringify(customerItems).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         const phoneValue = String(customer.phone || '');
         const orderGroupId = String(customer.order_group_id || '');
         const hasDbMatch = Boolean(customer.client_id || customer.is_matched);
@@ -1956,7 +1999,12 @@ function renderStoreCustomerOrdersTable() {
                         <small class="store-client-meta">${clientPhone}</small>
                     `}
                 </td>
-                <td>${itemList || '<span style="color:#7a5246;">Sin items</span>'}</td>
+                <td style="max-width:340px; min-width:220px;">
+                    <div style="display:flex; flex-direction:column; gap:0.22rem; min-height:56px; max-height:72px; overflow:hidden; line-height:1.3;">
+                        ${itemPreview || '<span style="color:#7a5246;">Sin items</span>'}
+                        ${hasMoreItems ? `<button type="button" class="store-customer-item-btn" data-items='${itemsJson}' style="margin-top:0.18rem; border:none; background:#eef9f0; color:#266c45; border-radius:999px; padding:0.22rem 0.5rem; font-size:0.66rem; font-weight:700; cursor:pointer; max-width:max-content;">Ver + items</button>` : ''}
+                    </div>
+                </td>
                 <td>${Number(customer.total_quantity || 0)}</td>
                 <td class="admin-actions-cell">
                     <span class="admin-actions-inline">
@@ -1975,6 +2023,18 @@ function renderStoreCustomerOrdersTable() {
             <td colspan="4" style="text-align:center; color:#7a5246; padding:1.2rem;">No se encontraron clientes con esa búsqueda.</td>
         </tr>
     `;
+
+    const itemButtons = tableBody.querySelectorAll('.store-customer-item-btn');
+    itemButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            try {
+                const parsed = JSON.parse(button.dataset.items || '[]');
+                openStoreCustomerItemsModal(parsed);
+            } catch (_error) {
+                openStoreCustomerItemsModal([]);
+            }
+        });
+    });
 
     rowsPerPageSelect.value = String(storeCustomerOrdersState.rowsPerPage);
     paginationInfo.innerHTML = `Mostrando <strong>${totalRows === 0 ? 0 : startIndex + 1}</strong> - <strong>${Math.min(endIndex, totalRows)}</strong> de <strong>${totalRows}</strong>`;
