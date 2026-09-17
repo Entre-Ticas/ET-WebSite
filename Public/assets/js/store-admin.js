@@ -254,6 +254,156 @@ async function reopenStoreById(storeId) {
     await initStoreAdminPage();
 }
 
+async function checkStoreDeleteRisk(storeId) {
+    const session = getSession();
+    if (!session) return { items: 0, orders: 0, hasRisk: false };
+
+    try {
+        const [itemsRes, ordersRes] = await Promise.all([
+            fetch(`/.netlify/functions/store-admin?action=store-items&store_id=${encodeURIComponent(storeId)}`, {
+                headers: { 'x-admin-token': session.token }
+            }),
+            fetch(`/.netlify/functions/store-admin?action=store-orders-summary&store_id=${encodeURIComponent(storeId)}`, {
+                headers: { 'x-admin-token': session.token }
+            })
+        ]);
+
+        const itemsData = itemsRes.ok ? await itemsRes.json().catch(() => ({ items: [] })) : { items: [] };
+        const ordersData = ordersRes.ok ? await ordersRes.json().catch(() => ({ items: [] })) : { items: [] };
+
+        const itemsCount = Array.isArray(itemsData.items) ? itemsData.items.length : 0;
+        const ordersCount = Array.isArray(ordersData.items) ? ordersData.items.length : 0;
+        return {
+            items: itemsCount,
+            orders: ordersCount,
+            hasRisk: itemsCount > 0 || ordersCount > 0
+        };
+    } catch (error) {
+        console.error('checkStoreDeleteRisk failed', error);
+        return { items: 0, orders: 0, hasRisk: false };
+    }
+}
+
+async function deleteStoreById(storeId) {
+    if (!storeId) return;
+
+    const store = storeAdminCache[storeId] || {};
+    const storeName = String(store.nombre_tienda || 'esta tienda').replace(/</g, '&lt;');
+    const risk = await checkStoreDeleteRisk(storeId);
+
+    if (risk.hasRisk) {
+        openGenericModal(
+            'Conflicto al eliminar tienda',
+            `
+                <p>Antes de borrar la tienda <strong>${storeName}</strong> debes eliminar los items y/o las orders asociadas.</p>
+                <p style="color:#c0392b; margin-top:8px;"><strong>Si desea eliminar toda la información, confirme la acción a continuación.</strong></p>
+            `,
+            `
+                <button class="btn btn-secondary" type="button" onclick="closeGenericModal()">Cancelar</button>
+                <button class="btn btn-danger" type="button" onclick="closeGenericModal(); confirmDeleteStoreById(${Number(storeId)}, true)">Eliminar toda la información</button>
+            `
+        );
+        return;
+    }
+
+    openGenericModal(
+        'Confirmar Eliminación',
+        `
+            <p>¿Está seguro que desea eliminar la tienda <strong>${storeName}</strong>?</p>
+            <p style="color:#c0392b; margin-top:8px;"><strong>⚠ Esta acción no se puede deshacer.</strong></p>
+        `,
+        `
+            <button class="btn btn-secondary" type="button" onclick="closeGenericModal()">Cancelar</button>
+            <button class="btn btn-danger" type="button" onclick="closeGenericModal(); confirmDeleteStoreById(${Number(storeId)})">Sí, Eliminar</button>
+        `
+    );
+}
+
+async function confirmDeleteStoreById(storeId, forceDelete = false) {
+    const modalBody = document.getElementById('genericModalBody');
+    const modalFooter = document.getElementById('genericModalFooter');
+    const store = storeAdminCache[storeId] || {};
+    const storeName = String(store.nombre_tienda || 'esta tienda').replace(/</g, '&lt;');
+    const normalizedForceDelete = forceDelete === true || forceDelete === 'true' || forceDelete === 1;
+
+    if (!normalizedForceDelete) {
+        const risk = await checkStoreDeleteRisk(storeId);
+        if (risk.hasRisk) {
+            openGenericModal(
+                'Conflicto al eliminar tienda',
+                `
+                    <p>Antes de borrar la tienda <strong>${storeName}</strong> debes eliminar los items y/o las orders asociadas.</p>
+                    <p style="color:#c0392b; margin-top:8px;"><strong>Si desea eliminar toda la información, confirme la acción a continuación.</strong></p>
+                `,
+                `
+                    <button class="btn btn-secondary" type="button" onclick="closeGenericModal()">Cancelar</button>
+                    <button class="btn btn-danger" type="button" onclick="closeGenericModal(); confirmDeleteStoreById(${Number(storeId)}, true)">Eliminar toda la información</button>
+                `
+            );
+            return;
+        }
+    }
+
+    if (modalBody) modalBody.innerHTML = '<div class="spinner"></div><p>Procesando eliminación...</p>';
+    if (modalFooter) modalFooter.innerHTML = '';
+
+    try {
+        const session = getSession();
+        if (!session) throw new Error('Sesión expirada.');
+
+        const response = await fetch('/.netlify/functions/store-admin?action=delete-store', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-token': session.token,
+            },
+            body: JSON.stringify({ store_id: storeId, force_delete: normalizedForceDelete })
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (response.status === 409 || response.status >= 500) {
+            const errorMessage = data.error || 'Debe eliminar primero los items y las orders asociadas.';
+            if (modalBody) {
+                modalBody.innerHTML = `
+                    <p style="color:#c0392b;"><strong>Hay conflicto al eliminar la tienda ${storeName}.</strong></p>
+                    <p>${errorMessage}</p>
+                    <p>Si desea eliminar toda la información de la tienda, vuelva a confirmar la acción.</p>
+                `;
+            }
+            if (modalFooter) {
+                modalFooter.innerHTML = `
+                    <button class="btn btn-secondary" type="button" onclick="closeGenericModal()">Cancelar</button>
+                    <button class="btn btn-danger" type="button" onclick="closeGenericModal(); confirmDeleteStoreById(${Number(storeId)}, true)">Eliminar toda la información</button>
+                `;
+            }
+            return;
+        }
+
+        if (!response.ok) {
+            if (modalBody) {
+                modalBody.innerHTML = `<p style="color:#c0392b;">${data.error || 'No se pudo eliminar la tienda.'}</p>`;
+            }
+            if (modalFooter) modalFooter.innerHTML = '<button class="btn btn-secondary" type="button" onclick="closeGenericModal()">Cerrar</button>';
+            return;
+        }
+
+        if (modalBody) {
+            modalBody.innerHTML = `<p style="color:#2e7d32;">${data.message || 'Tienda eliminada correctamente.'}</p>`;
+        }
+        if (modalFooter) modalFooter.innerHTML = '<button class="btn btn-secondary" type="button" onclick="closeGenericModal(); initStoreAdminPage();">Cerrar</button>';
+
+        setTimeout(() => {
+            closeGenericModal();
+            initStoreAdminPage();
+        }, 900);
+    } catch (error) {
+        console.error('confirmDeleteStoreById failed', error);
+        if (modalBody) modalBody.innerHTML = '<p style="color:#c0392b;">No se pudo eliminar la tienda.</p>';
+        if (modalFooter) modalFooter.innerHTML = '<button class="btn btn-secondary" type="button" onclick="closeGenericModal()">Cerrar</button>';
+    }
+}
+
 function getStorePublicLink(publicToken) {
     const origin = window.location && window.location.origin ? window.location.origin : 'https://entreticas.netlify.app';
     return `${origin}/StoreCatalog/${publicToken}`;
@@ -748,7 +898,12 @@ function openEditStorePanel(storeId) {
     panel.style.display = 'block';
     panel.dataset.storeId = storeId;
     panel.innerHTML = `
-        <button onclick="closeEditStorePanel()" class="admin-btn-back">← Volver</button>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px;">
+            <button onclick="closeEditStorePanel()" class="admin-btn-back">← Volver</button>
+            <button type="button" onclick="deleteStoreById('${storeId}')" title="Eliminar tienda" aria-label="Eliminar tienda" style="width:42px; height:42px; border:none; border-radius:10px; background:#c94848; color:white; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 6px 18px rgba(201,72,72,0.2);">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
         <h3>Editar tienda</h3>
         <div class="floating-field">
             <input id="storeEditName" class="floating-input" type="text" placeholder=" " autocomplete="new-password" value="${String(store.nombre_tienda || '').replace(/"/g, '&quot;')}" />
@@ -770,7 +925,7 @@ function openEditStorePanel(storeId) {
             <input id="storeEditExpiresAt" class="floating-input" type="datetime-local" placeholder=" " value="${toDatetimeLocalValue(store.expires_at)}" />
             <label class="floating-label">Expira en</label>
         </div>
-        <button onclick="saveStoreEdit('${storeId}')"
+        <button type="button" onclick="saveStoreEdit('${storeId}')"
             style="width:100%; padding:12px; background:var(--pink-accent); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
             Guardar Cambios
         </button>
@@ -1061,6 +1216,29 @@ async function confirmStoreItemsMultiDelete() {
     }
 }
 
+const storeItemsDetailState = {
+    currentPage: 1,
+    rowsPerPage: 10,
+};
+
+function changeStoreItemsPage(page) {
+    if (page < 1) return;
+    const items = storeItemsCache[document.getElementById('storeItemsDetailView')?.dataset.storeId] || [];
+    const totalPages = Math.max(1, Math.ceil(items.length / storeItemsDetailState.rowsPerPage));
+    if (page > totalPages) return;
+    storeItemsDetailState.currentPage = page;
+    const storeId = document.getElementById('storeItemsDetailView')?.dataset.storeId;
+    if (storeId) viewStoreItems(storeId);
+}
+
+function changeStoreItemsRowsPerPage(value) {
+    const parsed = Number(value);
+    storeItemsDetailState.rowsPerPage = Number.isFinite(parsed) ? parsed : 10;
+    storeItemsDetailState.currentPage = 1;
+    const storeId = document.getElementById('storeItemsDetailView')?.dataset.storeId;
+    if (storeId) viewStoreItems(storeId);
+}
+
 async function viewStoreItems(storeId) {
     const session = getSession();
     const response = await fetch(`/.netlify/functions/store-admin?action=store-items&store_id=${encodeURIComponent(storeId)}`, {
@@ -1077,6 +1255,14 @@ async function viewStoreItems(storeId) {
     const gridView = document.getElementById('storeAdminGridView');
     const detailView = document.getElementById('storeItemsDetailView');
     if (!gridView || !detailView) return;
+
+    const items = data.items || [];
+    const totalRows = items.length;
+    const totalPages = Math.max(1, Math.ceil(totalRows / storeItemsDetailState.rowsPerPage));
+    storeItemsDetailState.currentPage = Math.min(Math.max(1, storeItemsDetailState.currentPage), totalPages);
+    const startItem = totalRows === 0 ? 0 : (storeItemsDetailState.currentPage - 1) * storeItemsDetailState.rowsPerPage + 1;
+    const endItem = storeItemsDetailState.rowsPerPage === -1 ? totalRows : Math.min(storeItemsDetailState.currentPage * storeItemsDetailState.rowsPerPage, totalRows);
+    const paginatedItems = storeItemsDetailState.rowsPerPage === -1 ? items : items.slice(startItem - 1, endItem);
 
     gridView.style.display = 'none';
     detailView.style.display = 'block';
@@ -1113,7 +1299,7 @@ async function viewStoreItems(storeId) {
                     </tr>
                 </thead>
                 <tbody>
-                    ${(data.items || []).map(item => {
+                    ${paginatedItems.map(item => {
                         const imageButton = item.image_url
                             ? `<button type="button" class="admin-table-img-btn" data-image-url="${String(item.image_url || '').replace(/"/g, '&quot;')}" title="Ver imagen"><i class="fas fa-camera"></i></button>`
                             : '';
@@ -1140,6 +1326,30 @@ async function viewStoreItems(storeId) {
                         </tr>
                     `}
                 </tbody>
+                <tfoot id="storeItemsDetailFooter" style="display: ${totalRows <= storeItemsDetailState.rowsPerPage ? 'none' : ''};">
+                    <tr>
+                        <td colspan="8">
+                            <div class="admin-pagination-container order-pagination-layout" style="margin-top: 0;">
+                                <div class="pagination-info" id="storeItemsDetailPaginationInfo">Mostrando <strong>${totalRows === 0 ? 0 : startItem}</strong> - <strong>${endItem}</strong> de <strong>${totalRows}</strong></div>
+                                <div class="pagination-rows-selector order-pagination-rows">
+                                    <span>Filas:</span>
+                                    <select id="storeItemsDetailRowsPerPage" onchange="changeStoreItemsRowsPerPage(this.value)">
+                                        <option value="10" ${storeItemsDetailState.rowsPerPage === 10 ? 'selected' : ''}>10</option>
+                                        <option value="30" ${storeItemsDetailState.rowsPerPage === 30 ? 'selected' : ''}>30</option>
+                                        <option value="50" ${storeItemsDetailState.rowsPerPage === 50 ? 'selected' : ''}>50</option>
+                                        <option value="100" ${storeItemsDetailState.rowsPerPage === 100 ? 'selected' : ''}>100</option>
+                                        <option value="-1" ${storeItemsDetailState.rowsPerPage === -1 ? 'selected' : ''}>Todos</option>
+                                    </select>
+                                </div>
+                                <div class="pagination-nav" id="storeItemsDetailPaginationNav">
+                                    <button type="button" onclick="changeStoreItemsPage(${storeItemsDetailState.currentPage - 1})" ${storeItemsDetailState.currentPage <= 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
+                                    <span>Página <strong>${storeItemsDetailState.currentPage}</strong> de ${totalPages}</span>
+                                    <button type="button" onclick="changeStoreItemsPage(${storeItemsDetailState.currentPage + 1})" ${storeItemsDetailState.currentPage >= totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
     `;
@@ -1165,6 +1375,29 @@ function closeStoreItemsPanel() {
     gridView.style.display = 'block';
 }
 
+const storeOrdersDetailState = {
+    currentPage: 1,
+    rowsPerPage: 10,
+};
+
+function changeStoreOrdersPage(page) {
+    if (page < 1) return;
+    const orders = document.getElementById('storeOrdersDetailView')?.dataset.orders ? JSON.parse(document.getElementById('storeOrdersDetailView').dataset.orders) : [];
+    const totalPages = Math.max(1, Math.ceil(orders.length / storeOrdersDetailState.rowsPerPage));
+    if (page > totalPages) return;
+    storeOrdersDetailState.currentPage = page;
+    const storeId = document.getElementById('storeOrdersDetailView')?.dataset.storeId;
+    if (storeId) viewStoreOrders(storeId);
+}
+
+function changeStoreOrdersRowsPerPage(value) {
+    const parsed = Number(value);
+    storeOrdersDetailState.rowsPerPage = Number.isFinite(parsed) ? parsed : 10;
+    storeOrdersDetailState.currentPage = 1;
+    const storeId = document.getElementById('storeOrdersDetailView')?.dataset.storeId;
+    if (storeId) viewStoreOrders(storeId);
+}
+
 async function viewStoreOrders(storeId) {
     const session = getSession();
     const response = await fetch(`/.netlify/functions/store-admin?action=store-orders-summary&store_id=${encodeURIComponent(storeId)}`, {
@@ -1182,8 +1415,18 @@ async function viewStoreOrders(storeId) {
     const detailView = document.getElementById('storeOrdersDetailView');
     if (!gridView || !detailView) return;
 
+    const items = data.items || [];
+    const totalRows = items.length;
+    const totalPages = Math.max(1, Math.ceil(totalRows / storeOrdersDetailState.rowsPerPage));
+    storeOrdersDetailState.currentPage = Math.min(Math.max(1, storeOrdersDetailState.currentPage), totalPages);
+    const startItem = totalRows === 0 ? 0 : (storeOrdersDetailState.currentPage - 1) * storeOrdersDetailState.rowsPerPage + 1;
+    const endItem = storeOrdersDetailState.rowsPerPage === -1 ? totalRows : Math.min(storeOrdersDetailState.currentPage * storeOrdersDetailState.rowsPerPage, totalRows);
+    const paginatedItems = storeOrdersDetailState.rowsPerPage === -1 ? items : items.slice(startItem - 1, endItem);
+
     gridView.style.display = 'none';
     detailView.style.display = 'block';
+    detailView.dataset.storeId = storeId;
+    detailView.dataset.orders = JSON.stringify(items);
     detailView.innerHTML = `
         <button onclick="closeStoreOrdersPanel()" class="admin-btn-back">← Volver</button>
         <div class="store-item-detail-header">
@@ -1202,7 +1445,7 @@ async function viewStoreOrders(storeId) {
                     </tr>
                 </thead>
                 <tbody>
-                    ${(data.items || []).map(item => {
+                    ${paginatedItems.map(item => {
                         const imageButton = item.image_url
                             ? `<button type="button" class="admin-table-img-btn" data-image-url="${String(item.image_url || '').replace(/"/g, '&quot;')}" title="Ver imagen"><i class="fas fa-camera"></i></button>`
                             : '';
@@ -1220,6 +1463,30 @@ async function viewStoreOrders(storeId) {
                         </tr>
                     `}
                 </tbody>
+                <tfoot id="storeOrdersDetailFooter" style="display: ${totalRows <= storeOrdersDetailState.rowsPerPage ? 'none' : ''};">
+                    <tr>
+                        <td colspan="3">
+                            <div class="admin-pagination-container order-pagination-layout" style="margin-top: 0;">
+                                <div class="pagination-info" id="storeOrdersDetailPaginationInfo">Mostrando <strong>${totalRows === 0 ? 0 : startItem}</strong> - <strong>${endItem}</strong> de <strong>${totalRows}</strong></div>
+                                <div class="pagination-rows-selector order-pagination-rows">
+                                    <span>Filas:</span>
+                                    <select id="storeOrdersDetailRowsPerPage" onchange="changeStoreOrdersRowsPerPage(this.value)">
+                                        <option value="10" ${storeOrdersDetailState.rowsPerPage === 10 ? 'selected' : ''}>10</option>
+                                        <option value="30" ${storeOrdersDetailState.rowsPerPage === 30 ? 'selected' : ''}>30</option>
+                                        <option value="50" ${storeOrdersDetailState.rowsPerPage === 50 ? 'selected' : ''}>50</option>
+                                        <option value="100" ${storeOrdersDetailState.rowsPerPage === 100 ? 'selected' : ''}>100</option>
+                                        <option value="-1" ${storeOrdersDetailState.rowsPerPage === -1 ? 'selected' : ''}>Todos</option>
+                                    </select>
+                                </div>
+                                <div class="pagination-nav" id="storeOrdersDetailPaginationNav">
+                                    <button type="button" onclick="changeStoreOrdersPage(${storeOrdersDetailState.currentPage - 1})" ${storeOrdersDetailState.currentPage <= 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
+                                    <span>Página <strong>${storeOrdersDetailState.currentPage}</strong> de ${totalPages}</span>
+                                    <button type="button" onclick="changeStoreOrdersPage(${storeOrdersDetailState.currentPage + 1})" ${storeOrdersDetailState.currentPage >= totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
     `;
@@ -1281,8 +1548,9 @@ function getLast4PhoneDigits(value) {
     return digits.slice(-4);
 }
 
-async function openStoreCustomerLinkModal(phoneValue) {
+async function openStoreCustomerLinkModal(phoneValue, clientNameValue = '') {
     const phone = String(phoneValue || '').trim();
+    const clientName = String(clientNameValue || '').trim();
     const session = getSession();
     if (!session) {
         alert('Debes iniciar sesión para vincular clientes.');
@@ -1308,7 +1576,7 @@ async function openStoreCustomerLinkModal(phoneValue) {
                 `,
                 `
                     <button class="btn btn-secondary" type="button" onclick="closeGenericModal()">Cancelar</button>
-                    <button class="btn btn-primary" type="button" onclick="openStoreCustomerCreateModal('${String(phone).replace(/'/g, "\\'")}')">Crear nuevo cliente</button>
+                    <button class="btn btn-primary" type="button" onclick="openStoreCustomerCreateModal('${String(phone).replace(/'/g, "\\'")}', '${String(clientName).replace(/'/g, "\\'")}')">Crear nuevo cliente</button>
                 `
             );
             return;
@@ -1331,7 +1599,7 @@ async function openStoreCustomerLinkModal(phoneValue) {
                             ${options}
                         </select>
                     </label>
-                    <button class="btn btn-secondary" type="button" onclick="openStoreCustomerCreateModal('${String(phone).replace(/'/g, "\\'")}')" style="justify-self:start;">Cliente nuevo</button>
+                    <button class="store-customer-new-btn" type="button" onclick="openStoreCustomerCreateModal('${String(phone).replace(/'/g, "\\'")}', '${String(clientName).replace(/'/g, "\\'")}')" style="justify-self:start;">Cliente nuevo</button>
                 </div>
             `,
             `
@@ -1387,8 +1655,9 @@ async function confirmStoreCustomerLink(phoneValue) {
     );
 }
 
-function openStoreCustomerCreateModal(phoneValue) {
+function openStoreCustomerCreateModal(phoneValue, nameValue = '') {
     const safePhone = String(phoneValue || '').trim();
+    const safeName = String(nameValue || '').trim();
     closeGenericModal();
     openGenericModal(
         'Crear cliente nuevo',
@@ -1396,7 +1665,7 @@ function openStoreCustomerCreateModal(phoneValue) {
             <div style="display:grid; gap:1rem;">
                 <label style="display:grid; gap:0.4rem; font-size:0.95rem; color:#5c3d34; font-weight:700;">
                     Nombre del cliente
-                    <input id="storeCustomerNewName" type="text" value="" placeholder="Ej: Michael" style="padding:0.8rem 0.9rem; border-radius:12px; border:1px solid #f1c9d1; background:#fff; color:#412c2d; font-size:1rem;" />
+                    <input id="storeCustomerNewName" type="text" value="${safeName.replace(/"/g, '&quot;')}" placeholder="Ej: Michael" style="padding:0.8rem 0.9rem; border-radius:12px; border:1px solid #f1c9d1; background:#fff; color:#412c2d; font-size:1rem;" />
                 </label>
                 <label style="display:grid; gap:0.4rem; font-size:0.95rem; color:#5c3d34; font-weight:700;">
                     Teléfono
@@ -1406,15 +1675,15 @@ function openStoreCustomerCreateModal(phoneValue) {
         `,
         `
             <button class="btn btn-secondary" type="button" onclick="closeGenericModal()">Cancelar</button>
-            <button class="btn btn-primary" type="button" onclick="saveStoreCustomerFromModal('${safePhone.replace(/'/g, "\\'")}')">Guardar</button>
+            <button class="btn btn-primary" type="button" onclick="saveStoreCustomerFromModal('${safePhone.replace(/'/g, "\\'")}', '${safeName.replace(/'/g, "\\'")}')">Guardar</button>
         `
     );
 }
 
-async function saveStoreCustomerFromModal(phoneValue) {
+async function saveStoreCustomerFromModal(phoneValue, nameValue = '') {
     const nameInput = document.getElementById('storeCustomerNewName');
     const phoneInput = document.getElementById('storeCustomerNewPhone');
-    const name = String(nameInput?.value || '').trim();
+    const name = String(nameInput?.value || nameValue || '').trim();
     const phone = String(phoneInput?.value || '').trim();
     if (!name || !phone) {
         alert('Debes ingresar nombre y teléfono.');
@@ -1472,6 +1741,54 @@ async function saveStoreCustomerFromModal(phoneValue) {
     );
 }
 
+function escapeStoreCustomerHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function getStoreCustomerItemImageUrl(item) {
+    return String(item?.image_url || item?.image || item?.thumbnail_url || item?.foto || '').trim();
+}
+
+function openStoreCustomerItemsModal(items) {
+    const safeItems = Array.isArray(items) ? items : [];
+    const listHtml = safeItems.length
+        ? safeItems.map((item) => {
+            const imageUrl = getStoreCustomerItemImageUrl(item);
+            const thumbMarkup = imageUrl
+                ? `<img src="${imageUrl}" alt="${escapeStoreCustomerHtml(item.name || 'Item')}" onclick="openImageModal('${imageUrl.replace(/'/g, "\\'")}')" style="width:22px; height:22px; object-fit:cover; border-radius:6px; border:1px solid rgba(112,82,66,0.18); cursor:pointer; flex-shrink:0;" />`
+                : '<span style="width:22px; height:22px; border-radius:6px; background:#f7dfe2; display:inline-flex; align-items:center; justify-content:center; color:#8f6b60; font-size:0.68rem; flex-shrink:0;">◌</span>';
+
+            return `
+            <li style="display:flex; align-items:center; justify-content:space-between; gap:0.8rem; padding:0.5rem 0; border-bottom:1px solid rgba(112,82,66,0.12); color:#452d2c;">
+                <span style="display:flex; align-items:center; gap:0.55rem; min-width:0;">
+                    ${thumbMarkup}
+                    <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeStoreCustomerHtml(item.name || 'Sin nombre')}</span>
+                </span>
+                <strong>x${Number(item.quantity || 0)}</strong>
+            </li>
+        `;
+        }).join('')
+        : '<li style="padding:0.5rem 0; color:#6f4d4b;">Sin items.</li>';
+
+    openGenericModal(
+        'Items de la compra',
+        `
+            <div style="display:grid; gap:0.5rem;">
+                <p style="margin:0; font-weight:700; color:#5c3d34;">Detalle completo de los artículos</p>
+                <ul style="list-style:none; margin:0; padding:0; display:grid; gap:0; max-height:280px; overflow-y:auto;">
+                    ${listHtml}
+                </ul>
+            </div>
+        `,
+        '<button class="btn btn-primary" type="button" onclick="closeGenericModal()">Cerrar</button>'
+    );
+}
+
 function getFilteredStoreCustomerOrders(customers) {
     const searchTerm = normalizeStoreCustomerOrdersSearch(storeCustomerOrdersState.globalSearch);
     const phoneFilter = normalizeStoreCustomerOrdersSearch(storeCustomerOrdersState.filters.phone);
@@ -1482,8 +1799,9 @@ function getFilteredStoreCustomerOrders(customers) {
 
     return customers.filter((customer) => {
         const phone = String(customer.phone || customer.phone_digits || 'Sin teléfono');
-        const clientName = String(customer.client_name || 'Sin cliente');
-        const clientMeta = customer.is_matched ? 'Matcheado' : 'Sin match';
+        const hasDbMatch = Boolean(customer.client_id || customer.is_matched);
+        const clientName = hasDbMatch ? String(customer.client_name || 'Cliente sin nombre') : 'SIN MATCH';
+        const clientMeta = hasDbMatch ? 'Matcheado' : 'Sin match';
         const itemText = (customer.items || []).map((item) => `${item.name || ''} ${item.quantity || ''}`).join(' ');
         const totalText = String(Number(customer.total_quantity || 0));
         const matchesContactStatus = !onlyUncontacted || isStoreCustomerUncontacted(customer);
@@ -1538,10 +1856,6 @@ function renderStoreCustomerOrdersTable() {
             </div>
             <div class="admin-search-bar" style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
                 <input id="storeCustomerOrdersSearchInput" type="text" placeholder="🔍 Buscar por cliente, teléfono, item o total..." value="${String(storeCustomerOrdersState.globalSearch || '').replace(/"/g, '&quot;')}" oninput="setStoreCustomerOrdersGlobalSearch(this.value)" style="flex:1 1 280px; min-width:220px;" />
-                <button type="button" class="btn btn-secondary" onclick="resetStoreCustomerOrdersFilters()" style="display:inline-flex; align-items:center; justify-content:center; gap:0.45rem; white-space:nowrap;">
-                    <i class="fas fa-broom" aria-hidden="true"></i>
-                    <span>Limpiar todo</span>
-                </button>
             </div>
             <div class="admin-filter-chips">
                 <label class="admin-filter-option">
@@ -1579,28 +1893,38 @@ function renderStoreCustomerOrdersTable() {
                             const adminSummary = customerItems.map((item) => `- ${item.name || 'Item'}: ${Number(item.quantity || 0)} x ${formatStoreCurrency(Number(item.unit_price || item.price || 0))}`).join('\n');
                             const waText = encodeURIComponent(`Hola!\n\nYa agregamos tu pedido.\n\n${reminderLine}\n\nLo que incluimos fue lo siguiente:\n\n${adminSummary || '- Productos sin detalle'}\n\nMuchas gracias por tu compra.`);
                             const waLink = phoneDigits ? `https://wa.me/${phoneDigits}?text=${waText}` : '#';
-                            const itemList = customerItems.map((item) => `<div>${item.name || 'Sin nombre'}: ${Number(item.quantity || 0)}</div>`).join('');
+                            const hasItems = customerItems.length > 0;
+                            const itemPreview = hasItems
+                                ? customerItems.slice(0, 2).map((item) => `${escapeStoreCustomerHtml(item.name || 'Sin nombre')} x${Number(item.quantity || 0)}`).join('<br>')
+                                : '<span style="color:#7a5246;">Sin items</span>';
+                            const itemsJson = JSON.stringify(customerItems).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
                             const phoneValue = String(customer.phone || '');
                             const orderGroupId = String(customer.order_group_id || '');
-                            const isMatched = Boolean(customer.is_matched && customer.client_name);
-                            const clientName = isMatched ? customer.client_name : 'SIN MATCH';
-                            const clientPhone = isMatched ? (customer.client_phone || customer.phone || 'Sin teléfono') : (customer.phone || customer.phone_digits || 'Sin teléfono');
+                            const hasDbMatch = Boolean(customer.client_id || customer.is_matched);
+                            const rawClientName = String(customer.client_name || '').trim();
+                            const clientName = hasDbMatch ? (rawClientName ? rawClientName.toUpperCase() : 'CLIENTE SIN NOMBRE') : 'SIN MATCH';
+                            const clientPhone = customer.phone || customer.phone_digits || 'Sin teléfono';
                             return `
                                 <tr>
                                     <td>
-                                        ${isMatched ? `
-                                            <div class="store-client-name">${clientName}</div>
+                                        ${hasDbMatch ? `
+                                            <div class="store-match-badge matched">${clientName}</div>
                                             <small class="store-client-meta">${clientPhone}</small>
                                         ` : `
                                             <div class="store-match-badge unmatched">SIN MATCH</div>
                                             <small class="store-client-meta">${clientPhone}</small>
                                         `}
                                     </td>
-                                    <td>${itemList || '<span style="color:#7a5246;">Sin items</span>'}</td>
+                                    <td style="max-width:340px; min-width:220px;">
+                                        <div class="store-customer-items-compact">
+                                            ${itemPreview || '<span style="color:#7a5246;">Sin items</span>'}
+                                        </div>
+                                    </td>
                                     <td>${Number(customer.total_quantity || 0)}</td>
                                     <td class="admin-actions-cell">
                                         <span class="admin-actions-inline">
-                                            <button class="admin-btn-action btn-edit" type="button" title="Vincular cliente" onclick="openStoreCustomerLinkModal('${phoneValue.replace(/'/g, "\\'")}')" aria-label="Vincular cliente">
+                                            ${hasItems ? `<button class="admin-btn-action store-customer-item-action store-customer-item-btn" type="button" title="Ver items" data-items='${itemsJson}' aria-label="Ver items"><i class="fas fa-plus"></i></button>` : ''}
+                                            <button class="admin-btn-action btn-edit" type="button" title="Vincular cliente" onclick="openStoreCustomerLinkModal('${phoneValue.replace(/'/g, "\\'")}', '${String(rawClientName).replace(/'/g, "\\'")}')" aria-label="Vincular cliente">
                                                 <i class="fas fa-user-plus"></i>
                                             </button>
                                             <button class="admin-btn-action btn-copy" type="button" title="Reconfirmar por WhatsApp" onclick="markStoreCustomerOrdersAsContacted('${phoneValue.replace(/'/g, "\\'")}', '${waLink.replace(/'/g, "\\'")}', '${orderGroupId.replace(/'/g, "\\'")}')" aria-label="Reconfirmar por WhatsApp">
@@ -1616,29 +1940,48 @@ function renderStoreCustomerOrdersTable() {
                             </tr>
                         `}
                     </tbody>
+                    <tfoot id="storeCustomerOrdersDetailFooter" style="display: ${totalRows <= storeCustomerOrdersState.rowsPerPage ? 'none' : ''};">
+                        <tr>
+                            <td colspan="4">
+                                <div class="admin-pagination-container order-pagination-layout" id="storeCustomerOrdersPaginationContainer" style="margin-top: 0;">
+                                    <div class="pagination-info" id="storeCustomerOrdersPaginationInfo">
+                                        Mostrando <strong>${totalRows === 0 ? 0 : startIndex + 1}</strong> - <strong>${Math.min(endIndex, totalRows)}</strong> de <strong>${totalRows}</strong>
+                                    </div>
+                                    <div class="pagination-rows-selector order-pagination-rows">
+                                        <span>Filas:</span>
+                                        <select id="storeCustomerOrdersRowsPerPage" onchange="changeStoreCustomerOrdersRowsPerPage(this.value)">
+                                            <option value="10" ${storeCustomerOrdersState.rowsPerPage === 10 ? 'selected' : ''}>10</option>
+                                            <option value="30" ${storeCustomerOrdersState.rowsPerPage === 30 ? 'selected' : ''}>30</option>
+                                            <option value="50" ${storeCustomerOrdersState.rowsPerPage === 50 ? 'selected' : ''}>50</option>
+                                            <option value="100" ${storeCustomerOrdersState.rowsPerPage === 100 ? 'selected' : ''}>100</option>
+                                            <option value="-1" ${storeCustomerOrdersState.rowsPerPage === -1 ? 'selected' : ''}>Todos</option>
+                                        </select>
+                                    </div>
+                                    <div class="pagination-nav" id="storeCustomerOrdersPaginationNav">
+                                        <button type="button" onclick="changeStoreCustomerOrdersPage(${storeCustomerOrdersState.currentPage - 1})" ${storeCustomerOrdersState.currentPage <= 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
+                                        <span>Página <strong>${storeCustomerOrdersState.currentPage}</strong> de ${totalPages}</span>
+                                        <button type="button" onclick="changeStoreCustomerOrdersPage(${storeCustomerOrdersState.currentPage + 1})" ${storeCustomerOrdersState.currentPage >= totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
-            <div class="admin-pagination-container order-pagination-layout" id="storeCustomerOrdersPaginationContainer" style="margin-top: 1rem; ${totalRows <= 10 ? 'display:none;' : ''}">
-                <div class="pagination-info" id="storeCustomerOrdersPaginationInfo">
-                    Mostrando <strong>${totalRows === 0 ? 0 : startIndex + 1}</strong> - <strong>${Math.min(endIndex, totalRows)}</strong> de <strong>${totalRows}</strong>
-                </div>
-                <div class="pagination-rows-selector order-pagination-rows">
-                    <span>Filas:</span>
-                    <select id="storeCustomerOrdersRowsPerPage" onchange="changeStoreCustomerOrdersRowsPerPage(this.value)">
-                        <option value="10" ${storeCustomerOrdersState.rowsPerPage === 10 ? 'selected' : ''}>10</option>
-                        <option value="30" ${storeCustomerOrdersState.rowsPerPage === 30 ? 'selected' : ''}>30</option>
-                        <option value="50" ${storeCustomerOrdersState.rowsPerPage === 50 ? 'selected' : ''}>50</option>
-                        <option value="100" ${storeCustomerOrdersState.rowsPerPage === 100 ? 'selected' : ''}>100</option>
-                        <option value="-1" ${storeCustomerOrdersState.rowsPerPage === -1 ? 'selected' : ''}>Todos</option>
-                    </select>
-                </div>
-                <div class="pagination-nav" id="storeCustomerOrdersPaginationNav">
-                    <button type="button" onclick="changeStoreCustomerOrdersPage(${storeCustomerOrdersState.currentPage - 1})" ${storeCustomerOrdersState.currentPage <= 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
-                    <span>Página <strong>${storeCustomerOrdersState.currentPage}</strong> de ${totalPages}</span>
-                    <button type="button" onclick="changeStoreCustomerOrdersPage(${storeCustomerOrdersState.currentPage + 1})" ${storeCustomerOrdersState.currentPage >= totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>
-                </div>
-            </div>
         `;
+
+        const initialItemButtons = detailView.querySelectorAll('.store-customer-item-btn, .store-customer-item-action');
+        initialItemButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+                try {
+                    const parsed = JSON.parse(button.dataset.items || '[]');
+                    openStoreCustomerItemsModal(parsed);
+                } catch (_error) {
+                    openStoreCustomerItemsModal([]);
+                }
+            });
+        });
+
         return;
     }
 
@@ -1661,28 +2004,38 @@ function renderStoreCustomerOrdersTable() {
         const adminSummary = customerItems.map((item) => `- ${item.name || 'Item'}: ${Number(item.quantity || 0)} x ${formatStoreCurrency(Number(item.unit_price || item.price || 0))}`).join('\n');
         const waText = encodeURIComponent(`Hola!\n\nYa agregamos tu pedido.\n\n${reminderLine}\n\nLo que incluimos fue lo siguiente:\n\n${adminSummary || '- Productos sin detalle'}\n\nMuchas gracias por tu compra.`);
         const waLink = phoneDigits ? `https://wa.me/${phoneDigits}?text=${waText}` : '#';
-        const itemList = customerItems.map((item) => `<div>${item.name || 'Sin nombre'}: ${Number(item.quantity || 0)}</div>`).join('');
+        const hasItems = customerItems.length > 0;
+        const itemPreview = hasItems
+            ? customerItems.slice(0, 2).map((item) => `${escapeStoreCustomerHtml(item.name || 'Sin nombre')} x${Number(item.quantity || 0)}`).join('<br>')
+            : '<span style="color:#7a5246;">Sin items</span>';
+        const itemsJson = JSON.stringify(customerItems).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         const phoneValue = String(customer.phone || '');
         const orderGroupId = String(customer.order_group_id || '');
-        const isMatched = Boolean(customer.is_matched && customer.client_name);
-        const clientName = isMatched ? customer.client_name : 'SIN MATCH';
-        const clientPhone = isMatched ? (customer.client_phone || customer.phone || 'Sin teléfono') : (customer.phone || customer.phone_digits || 'Sin teléfono');
+        const hasDbMatch = Boolean(customer.client_id || customer.is_matched);
+        const rawClientName = String(customer.client_name || '').trim();
+        const clientName = hasDbMatch ? (rawClientName ? rawClientName.toUpperCase() : 'CLIENTE SIN NOMBRE') : 'SIN MATCH';
+        const clientPhone = customer.phone || customer.phone_digits || 'Sin teléfono';
         return `
             <tr>
                 <td>
-                    ${isMatched ? `
-                        <div class="store-client-name">${clientName}</div>
+                    ${hasDbMatch ? `
+                        <div class="store-match-badge matched">${clientName}</div>
                         <small class="store-client-meta">${clientPhone}</small>
                     ` : `
                         <div class="store-match-badge unmatched">SIN MATCH</div>
                         <small class="store-client-meta">${clientPhone}</small>
                     `}
                 </td>
-                <td>${itemList || '<span style="color:#7a5246;">Sin items</span>'}</td>
+                <td style="max-width:340px; min-width:220px;">
+                    <div class="store-customer-items-compact">
+                        ${itemPreview || '<span style="color:#7a5246;">Sin items</span>'}
+                    </div>
+                </td>
                 <td>${Number(customer.total_quantity || 0)}</td>
                 <td class="admin-actions-cell">
                     <span class="admin-actions-inline">
-                        <button class="admin-btn-action btn-edit" type="button" title="Vincular cliente" onclick="openStoreCustomerLinkModal('${phoneValue.replace(/'/g, "\\'")}')" aria-label="Vincular cliente">
+                        ${hasItems ? `<button class="admin-btn-action store-customer-item-action store-customer-item-btn" type="button" title="Ver items" data-items='${itemsJson}' aria-label="Ver items"><i class="fas fa-plus"></i></button>` : ''}
+                        <button class="admin-btn-action btn-edit" type="button" title="Vincular cliente" onclick="openStoreCustomerLinkModal('${phoneValue.replace(/'/g, "\\'")}', '${String(rawClientName).replace(/'/g, "\\'")}')" aria-label="Vincular cliente">
                             <i class="fas fa-user-plus"></i>
                         </button>
                         <button class="admin-btn-action btn-copy" type="button" title="Reconfirmar por WhatsApp" onclick="markStoreCustomerOrdersAsContacted('${phoneValue.replace(/'/g, "\\'")}', '${waLink.replace(/'/g, "\\'")}', '${orderGroupId.replace(/'/g, "\\'")}')" aria-label="Reconfirmar por WhatsApp">
@@ -1697,6 +2050,18 @@ function renderStoreCustomerOrdersTable() {
             <td colspan="4" style="text-align:center; color:#7a5246; padding:1.2rem;">No se encontraron clientes con esa búsqueda.</td>
         </tr>
     `;
+
+    const itemButtons = tableBody.querySelectorAll('.store-customer-item-btn, .store-customer-item-action');
+    itemButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            try {
+                const parsed = JSON.parse(button.dataset.items || '[]');
+                openStoreCustomerItemsModal(parsed);
+            } catch (_error) {
+                openStoreCustomerItemsModal([]);
+            }
+        });
+    });
 
     rowsPerPageSelect.value = String(storeCustomerOrdersState.rowsPerPage);
     paginationInfo.innerHTML = `Mostrando <strong>${totalRows === 0 ? 0 : startIndex + 1}</strong> - <strong>${Math.min(endIndex, totalRows)}</strong> de <strong>${totalRows}</strong>`;
@@ -1946,6 +2311,8 @@ window.syncStoreStatusFromTimestamps = syncStoreStatusFromTimestamps;
 window.createStoreFromAdmin = createStoreFromAdmin;
 window.activateStoreById = activateStoreById;
 window.reopenStoreById = reopenStoreById;
+window.deleteStoreById = deleteStoreById;
+window.confirmDeleteStoreById = confirmDeleteStoreById;
 window.copyStoreLink = copyStoreLink;
 window.openStorePublicLink = openStorePublicLink;
 window.openStoreItemPanel = openStoreItemPanel;

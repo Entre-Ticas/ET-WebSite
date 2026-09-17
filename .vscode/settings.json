@@ -20,5 +20,6 @@
         "approve": true,
         "matchCommandLine": true
     }
-}
+},
+"CodeGPT.apiKey": "Google AI Studio"
 }

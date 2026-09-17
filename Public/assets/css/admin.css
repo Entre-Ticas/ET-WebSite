@@ -209,6 +209,52 @@
     color: #9d4a4a;
 }
 
+.store-customer-items-compact {
+    min-width: 0;
+    max-width: 100%;
+    min-height: 28px;
+    max-height: 42px;
+    overflow: hidden;
+    color: #4d342f;
+    font-size: 0.75rem;
+    line-height: 1.1;
+    white-space: normal;
+    display: block;
+    padding-top: 0.04rem;
+    padding-bottom: 0.04rem;
+}
+
+.store-customer-item-action {
+    min-width: 24px;
+    min-height: 24px;
+    background: #9dd9b4;
+    padding: 4px 6px;
+    font-size: 0.7rem;
+}
+
+.store-customer-new-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 0.7rem 1rem;
+    border: 1px solid #e7b9bf;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #fff8f8 0%, #fdf1f2 100%);
+    color: #5c3d34;
+    font-size: 0.96rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(124, 80, 80, 0.08);
+}
+
+.store-customer-new-btn:hover {
+    background: linear-gradient(180deg, #fff1f3 0%, #fbe7eb 100%);
+    border-color: #d99ca7;
+    transform: translateY(-1px);
+}
+
 .store-badge.draft { background: #f4e8e3; color: #7c5d52; }
 .store-badge.active { background: #e8f7ee; color: #266c45; }
 .store-badge.expired { background: #f8e3e3; color: #9d4a4a; }

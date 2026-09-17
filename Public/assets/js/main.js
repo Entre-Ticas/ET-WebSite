@@ -249,35 +249,39 @@ async function fetchActiveCatalogStores() {
     }
 }
 
-async function refreshCatalogNavState() {
-    const stores = await fetchActiveCatalogStores();
-    renderCatalogNavButton(stores);
-
+function applyHomeStoreCardState(stores = []) {
     const homeStoreCard = document.getElementById('homeStoreTimeCard');
     const homeStoreTimer = document.getElementById('homeStoreTimeCountdown');
     const homeStoreName = document.getElementById('homeStoreTimeName');
-    if (homeStoreCard && homeStoreTimer && homeStoreName) {
-        const activeStore = (stores || [])
-            .filter((store) => store && store.public_token && store.status === 'active' && store.expires_at)
-            .sort((a, b) => new Date(b.expires_at).getTime() - new Date(a.expires_at).getTime())
-            [0] || null;
+    if (!homeStoreCard || !homeStoreTimer || !homeStoreName) return;
 
-        if (activeStore) {
-            homeStoreCard.style.display = '';
-            homeStoreName.textContent = activeStore.nombre_tienda || 'Tienda por tiempo';
-            homeStoreTimer.dataset.expiresAt = activeStore.expires_at;
-            homeStoreTimer.textContent = formatCatalogCountdown(activeStore.expires_at);
-            homeStoreCard.onclick = () => {
-                window.location.href = getCatalogPublicUrl(activeStore.public_token);
-            };
-        } else {
-            homeStoreName.textContent = 'Tienda por tiempo';
-            homeStoreTimer.dataset.expiresAt = '';
-            homeStoreTimer.textContent = '00:00';
-            homeStoreCard.style.display = 'none';
-        }
+    const activeStore = (stores || [])
+        .filter((store) => store && store.public_token && store.status === 'active' && store.expires_at)
+        .sort((a, b) => new Date(b.expires_at).getTime() - new Date(a.expires_at).getTime())[0] || null;
+
+    if (activeStore) {
+        homeStoreCard.hidden = false;
+        homeStoreCard.style.display = 'block';
+        homeStoreName.textContent = activeStore.nombre_tienda || 'Tienda por tiempo';
+        homeStoreTimer.dataset.expiresAt = activeStore.expires_at;
+        homeStoreTimer.textContent = formatCatalogCountdown(activeStore.expires_at);
+        homeStoreCard.onclick = () => {
+            window.location.href = getCatalogPublicUrl(activeStore.public_token);
+        };
+    } else {
+        homeStoreName.textContent = 'Tienda por tiempo';
+        homeStoreTimer.dataset.expiresAt = '';
+        homeStoreTimer.textContent = '00:00';
+        homeStoreCard.hidden = true;
+        homeStoreCard.style.display = 'none';
+        homeStoreCard.onclick = () => loadPage('catalog');
     }
+}
 
+async function refreshCatalogNavState() {
+    const stores = await fetchActiveCatalogStores();
+    renderCatalogNavButton(stores);
+    applyHomeStoreCardState(stores);
     updateCatalogCountdowns();
 }
 
@@ -385,11 +389,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Si estamos en la página de inicio, no hacemos nada para evitar el bucle de recarga.
-        // El contenido de la home ya está en index.html.
-        if (pageToLoad !== 'home') {
-            loadPage(pageToLoad, paramToLoad);
+        if (pageToLoad === 'home') {
+            refreshCatalogNavState();
+            return;
         }
+
+        loadPage(pageToLoad, paramToLoad);
     };
 
     handleRouting();
@@ -481,6 +486,7 @@ async function loadPage(page, param = null) {
                 container.innerHTML = homeContentCache || (await fetch('/index.html').then(r => r.text())).match(/<div id="content-area">([\s\S]*)<\/div>/)[1];
                 ensureAutofillTrap(false);
                 applyGlobalInputHardening(container);
+                refreshCatalogNavState();
                 
                 container.classList.remove('fade-out');
                 window.scrollTo(0, 0);

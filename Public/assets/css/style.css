@@ -180,12 +180,7 @@ body {
             align-items: center;
         }
 
-        .catalog-nav-dropdown {
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-        }
-
+        #catalogNavContainer > a,
         .catalog-nav-trigger {
             color: var(--white);
             text-decoration: none;
@@ -195,15 +190,32 @@ body {
             cursor: pointer;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            justify-content: center;
+            gap: 5px;
             white-space: nowrap;
             background: rgba(255,255,255,0.08);
             padding: 6px 14px;
             border-radius: 20px;
             border: none;
             transition: background 0.2s;
-            appearance: none;
             font-family: inherit;
+            box-sizing: border-box;
+        }
+
+        #catalogNavContainer > a {
+            appearance: none;
+        }
+
+        .catalog-nav-dropdown {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .catalog-nav-trigger {
+            appearance: none;
+            margin: 0;
+            line-height: normal;
         }
 
         .catalog-nav-trigger:hover,
@@ -290,11 +302,34 @@ body {
                 padding: 0.45rem 0.4rem;
             }
 
-            nav a {
+            nav a,
+            #catalogNavContainer > a,
+            .catalog-nav-trigger {
                 font-size: 0.68rem;
                 padding: 5px 6px;
                 border-radius: 12px;
                 justify-content: center;
+            }
+
+            #catalogNavContainer {
+                width: 100%;
+            }
+
+            .catalog-nav-dropdown {
+                width: 100%;
+                display: flex;
+            }
+
+            .catalog-nav-trigger {
+                width: 100%;
+                min-width: 0;
+                max-width: 100%;
+            }
+
+            .catalog-nav-menu {
+                left: 50%;
+                transform: translateX(-50%);
+                min-width: min(220px, calc(100vw - 40px));
             }
 
             #content-area {
@@ -316,7 +351,9 @@ body {
                 padding: 0.35rem 0.4rem;
             }
 
-            nav a {
+            nav a,
+            #catalogNavContainer > a,
+            .catalog-nav-trigger {
                 font-size: 0.62rem;
                 padding: 4px 5px;
             }
@@ -357,6 +394,7 @@ body {
         }
 
         .home-store-time-card {
+            display: none;
             border-color: rgba(225, 155, 157, 0.5);
             background: rgba(255, 255, 255, 0.2);
         }
