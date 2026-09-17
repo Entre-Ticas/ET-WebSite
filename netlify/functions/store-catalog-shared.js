@@ -655,7 +655,7 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
       const storeId = queryStringParameters.store_id || payload.store_id || payload.storeId;
       if (!storeId) return jsonResponse(400, { error: 'Falta store_id.' });
 
-      const orders = await supabaseRequest(`/rest/v1/store_orders?store_id=eq.${encodeURIComponent(storeId)}&select=id,client_id,client_phone,item_id,quantity,unit_price,created_at,contacted,order_group_id`);
+      const orders = await supabaseRequest(`/rest/v1/store_orders?store_id=eq.${encodeURIComponent(storeId)}&select=id,client_id,client_phone,client_name,item_id,quantity,unit_price,created_at,contacted,order_group_id`);
       if (!Array.isArray(orders) || !orders.length) {
         return jsonResponse(200, { customers: [] });
       }
@@ -693,7 +693,7 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
             phone_digits: String(phone).replace(/\D/g, ''),
             order_group_id: orderGroupId,
             client_id: linkedClient ? linkedClient.id : null,
-            client_name: linkedClient ? linkedClient.name : null,
+            client_name: linkedClient ? linkedClient.name : (order.client_name || null),
             client_phone: linkedClient ? linkedClient.phone : null,
             client_phone_last4: linkedClient ? (linkedClient.phone_last4 || String(linkedClient.phone || '').slice(-4)) : null,
             is_matched: Boolean(linkedClient),
@@ -851,20 +851,29 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
       if (!phone || !clientId) return jsonResponse(400, { error: 'Falta teléfono o client_id.' });
 
       try {
-        const orders = await supabaseRequest('/rest/v1/store_orders?select=id,client_phone,client_id');
+        const clientResult = await supabaseRequest(`/rest/v1/clients?id=eq.${encodeURIComponent(clientId)}&select=id,name,phone`);
+        const client = Array.isArray(clientResult) ? clientResult[0] : null;
+        const clientName = String(client?.name || '').trim();
+
+        const orders = await supabaseRequest('/rest/v1/store_orders?select=id,client_phone,client_id,client_name');
         const normalizedPhone = normalizePhoneDigits(phone);
         const last4 = normalizedPhone.slice(-4);
 
         const matches = (orders || []).filter((order) => {
           const rowPhone = normalizePhoneDigits(order.client_phone || '');
-          return rowPhone === normalizedPhone || rowPhone.endsWith(last4) || (order.client_id != null && Number(order.client_id) === Number(clientId));
+          const samePhone = rowPhone === normalizedPhone || rowPhone.endsWith(last4);
+          const sameClientId = order.client_id != null && Number(order.client_id) === Number(clientId);
+          return samePhone || sameClientId;
         });
 
         let updatedCount = 0;
         for (const order of matches) {
           await supabaseRequest(`/rest/v1/store_orders?id=eq.${encodeURIComponent(order.id)}`, {
             method: 'PATCH',
-            body: JSON.stringify({ client_id: clientId })
+            body: JSON.stringify({
+              client_id: clientId,
+              client_name: clientName || order.client_name || '',
+            })
           });
           updatedCount += 1;
         }
@@ -872,6 +881,7 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
         return jsonResponse(200, {
           updated: updatedCount,
           client_id: clientId,
+          client_name: clientName,
           phone,
         });
       } catch (error) {
@@ -964,6 +974,7 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
       const storeId = payload.store_id || payload.storeId;
       const itemId = payload.item_id || payload.itemId;
       const clientPhone = String(payload.client_phone || payload.phone || '').trim();
+      const clientName = String(payload.client_name || payload.clientName || '').trim();
       const quantity = Number(payload.quantity || 1);
       const unitPrice = Number(payload.unit_price || payload.price || 0);
 
@@ -971,10 +982,27 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
         return jsonResponse(400, { error: 'Faltan store_id, item_id o client_phone.' });
       }
 
+      let resolvedClientId = payload.client_id != null && payload.client_id !== '' ? Number(payload.client_id) : null;
+      let resolvedClientName = clientName;
+      if (!resolvedClientId && clientPhone) {
+        const clients = await supabaseRequest('/rest/v1/clients?select=id,name,phone');
+        const normalizedPhone = normalizePhoneDigits(clientPhone);
+        const matchedClient = (clients || []).find((client) => {
+          const rowPhone = normalizePhoneDigits(client.phone || '');
+          return rowPhone === normalizedPhone || rowPhone.endsWith(normalizedPhone.slice(-4));
+        });
+        if (matchedClient) {
+          resolvedClientId = Number(matchedClient.id);
+          resolvedClientName = String(matchedClient.name || resolvedClientName || '').trim();
+        }
+      }
+
       const row = {
         store_id: Number(storeId),
         item_id: Number(itemId),
         client_phone: clientPhone,
+        client_id: resolvedClientId,
+        client_name: resolvedClientName,
         quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
         unit_price: Number.isFinite(unitPrice) ? unitPrice : 0,
         created_at: new Date().toISOString(),
@@ -999,6 +1027,7 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
       if (payload.store_id !== undefined) patch.store_id = Number(payload.store_id);
       if (payload.item_id !== undefined) patch.item_id = Number(payload.item_id);
       if (payload.client_phone !== undefined) patch.client_phone = String(payload.client_phone || '').trim();
+      if (payload.client_name !== undefined || payload.clientName !== undefined) patch.client_name = String(payload.client_name || payload.clientName || '').trim();
       if (payload.quantity !== undefined) patch.quantity = Number(payload.quantity || 1);
       if (payload.unit_price !== undefined) patch.unit_price = Number(payload.unit_price || 0);
       if (payload.order_group_id !== undefined) patch.order_group_id = payload.order_group_id;
@@ -1049,12 +1078,23 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
         return jsonResponse(410, { error: 'La tienda ya expiró.' });
       }
 
+      const normalizedPhone = normalizePhoneDigits(clientPhone);
+      const existingClients = await supabaseRequest('/rest/v1/clients?select=id,name,phone');
+      const matchedClient = (existingClients || []).find((client) => {
+        const rowPhone = normalizePhoneDigits(client.phone || '');
+        return rowPhone === normalizedPhone || rowPhone.endsWith(normalizedPhone.slice(-4));
+      });
+      const resolvedClientId = matchedClient ? Number(matchedClient.id) : null;
+      const resolvedClientName = String(matchedClient?.name || clientName || '').trim();
+
       const orderGroupId = randomUUID();
       const rows = items.map((item) => ({
         order_group_id: orderGroupId,
         store_id: store.id_store,
         item_id: item.id,
         client_phone: clientPhone,
+        client_id: resolvedClientId,
+        client_name: resolvedClientName,
         quantity: Number(item.quantity || 1),
         unit_price: Number(item.price || 0),
         created_at: new Date().toISOString(),

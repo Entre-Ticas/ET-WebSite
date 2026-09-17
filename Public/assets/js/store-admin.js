@@ -1548,8 +1548,9 @@ function getLast4PhoneDigits(value) {
     return digits.slice(-4);
 }
 
-async function openStoreCustomerLinkModal(phoneValue) {
+async function openStoreCustomerLinkModal(phoneValue, clientNameValue = '') {
     const phone = String(phoneValue || '').trim();
+    const clientName = String(clientNameValue || '').trim();
     const session = getSession();
     if (!session) {
         alert('Debes iniciar sesión para vincular clientes.');
@@ -1575,7 +1576,7 @@ async function openStoreCustomerLinkModal(phoneValue) {
                 `,
                 `
                     <button class="btn btn-secondary" type="button" onclick="closeGenericModal()">Cancelar</button>
-                    <button class="btn btn-primary" type="button" onclick="openStoreCustomerCreateModal('${String(phone).replace(/'/g, "\\'")}')">Crear nuevo cliente</button>
+                    <button class="btn btn-primary" type="button" onclick="openStoreCustomerCreateModal('${String(phone).replace(/'/g, "\\'")}', '${String(clientName).replace(/'/g, "\\'")}')">Crear nuevo cliente</button>
                 `
             );
             return;
@@ -1598,7 +1599,7 @@ async function openStoreCustomerLinkModal(phoneValue) {
                             ${options}
                         </select>
                     </label>
-                    <button class="btn btn-secondary" type="button" onclick="openStoreCustomerCreateModal('${String(phone).replace(/'/g, "\\'")}')" style="justify-self:start;">Cliente nuevo</button>
+                    <button class="btn btn-secondary" type="button" onclick="openStoreCustomerCreateModal('${String(phone).replace(/'/g, "\\'")}', '${String(clientName).replace(/'/g, "\\'")}')" style="justify-self:start;">Cliente nuevo</button>
                 </div>
             `,
             `
@@ -1654,8 +1655,9 @@ async function confirmStoreCustomerLink(phoneValue) {
     );
 }
 
-function openStoreCustomerCreateModal(phoneValue) {
+function openStoreCustomerCreateModal(phoneValue, nameValue = '') {
     const safePhone = String(phoneValue || '').trim();
+    const safeName = String(nameValue || '').trim();
     closeGenericModal();
     openGenericModal(
         'Crear cliente nuevo',
@@ -1663,7 +1665,7 @@ function openStoreCustomerCreateModal(phoneValue) {
             <div style="display:grid; gap:1rem;">
                 <label style="display:grid; gap:0.4rem; font-size:0.95rem; color:#5c3d34; font-weight:700;">
                     Nombre del cliente
-                    <input id="storeCustomerNewName" type="text" value="" placeholder="Ej: Michael" style="padding:0.8rem 0.9rem; border-radius:12px; border:1px solid #f1c9d1; background:#fff; color:#412c2d; font-size:1rem;" />
+                    <input id="storeCustomerNewName" type="text" value="${safeName.replace(/"/g, '&quot;')}" placeholder="Ej: Michael" style="padding:0.8rem 0.9rem; border-radius:12px; border:1px solid #f1c9d1; background:#fff; color:#412c2d; font-size:1rem;" />
                 </label>
                 <label style="display:grid; gap:0.4rem; font-size:0.95rem; color:#5c3d34; font-weight:700;">
                     Teléfono
@@ -1673,15 +1675,15 @@ function openStoreCustomerCreateModal(phoneValue) {
         `,
         `
             <button class="btn btn-secondary" type="button" onclick="closeGenericModal()">Cancelar</button>
-            <button class="btn btn-primary" type="button" onclick="saveStoreCustomerFromModal('${safePhone.replace(/'/g, "\\'")}')">Guardar</button>
+            <button class="btn btn-primary" type="button" onclick="saveStoreCustomerFromModal('${safePhone.replace(/'/g, "\\'")}', '${safeName.replace(/'/g, "\\'")}')">Guardar</button>
         `
     );
 }
 
-async function saveStoreCustomerFromModal(phoneValue) {
+async function saveStoreCustomerFromModal(phoneValue, nameValue = '') {
     const nameInput = document.getElementById('storeCustomerNewName');
     const phoneInput = document.getElementById('storeCustomerNewPhone');
-    const name = String(nameInput?.value || '').trim();
+    const name = String(nameInput?.value || nameValue || '').trim();
     const phone = String(phoneInput?.value || '').trim();
     if (!name || !phone) {
         alert('Debes ingresar nombre y teléfono.');
@@ -1749,8 +1751,9 @@ function getFilteredStoreCustomerOrders(customers) {
 
     return customers.filter((customer) => {
         const phone = String(customer.phone || customer.phone_digits || 'Sin teléfono');
-        const clientName = String(customer.client_name || 'Sin cliente');
-        const clientMeta = customer.is_matched ? 'Matcheado' : 'Sin match';
+        const hasDbMatch = Boolean(customer.client_id || customer.is_matched);
+        const clientName = hasDbMatch ? String(customer.client_name || 'Cliente sin nombre') : 'SIN MATCH';
+        const clientMeta = hasDbMatch ? 'Matcheado' : 'Sin match';
         const itemText = (customer.items || []).map((item) => `${item.name || ''} ${item.quantity || ''}`).join(' ');
         const totalText = String(Number(customer.total_quantity || 0));
         const matchesContactStatus = !onlyUncontacted || isStoreCustomerUncontacted(customer);
@@ -1849,14 +1852,15 @@ function renderStoreCustomerOrdersTable() {
                             const itemList = customerItems.map((item) => `<div>${item.name || 'Sin nombre'}: ${Number(item.quantity || 0)}</div>`).join('');
                             const phoneValue = String(customer.phone || '');
                             const orderGroupId = String(customer.order_group_id || '');
-                            const isMatched = Boolean(customer.is_matched && customer.client_name);
-                            const clientName = isMatched ? customer.client_name : 'SIN MATCH';
-                            const clientPhone = isMatched ? (customer.client_phone || customer.phone || 'Sin teléfono') : (customer.phone || customer.phone_digits || 'Sin teléfono');
+                            const hasDbMatch = Boolean(customer.client_id || customer.is_matched);
+                            const rawClientName = String(customer.client_name || '').trim();
+                            const clientName = hasDbMatch ? (rawClientName ? rawClientName.toUpperCase() : 'CLIENTE SIN NOMBRE') : 'SIN MATCH';
+                            const clientPhone = customer.phone || customer.phone_digits || 'Sin teléfono';
                             return `
                                 <tr>
                                     <td>
-                                        ${isMatched ? `
-                                            <div class="store-client-name">${clientName}</div>
+                                        ${hasDbMatch ? `
+                                            <div class="store-match-badge matched">${clientName}</div>
                                             <small class="store-client-meta">${clientPhone}</small>
                                         ` : `
                                             <div class="store-match-badge unmatched">SIN MATCH</div>
@@ -1867,7 +1871,7 @@ function renderStoreCustomerOrdersTable() {
                                     <td>${Number(customer.total_quantity || 0)}</td>
                                     <td class="admin-actions-cell">
                                         <span class="admin-actions-inline">
-                                            <button class="admin-btn-action btn-edit" type="button" title="Vincular cliente" onclick="openStoreCustomerLinkModal('${phoneValue.replace(/'/g, "\\'")}')" aria-label="Vincular cliente">
+                                            <button class="admin-btn-action btn-edit" type="button" title="Vincular cliente" onclick="openStoreCustomerLinkModal('${phoneValue.replace(/'/g, "\\'")}', '${String(rawClientName).replace(/'/g, "\\'")}')" aria-label="Vincular cliente">
                                                 <i class="fas fa-user-plus"></i>
                                             </button>
                                             <button class="admin-btn-action btn-copy" type="button" title="Reconfirmar por WhatsApp" onclick="markStoreCustomerOrdersAsContacted('${phoneValue.replace(/'/g, "\\'")}', '${waLink.replace(/'/g, "\\'")}', '${orderGroupId.replace(/'/g, "\\'")}')" aria-label="Reconfirmar por WhatsApp">
@@ -1937,14 +1941,15 @@ function renderStoreCustomerOrdersTable() {
         const itemList = customerItems.map((item) => `<div>${item.name || 'Sin nombre'}: ${Number(item.quantity || 0)}</div>`).join('');
         const phoneValue = String(customer.phone || '');
         const orderGroupId = String(customer.order_group_id || '');
-        const isMatched = Boolean(customer.is_matched && customer.client_name);
-        const clientName = isMatched ? customer.client_name : 'SIN MATCH';
-        const clientPhone = isMatched ? (customer.client_phone || customer.phone || 'Sin teléfono') : (customer.phone || customer.phone_digits || 'Sin teléfono');
+        const hasDbMatch = Boolean(customer.client_id || customer.is_matched);
+        const rawClientName = String(customer.client_name || '').trim();
+        const clientName = hasDbMatch ? (rawClientName ? rawClientName.toUpperCase() : 'CLIENTE SIN NOMBRE') : 'SIN MATCH';
+        const clientPhone = customer.phone || customer.phone_digits || 'Sin teléfono';
         return `
             <tr>
                 <td>
-                    ${isMatched ? `
-                        <div class="store-client-name">${clientName}</div>
+                    ${hasDbMatch ? `
+                        <div class="store-match-badge matched">${clientName}</div>
                         <small class="store-client-meta">${clientPhone}</small>
                     ` : `
                         <div class="store-match-badge unmatched">SIN MATCH</div>
@@ -1955,7 +1960,7 @@ function renderStoreCustomerOrdersTable() {
                 <td>${Number(customer.total_quantity || 0)}</td>
                 <td class="admin-actions-cell">
                     <span class="admin-actions-inline">
-                        <button class="admin-btn-action btn-edit" type="button" title="Vincular cliente" onclick="openStoreCustomerLinkModal('${phoneValue.replace(/'/g, "\\'")}')" aria-label="Vincular cliente">
+                        <button class="admin-btn-action btn-edit" type="button" title="Vincular cliente" onclick="openStoreCustomerLinkModal('${phoneValue.replace(/'/g, "\\'")}', '${String(rawClientName).replace(/'/g, "\\'")}')" aria-label="Vincular cliente">
                             <i class="fas fa-user-plus"></i>
                         </button>
                         <button class="admin-btn-action btn-copy" type="button" title="Reconfirmar por WhatsApp" onclick="markStoreCustomerOrdersAsContacted('${phoneValue.replace(/'/g, "\\'")}', '${waLink.replace(/'/g, "\\'")}', '${orderGroupId.replace(/'/g, "\\'")}')" aria-label="Reconfirmar por WhatsApp">
