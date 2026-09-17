@@ -1599,7 +1599,7 @@ async function openStoreCustomerLinkModal(phoneValue, clientNameValue = '') {
                             ${options}
                         </select>
                     </label>
-                    <button class="btn btn-secondary" type="button" onclick="openStoreCustomerCreateModal('${String(phone).replace(/'/g, "\\'")}', '${String(clientName).replace(/'/g, "\\'")}')" style="justify-self:start;">Cliente nuevo</button>
+                    <button class="store-customer-new-btn" type="button" onclick="openStoreCustomerCreateModal('${String(phone).replace(/'/g, "\\'")}', '${String(clientName).replace(/'/g, "\\'")}')" style="justify-self:start;">Cliente nuevo</button>
                 </div>
             `,
             `
@@ -1750,15 +1750,29 @@ function escapeStoreCustomerHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
+function getStoreCustomerItemImageUrl(item) {
+    return String(item?.image_url || item?.image || item?.thumbnail_url || item?.foto || '').trim();
+}
+
 function openStoreCustomerItemsModal(items) {
     const safeItems = Array.isArray(items) ? items : [];
     const listHtml = safeItems.length
-        ? safeItems.map((item) => `
-            <li style="display:flex; justify-content:space-between; gap:0.8rem; padding:0.45rem 0; border-bottom:1px solid rgba(112,82,66,0.12); color:#452d2c;">
-                <span>${escapeStoreCustomerHtml(item.name || 'Sin nombre')}</span>
+        ? safeItems.map((item) => {
+            const imageUrl = getStoreCustomerItemImageUrl(item);
+            const thumbMarkup = imageUrl
+                ? `<img src="${imageUrl}" alt="${escapeStoreCustomerHtml(item.name || 'Item')}" onclick="openImageModal('${imageUrl.replace(/'/g, "\\'")}')" style="width:22px; height:22px; object-fit:cover; border-radius:6px; border:1px solid rgba(112,82,66,0.18); cursor:pointer; flex-shrink:0;" />`
+                : '<span style="width:22px; height:22px; border-radius:6px; background:#f7dfe2; display:inline-flex; align-items:center; justify-content:center; color:#8f6b60; font-size:0.68rem; flex-shrink:0;">◌</span>';
+
+            return `
+            <li style="display:flex; align-items:center; justify-content:space-between; gap:0.8rem; padding:0.5rem 0; border-bottom:1px solid rgba(112,82,66,0.12); color:#452d2c;">
+                <span style="display:flex; align-items:center; gap:0.55rem; min-width:0;">
+                    ${thumbMarkup}
+                    <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeStoreCustomerHtml(item.name || 'Sin nombre')}</span>
+                </span>
                 <strong>x${Number(item.quantity || 0)}</strong>
             </li>
-        `).join('')
+        `;
+        }).join('')
         : '<li style="padding:0.5rem 0; color:#6f4d4b;">Sin items.</li>';
 
     openGenericModal(
@@ -1766,7 +1780,7 @@ function openStoreCustomerItemsModal(items) {
         `
             <div style="display:grid; gap:0.5rem;">
                 <p style="margin:0; font-weight:700; color:#5c3d34;">Detalle completo de los artículos</p>
-                <ul style="list-style:none; margin:0; padding:0; display:grid; gap:0;">
+                <ul style="list-style:none; margin:0; padding:0; display:grid; gap:0; max-height:280px; overflow-y:auto;">
                     ${listHtml}
                 </ul>
             </div>
@@ -1842,10 +1856,6 @@ function renderStoreCustomerOrdersTable() {
             </div>
             <div class="admin-search-bar" style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
                 <input id="storeCustomerOrdersSearchInput" type="text" placeholder="🔍 Buscar por cliente, teléfono, item o total..." value="${String(storeCustomerOrdersState.globalSearch || '').replace(/"/g, '&quot;')}" oninput="setStoreCustomerOrdersGlobalSearch(this.value)" style="flex:1 1 280px; min-width:220px;" />
-                <button type="button" class="btn btn-secondary" onclick="resetStoreCustomerOrdersFilters()" style="display:inline-flex; align-items:center; justify-content:center; gap:0.45rem; white-space:nowrap;">
-                    <i class="fas fa-broom" aria-hidden="true"></i>
-                    <span>Limpiar todo</span>
-                </button>
             </div>
             <div class="admin-filter-chips">
                 <label class="admin-filter-option">
@@ -1883,8 +1893,10 @@ function renderStoreCustomerOrdersTable() {
                             const adminSummary = customerItems.map((item) => `- ${item.name || 'Item'}: ${Number(item.quantity || 0)} x ${formatStoreCurrency(Number(item.unit_price || item.price || 0))}`).join('\n');
                             const waText = encodeURIComponent(`Hola!\n\nYa agregamos tu pedido.\n\n${reminderLine}\n\nLo que incluimos fue lo siguiente:\n\n${adminSummary || '- Productos sin detalle'}\n\nMuchas gracias por tu compra.`);
                             const waLink = phoneDigits ? `https://wa.me/${phoneDigits}?text=${waText}` : '#';
-                            const itemPreview = customerItems.slice(0, 2).map((item) => `<div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeStoreCustomerHtml(item.name || 'Sin nombre')} x${Number(item.quantity || 0)}</div>`).join('');
-                            const hasMoreItems = customerItems.length > 2;
+                            const hasItems = customerItems.length > 0;
+                            const itemPreview = hasItems
+                                ? customerItems.slice(0, 2).map((item) => `${escapeStoreCustomerHtml(item.name || 'Sin nombre')} x${Number(item.quantity || 0)}`).join('<br>')
+                                : '<span style="color:#7a5246;">Sin items</span>';
                             const itemsJson = JSON.stringify(customerItems).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
                             const phoneValue = String(customer.phone || '');
                             const orderGroupId = String(customer.order_group_id || '');
@@ -1904,14 +1916,14 @@ function renderStoreCustomerOrdersTable() {
                                         `}
                                     </td>
                                     <td style="max-width:340px; min-width:220px;">
-                                        <div style="display:flex; flex-direction:column; gap:0.22rem; min-height:56px; max-height:72px; overflow:hidden; line-height:1.3;">
+                                        <div class="store-customer-items-compact">
                                             ${itemPreview || '<span style="color:#7a5246;">Sin items</span>'}
-                                            ${hasMoreItems ? `<button type="button" class="store-customer-item-btn" data-items='${itemsJson}' style="margin-top:0.18rem; border:none; background:#eef9f0; color:#266c45; border-radius:999px; padding:0.22rem 0.5rem; font-size:0.66rem; font-weight:700; cursor:pointer; max-width:max-content;">Ver + items</button>` : ''}
                                         </div>
                                     </td>
                                     <td>${Number(customer.total_quantity || 0)}</td>
                                     <td class="admin-actions-cell">
                                         <span class="admin-actions-inline">
+                                            ${hasItems ? `<button class="admin-btn-action store-customer-item-action store-customer-item-btn" type="button" title="Ver items" data-items='${itemsJson}' aria-label="Ver items"><i class="fas fa-plus"></i></button>` : ''}
                                             <button class="admin-btn-action btn-edit" type="button" title="Vincular cliente" onclick="openStoreCustomerLinkModal('${phoneValue.replace(/'/g, "\\'")}', '${String(rawClientName).replace(/'/g, "\\'")}')" aria-label="Vincular cliente">
                                                 <i class="fas fa-user-plus"></i>
                                             </button>
@@ -1957,6 +1969,19 @@ function renderStoreCustomerOrdersTable() {
                 </table>
             </div>
         `;
+
+        const initialItemButtons = detailView.querySelectorAll('.store-customer-item-btn, .store-customer-item-action');
+        initialItemButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+                try {
+                    const parsed = JSON.parse(button.dataset.items || '[]');
+                    openStoreCustomerItemsModal(parsed);
+                } catch (_error) {
+                    openStoreCustomerItemsModal([]);
+                }
+            });
+        });
+
         return;
     }
 
@@ -1979,8 +2004,10 @@ function renderStoreCustomerOrdersTable() {
         const adminSummary = customerItems.map((item) => `- ${item.name || 'Item'}: ${Number(item.quantity || 0)} x ${formatStoreCurrency(Number(item.unit_price || item.price || 0))}`).join('\n');
         const waText = encodeURIComponent(`Hola!\n\nYa agregamos tu pedido.\n\n${reminderLine}\n\nLo que incluimos fue lo siguiente:\n\n${adminSummary || '- Productos sin detalle'}\n\nMuchas gracias por tu compra.`);
         const waLink = phoneDigits ? `https://wa.me/${phoneDigits}?text=${waText}` : '#';
-        const itemPreview = customerItems.slice(0, 2).map((item) => `<div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeStoreCustomerHtml(item.name || 'Sin nombre')} x${Number(item.quantity || 0)}</div>`).join('');
-        const hasMoreItems = customerItems.length > 2;
+        const hasItems = customerItems.length > 0;
+        const itemPreview = hasItems
+            ? customerItems.slice(0, 2).map((item) => `${escapeStoreCustomerHtml(item.name || 'Sin nombre')} x${Number(item.quantity || 0)}`).join('<br>')
+            : '<span style="color:#7a5246;">Sin items</span>';
         const itemsJson = JSON.stringify(customerItems).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         const phoneValue = String(customer.phone || '');
         const orderGroupId = String(customer.order_group_id || '');
@@ -2000,14 +2027,14 @@ function renderStoreCustomerOrdersTable() {
                     `}
                 </td>
                 <td style="max-width:340px; min-width:220px;">
-                    <div style="display:flex; flex-direction:column; gap:0.22rem; min-height:56px; max-height:72px; overflow:hidden; line-height:1.3;">
+                    <div class="store-customer-items-compact">
                         ${itemPreview || '<span style="color:#7a5246;">Sin items</span>'}
-                        ${hasMoreItems ? `<button type="button" class="store-customer-item-btn" data-items='${itemsJson}' style="margin-top:0.18rem; border:none; background:#eef9f0; color:#266c45; border-radius:999px; padding:0.22rem 0.5rem; font-size:0.66rem; font-weight:700; cursor:pointer; max-width:max-content;">Ver + items</button>` : ''}
                     </div>
                 </td>
                 <td>${Number(customer.total_quantity || 0)}</td>
                 <td class="admin-actions-cell">
                     <span class="admin-actions-inline">
+                        ${hasItems ? `<button class="admin-btn-action store-customer-item-action store-customer-item-btn" type="button" title="Ver items" data-items='${itemsJson}' aria-label="Ver items"><i class="fas fa-plus"></i></button>` : ''}
                         <button class="admin-btn-action btn-edit" type="button" title="Vincular cliente" onclick="openStoreCustomerLinkModal('${phoneValue.replace(/'/g, "\\'")}', '${String(rawClientName).replace(/'/g, "\\'")}')" aria-label="Vincular cliente">
                             <i class="fas fa-user-plus"></i>
                         </button>
@@ -2024,7 +2051,7 @@ function renderStoreCustomerOrdersTable() {
         </tr>
     `;
 
-    const itemButtons = tableBody.querySelectorAll('.store-customer-item-btn');
+    const itemButtons = tableBody.querySelectorAll('.store-customer-item-btn, .store-customer-item-action');
     itemButtons.forEach((button) => {
         button.addEventListener('click', () => {
             try {
