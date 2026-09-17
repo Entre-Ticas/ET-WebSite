@@ -1216,6 +1216,29 @@ async function confirmStoreItemsMultiDelete() {
     }
 }
 
+const storeItemsDetailState = {
+    currentPage: 1,
+    rowsPerPage: 10,
+};
+
+function changeStoreItemsPage(page) {
+    if (page < 1) return;
+    const items = storeItemsCache[document.getElementById('storeItemsDetailView')?.dataset.storeId] || [];
+    const totalPages = Math.max(1, Math.ceil(items.length / storeItemsDetailState.rowsPerPage));
+    if (page > totalPages) return;
+    storeItemsDetailState.currentPage = page;
+    const storeId = document.getElementById('storeItemsDetailView')?.dataset.storeId;
+    if (storeId) viewStoreItems(storeId);
+}
+
+function changeStoreItemsRowsPerPage(value) {
+    const parsed = Number(value);
+    storeItemsDetailState.rowsPerPage = Number.isFinite(parsed) ? parsed : 10;
+    storeItemsDetailState.currentPage = 1;
+    const storeId = document.getElementById('storeItemsDetailView')?.dataset.storeId;
+    if (storeId) viewStoreItems(storeId);
+}
+
 async function viewStoreItems(storeId) {
     const session = getSession();
     const response = await fetch(`/.netlify/functions/store-admin?action=store-items&store_id=${encodeURIComponent(storeId)}`, {
@@ -1232,6 +1255,14 @@ async function viewStoreItems(storeId) {
     const gridView = document.getElementById('storeAdminGridView');
     const detailView = document.getElementById('storeItemsDetailView');
     if (!gridView || !detailView) return;
+
+    const items = data.items || [];
+    const totalRows = items.length;
+    const totalPages = Math.max(1, Math.ceil(totalRows / storeItemsDetailState.rowsPerPage));
+    storeItemsDetailState.currentPage = Math.min(Math.max(1, storeItemsDetailState.currentPage), totalPages);
+    const startItem = totalRows === 0 ? 0 : (storeItemsDetailState.currentPage - 1) * storeItemsDetailState.rowsPerPage + 1;
+    const endItem = storeItemsDetailState.rowsPerPage === -1 ? totalRows : Math.min(storeItemsDetailState.currentPage * storeItemsDetailState.rowsPerPage, totalRows);
+    const paginatedItems = storeItemsDetailState.rowsPerPage === -1 ? items : items.slice(startItem - 1, endItem);
 
     gridView.style.display = 'none';
     detailView.style.display = 'block';
@@ -1268,7 +1299,7 @@ async function viewStoreItems(storeId) {
                     </tr>
                 </thead>
                 <tbody>
-                    ${(data.items || []).map(item => {
+                    ${paginatedItems.map(item => {
                         const imageButton = item.image_url
                             ? `<button type="button" class="admin-table-img-btn" data-image-url="${String(item.image_url || '').replace(/"/g, '&quot;')}" title="Ver imagen"><i class="fas fa-camera"></i></button>`
                             : '';
@@ -1295,6 +1326,30 @@ async function viewStoreItems(storeId) {
                         </tr>
                     `}
                 </tbody>
+                <tfoot id="storeItemsDetailFooter" style="display: ${totalRows <= storeItemsDetailState.rowsPerPage ? 'none' : ''};">
+                    <tr>
+                        <td colspan="8">
+                            <div class="admin-pagination-container order-pagination-layout" style="margin-top: 0;">
+                                <div class="pagination-info" id="storeItemsDetailPaginationInfo">Mostrando <strong>${totalRows === 0 ? 0 : startItem}</strong> - <strong>${endItem}</strong> de <strong>${totalRows}</strong></div>
+                                <div class="pagination-rows-selector order-pagination-rows">
+                                    <span>Filas:</span>
+                                    <select id="storeItemsDetailRowsPerPage" onchange="changeStoreItemsRowsPerPage(this.value)">
+                                        <option value="10" ${storeItemsDetailState.rowsPerPage === 10 ? 'selected' : ''}>10</option>
+                                        <option value="30" ${storeItemsDetailState.rowsPerPage === 30 ? 'selected' : ''}>30</option>
+                                        <option value="50" ${storeItemsDetailState.rowsPerPage === 50 ? 'selected' : ''}>50</option>
+                                        <option value="100" ${storeItemsDetailState.rowsPerPage === 100 ? 'selected' : ''}>100</option>
+                                        <option value="-1" ${storeItemsDetailState.rowsPerPage === -1 ? 'selected' : ''}>Todos</option>
+                                    </select>
+                                </div>
+                                <div class="pagination-nav" id="storeItemsDetailPaginationNav">
+                                    <button type="button" onclick="changeStoreItemsPage(${storeItemsDetailState.currentPage - 1})" ${storeItemsDetailState.currentPage <= 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
+                                    <span>Página <strong>${storeItemsDetailState.currentPage}</strong> de ${totalPages}</span>
+                                    <button type="button" onclick="changeStoreItemsPage(${storeItemsDetailState.currentPage + 1})" ${storeItemsDetailState.currentPage >= totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
     `;
@@ -1320,6 +1375,29 @@ function closeStoreItemsPanel() {
     gridView.style.display = 'block';
 }
 
+const storeOrdersDetailState = {
+    currentPage: 1,
+    rowsPerPage: 10,
+};
+
+function changeStoreOrdersPage(page) {
+    if (page < 1) return;
+    const orders = document.getElementById('storeOrdersDetailView')?.dataset.orders ? JSON.parse(document.getElementById('storeOrdersDetailView').dataset.orders) : [];
+    const totalPages = Math.max(1, Math.ceil(orders.length / storeOrdersDetailState.rowsPerPage));
+    if (page > totalPages) return;
+    storeOrdersDetailState.currentPage = page;
+    const storeId = document.getElementById('storeOrdersDetailView')?.dataset.storeId;
+    if (storeId) viewStoreOrders(storeId);
+}
+
+function changeStoreOrdersRowsPerPage(value) {
+    const parsed = Number(value);
+    storeOrdersDetailState.rowsPerPage = Number.isFinite(parsed) ? parsed : 10;
+    storeOrdersDetailState.currentPage = 1;
+    const storeId = document.getElementById('storeOrdersDetailView')?.dataset.storeId;
+    if (storeId) viewStoreOrders(storeId);
+}
+
 async function viewStoreOrders(storeId) {
     const session = getSession();
     const response = await fetch(`/.netlify/functions/store-admin?action=store-orders-summary&store_id=${encodeURIComponent(storeId)}`, {
@@ -1337,8 +1415,18 @@ async function viewStoreOrders(storeId) {
     const detailView = document.getElementById('storeOrdersDetailView');
     if (!gridView || !detailView) return;
 
+    const items = data.items || [];
+    const totalRows = items.length;
+    const totalPages = Math.max(1, Math.ceil(totalRows / storeOrdersDetailState.rowsPerPage));
+    storeOrdersDetailState.currentPage = Math.min(Math.max(1, storeOrdersDetailState.currentPage), totalPages);
+    const startItem = totalRows === 0 ? 0 : (storeOrdersDetailState.currentPage - 1) * storeOrdersDetailState.rowsPerPage + 1;
+    const endItem = storeOrdersDetailState.rowsPerPage === -1 ? totalRows : Math.min(storeOrdersDetailState.currentPage * storeOrdersDetailState.rowsPerPage, totalRows);
+    const paginatedItems = storeOrdersDetailState.rowsPerPage === -1 ? items : items.slice(startItem - 1, endItem);
+
     gridView.style.display = 'none';
     detailView.style.display = 'block';
+    detailView.dataset.storeId = storeId;
+    detailView.dataset.orders = JSON.stringify(items);
     detailView.innerHTML = `
         <button onclick="closeStoreOrdersPanel()" class="admin-btn-back">← Volver</button>
         <div class="store-item-detail-header">
@@ -1357,7 +1445,7 @@ async function viewStoreOrders(storeId) {
                     </tr>
                 </thead>
                 <tbody>
-                    ${(data.items || []).map(item => {
+                    ${paginatedItems.map(item => {
                         const imageButton = item.image_url
                             ? `<button type="button" class="admin-table-img-btn" data-image-url="${String(item.image_url || '').replace(/"/g, '&quot;')}" title="Ver imagen"><i class="fas fa-camera"></i></button>`
                             : '';
@@ -1375,6 +1463,30 @@ async function viewStoreOrders(storeId) {
                         </tr>
                     `}
                 </tbody>
+                <tfoot id="storeOrdersDetailFooter" style="display: ${totalRows <= storeOrdersDetailState.rowsPerPage ? 'none' : ''};">
+                    <tr>
+                        <td colspan="3">
+                            <div class="admin-pagination-container order-pagination-layout" style="margin-top: 0;">
+                                <div class="pagination-info" id="storeOrdersDetailPaginationInfo">Mostrando <strong>${totalRows === 0 ? 0 : startItem}</strong> - <strong>${endItem}</strong> de <strong>${totalRows}</strong></div>
+                                <div class="pagination-rows-selector order-pagination-rows">
+                                    <span>Filas:</span>
+                                    <select id="storeOrdersDetailRowsPerPage" onchange="changeStoreOrdersRowsPerPage(this.value)">
+                                        <option value="10" ${storeOrdersDetailState.rowsPerPage === 10 ? 'selected' : ''}>10</option>
+                                        <option value="30" ${storeOrdersDetailState.rowsPerPage === 30 ? 'selected' : ''}>30</option>
+                                        <option value="50" ${storeOrdersDetailState.rowsPerPage === 50 ? 'selected' : ''}>50</option>
+                                        <option value="100" ${storeOrdersDetailState.rowsPerPage === 100 ? 'selected' : ''}>100</option>
+                                        <option value="-1" ${storeOrdersDetailState.rowsPerPage === -1 ? 'selected' : ''}>Todos</option>
+                                    </select>
+                                </div>
+                                <div class="pagination-nav" id="storeOrdersDetailPaginationNav">
+                                    <button type="button" onclick="changeStoreOrdersPage(${storeOrdersDetailState.currentPage - 1})" ${storeOrdersDetailState.currentPage <= 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
+                                    <span>Página <strong>${storeOrdersDetailState.currentPage}</strong> de ${totalPages}</span>
+                                    <button type="button" onclick="changeStoreOrdersPage(${storeOrdersDetailState.currentPage + 1})" ${storeOrdersDetailState.currentPage >= totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
     `;
@@ -1771,27 +1883,33 @@ function renderStoreCustomerOrdersTable() {
                             </tr>
                         `}
                     </tbody>
+                    <tfoot id="storeCustomerOrdersDetailFooter" style="display: ${totalRows <= storeCustomerOrdersState.rowsPerPage ? 'none' : ''};">
+                        <tr>
+                            <td colspan="4">
+                                <div class="admin-pagination-container order-pagination-layout" id="storeCustomerOrdersPaginationContainer" style="margin-top: 0;">
+                                    <div class="pagination-info" id="storeCustomerOrdersPaginationInfo">
+                                        Mostrando <strong>${totalRows === 0 ? 0 : startIndex + 1}</strong> - <strong>${Math.min(endIndex, totalRows)}</strong> de <strong>${totalRows}</strong>
+                                    </div>
+                                    <div class="pagination-rows-selector order-pagination-rows">
+                                        <span>Filas:</span>
+                                        <select id="storeCustomerOrdersRowsPerPage" onchange="changeStoreCustomerOrdersRowsPerPage(this.value)">
+                                            <option value="10" ${storeCustomerOrdersState.rowsPerPage === 10 ? 'selected' : ''}>10</option>
+                                            <option value="30" ${storeCustomerOrdersState.rowsPerPage === 30 ? 'selected' : ''}>30</option>
+                                            <option value="50" ${storeCustomerOrdersState.rowsPerPage === 50 ? 'selected' : ''}>50</option>
+                                            <option value="100" ${storeCustomerOrdersState.rowsPerPage === 100 ? 'selected' : ''}>100</option>
+                                            <option value="-1" ${storeCustomerOrdersState.rowsPerPage === -1 ? 'selected' : ''}>Todos</option>
+                                        </select>
+                                    </div>
+                                    <div class="pagination-nav" id="storeCustomerOrdersPaginationNav">
+                                        <button type="button" onclick="changeStoreCustomerOrdersPage(${storeCustomerOrdersState.currentPage - 1})" ${storeCustomerOrdersState.currentPage <= 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
+                                        <span>Página <strong>${storeCustomerOrdersState.currentPage}</strong> de ${totalPages}</span>
+                                        <button type="button" onclick="changeStoreCustomerOrdersPage(${storeCustomerOrdersState.currentPage + 1})" ${storeCustomerOrdersState.currentPage >= totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    </tfoot>
                 </table>
-            </div>
-            <div class="admin-pagination-container order-pagination-layout" id="storeCustomerOrdersPaginationContainer" style="margin-top: 1rem; ${totalRows <= 10 ? 'display:none;' : ''}">
-                <div class="pagination-info" id="storeCustomerOrdersPaginationInfo">
-                    Mostrando <strong>${totalRows === 0 ? 0 : startIndex + 1}</strong> - <strong>${Math.min(endIndex, totalRows)}</strong> de <strong>${totalRows}</strong>
-                </div>
-                <div class="pagination-rows-selector order-pagination-rows">
-                    <span>Filas:</span>
-                    <select id="storeCustomerOrdersRowsPerPage" onchange="changeStoreCustomerOrdersRowsPerPage(this.value)">
-                        <option value="10" ${storeCustomerOrdersState.rowsPerPage === 10 ? 'selected' : ''}>10</option>
-                        <option value="30" ${storeCustomerOrdersState.rowsPerPage === 30 ? 'selected' : ''}>30</option>
-                        <option value="50" ${storeCustomerOrdersState.rowsPerPage === 50 ? 'selected' : ''}>50</option>
-                        <option value="100" ${storeCustomerOrdersState.rowsPerPage === 100 ? 'selected' : ''}>100</option>
-                        <option value="-1" ${storeCustomerOrdersState.rowsPerPage === -1 ? 'selected' : ''}>Todos</option>
-                    </select>
-                </div>
-                <div class="pagination-nav" id="storeCustomerOrdersPaginationNav">
-                    <button type="button" onclick="changeStoreCustomerOrdersPage(${storeCustomerOrdersState.currentPage - 1})" ${storeCustomerOrdersState.currentPage <= 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
-                    <span>Página <strong>${storeCustomerOrdersState.currentPage}</strong> de ${totalPages}</span>
-                    <button type="button" onclick="changeStoreCustomerOrdersPage(${storeCustomerOrdersState.currentPage + 1})" ${storeCustomerOrdersState.currentPage >= totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>
-                </div>
             </div>
         `;
         return;
