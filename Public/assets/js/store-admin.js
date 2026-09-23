@@ -1888,20 +1888,24 @@ function renderStoreCustomerOrdersTable() {
                             const phoneDigits = normalizeStoreClientPhoneForWa(customer.phone_digits || customer.phone || '');
                             const customerItems = customer.items || [];
                             const totalAmount = customerItems.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.unit_price || item.price || 0)), 0);
-                            const fiftyPercentAmount = totalAmount / 2;
-                            const reminderLine = `Recorda que el monto total es ${formatStoreCurrency(totalAmount)} y el monto del 50% es ${formatStoreCurrency(fiftyPercentAmount)}`;
-                            const adminSummary = customerItems.map((item) => `- ${item.name || 'Item'}: ${Number(item.quantity || 0)} x ${formatStoreCurrency(Number(item.unit_price || item.price || 0))}`).join('\n');
-                            const waText = encodeURIComponent(`Hola!\n\nYa agregamos tu pedido.\n\n${reminderLine}\n\nLo que incluimos fue lo siguiente:\n\n${adminSummary || '- Productos sin detalle'}\n\nMuchas gracias por tu compra.`);
-                            const waLink = phoneDigits ? `https://wa.me/${phoneDigits}?text=${waText}` : '#';
+                            const phoneValue = String(customer.phone || '');
+                            const orderGroupId = String(customer.order_group_id || '');
+                            const hasDbMatch = Boolean(customer.client_id || customer.is_matched);
+                            const isBilled = Boolean(customer.is_invoiced || customer.is_billed || customer.billed);
+                            const rawClientName = String(customer.client_name || '').trim();
+                            const waLink = phoneDigits ? `https://wa.me/${phoneDigits}` : '#';
                             const hasItems = customerItems.length > 0;
                             const itemPreview = hasItems
                                 ? customerItems.slice(0, 2).map((item) => `${escapeStoreCustomerHtml(item.name || 'Sin nombre')} x${Number(item.quantity || 0)}`).join('<br>')
                                 : '<span style="color:#7a5246;">Sin items</span>';
                             const itemsJson = JSON.stringify(customerItems).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-                            const phoneValue = String(customer.phone || '');
-                            const orderGroupId = String(customer.order_group_id || '');
-                            const hasDbMatch = Boolean(customer.client_id || customer.is_matched);
-                            const rawClientName = String(customer.client_name || '').trim();
+                            const invoicePayload = JSON.stringify({
+                                phone: phoneValue,
+                                client_name: rawClientName,
+                                client_id: customer.client_id || null,
+                                items: customerItems,
+                                order_group_id: orderGroupId,
+                            }).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
                             const clientName = hasDbMatch ? (rawClientName ? rawClientName.toUpperCase() : 'CLIENTE SIN NOMBRE') : 'SIN MATCH';
                             const clientPhone = customer.phone || customer.phone_digits || 'Sin teléfono';
                             return `
@@ -1923,13 +1927,22 @@ function renderStoreCustomerOrdersTable() {
                                     <td>${Number(customer.total_quantity || 0)}</td>
                                     <td class="admin-actions-cell">
                                         <span class="admin-actions-inline">
-                                            ${hasItems ? `<button class="admin-btn-action store-customer-item-action store-customer-item-btn" type="button" title="Ver items" data-items='${itemsJson}' aria-label="Ver items"><i class="fas fa-plus"></i></button>` : ''}
-                                            <button class="admin-btn-action btn-edit" type="button" title="Vincular cliente" onclick="openStoreCustomerLinkModal('${phoneValue.replace(/'/g, "\\'")}', '${String(rawClientName).replace(/'/g, "\\'")}')" aria-label="Vincular cliente">
-                                                <i class="fas fa-user-plus"></i>
-                                            </button>
-                                            <button class="admin-btn-action btn-copy" type="button" title="Reconfirmar por WhatsApp" onclick="markStoreCustomerOrdersAsContacted('${phoneValue.replace(/'/g, "\\'")}', '${waLink.replace(/'/g, "\\'")}', '${orderGroupId.replace(/'/g, "\\'")}')" aria-label="Reconfirmar por WhatsApp">
-                                                <i class="fab fa-whatsapp"></i>
-                                            </button>
+                                            ${hasItems ? `<button class="admin-btn-action store-customer-item-action store-customer-item-btn" type="button" title="Ver items" data-items='${itemsJson}' aria-label="Ver items"><i class="fas fa-eye"></i></button>` : ''}
+                                            ${!hasDbMatch ? `
+                                                <button class="admin-btn-action btn-edit" type="button" title="Vincular cliente" onclick="openStoreCustomerLinkModal('${phoneValue.replace(/'/g, "\\'")}', '${String(rawClientName).replace(/'/g, "\\'")}')" aria-label="Vincular cliente">
+                                                    <i class="fas fa-user-plus"></i>
+                                                </button>
+                                            ` : ''}
+                                            ${hasDbMatch && !isBilled ? `
+                                                <button class="admin-btn-action btn-success" type="button" title="Facturar" data-invoice='${invoicePayload}' aria-label="Facturar">
+                                                    <i class="fas fa-file-invoice-dollar"></i>
+                                                </button>
+                                            ` : ''}
+                                            ${hasDbMatch ? `
+                                                <button class="admin-btn-action btn-copy" type="button" title="Ir a WhatsApp" onclick="window.open('${waLink.replace(/'/g, "\\'")}', '_blank', 'noopener,noreferrer');" aria-label="Ir a WhatsApp">
+                                                    <i class="fab fa-whatsapp"></i>
+                                                </button>
+                                            ` : ''}
                                         </span>
                                     </td>
                                 </tr>
@@ -1982,6 +1995,22 @@ function renderStoreCustomerOrdersTable() {
             });
         });
 
+        const initialInvoiceButtons = detailView.querySelectorAll('[data-invoice]');
+        initialInvoiceButtons.forEach((button) => {
+            button.addEventListener('click', async () => {
+                try {
+                    const payload = JSON.parse(button.dataset.invoice || '{}');
+                    await createInvoiceFromCustomerOrder(payload);
+                } catch (_error) {
+                    openGenericModal(
+                        'No se pudo facturar',
+                        '<p style="margin:0; color:#5c3d34;">No se pudo procesar la factura de este grupo.</p>',
+                        '<button class="btn btn-primary" type="button" onclick="closeGenericModal()">OK</button>'
+                    );
+                }
+            });
+        });
+
         return;
     }
 
@@ -1999,20 +2028,24 @@ function renderStoreCustomerOrdersTable() {
         const phoneDigits = normalizeStoreClientPhoneForWa(customer.phone_digits || customer.phone || '');
         const customerItems = customer.items || [];
         const totalAmount = customerItems.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.unit_price || item.price || 0)), 0);
-        const fiftyPercentAmount = totalAmount / 2;
-        const reminderLine = `Recorda que el monto total es ${formatStoreCurrency(totalAmount)} y el monto del 50% es ${formatStoreCurrency(fiftyPercentAmount)}`;
-        const adminSummary = customerItems.map((item) => `- ${item.name || 'Item'}: ${Number(item.quantity || 0)} x ${formatStoreCurrency(Number(item.unit_price || item.price || 0))}`).join('\n');
-        const waText = encodeURIComponent(`Hola!\n\nYa agregamos tu pedido.\n\n${reminderLine}\n\nLo que incluimos fue lo siguiente:\n\n${adminSummary || '- Productos sin detalle'}\n\nMuchas gracias por tu compra.`);
-        const waLink = phoneDigits ? `https://wa.me/${phoneDigits}?text=${waText}` : '#';
+        const phoneValue = String(customer.phone || '');
+        const orderGroupId = String(customer.order_group_id || '');
+        const hasDbMatch = Boolean(customer.client_id || customer.is_matched);
+        const isBilled = Boolean(customer.is_invoiced || customer.is_billed || customer.billed);
+        const rawClientName = String(customer.client_name || '').trim();
+        const waLink = phoneDigits ? `https://wa.me/${phoneDigits}` : '#';
         const hasItems = customerItems.length > 0;
         const itemPreview = hasItems
             ? customerItems.slice(0, 2).map((item) => `${escapeStoreCustomerHtml(item.name || 'Sin nombre')} x${Number(item.quantity || 0)}`).join('<br>')
             : '<span style="color:#7a5246;">Sin items</span>';
         const itemsJson = JSON.stringify(customerItems).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-        const phoneValue = String(customer.phone || '');
-        const orderGroupId = String(customer.order_group_id || '');
-        const hasDbMatch = Boolean(customer.client_id || customer.is_matched);
-        const rawClientName = String(customer.client_name || '').trim();
+        const invoicePayload = JSON.stringify({
+            phone: phoneValue,
+            client_name: rawClientName,
+            client_id: customer.client_id || null,
+            items: customerItems,
+            order_group_id: orderGroupId,
+        }).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         const clientName = hasDbMatch ? (rawClientName ? rawClientName.toUpperCase() : 'CLIENTE SIN NOMBRE') : 'SIN MATCH';
         const clientPhone = customer.phone || customer.phone_digits || 'Sin teléfono';
         return `
@@ -2034,13 +2067,22 @@ function renderStoreCustomerOrdersTable() {
                 <td>${Number(customer.total_quantity || 0)}</td>
                 <td class="admin-actions-cell">
                     <span class="admin-actions-inline">
-                        ${hasItems ? `<button class="admin-btn-action store-customer-item-action store-customer-item-btn" type="button" title="Ver items" data-items='${itemsJson}' aria-label="Ver items"><i class="fas fa-plus"></i></button>` : ''}
-                        <button class="admin-btn-action btn-edit" type="button" title="Vincular cliente" onclick="openStoreCustomerLinkModal('${phoneValue.replace(/'/g, "\\'")}', '${String(rawClientName).replace(/'/g, "\\'")}')" aria-label="Vincular cliente">
-                            <i class="fas fa-user-plus"></i>
-                        </button>
-                        <button class="admin-btn-action btn-copy" type="button" title="Reconfirmar por WhatsApp" onclick="markStoreCustomerOrdersAsContacted('${phoneValue.replace(/'/g, "\\'")}', '${waLink.replace(/'/g, "\\'")}', '${orderGroupId.replace(/'/g, "\\'")}')" aria-label="Reconfirmar por WhatsApp">
-                            <i class="fab fa-whatsapp"></i>
-                        </button>
+                        ${hasItems ? `<button class="admin-btn-action store-customer-item-action store-customer-item-btn" type="button" title="Ver items" data-items='${itemsJson}' aria-label="Ver items"><i class="fas fa-eye"></i></button>` : ''}
+                        ${!hasDbMatch ? `
+                            <button class="admin-btn-action btn-edit" type="button" title="Vincular cliente" onclick="openStoreCustomerLinkModal('${phoneValue.replace(/'/g, "\\'")}', '${String(rawClientName).replace(/'/g, "\\'")}')" aria-label="Vincular cliente">
+                                <i class="fas fa-user-plus"></i>
+                            </button>
+                        ` : ''}
+                        ${hasDbMatch && !isBilled ? `
+                            <button class="admin-btn-action btn-success" type="button" title="Facturar" data-invoice='${invoicePayload}' aria-label="Facturar">
+                                <i class="fas fa-file-invoice-dollar"></i>
+                            </button>
+                        ` : ''}
+                        ${hasDbMatch ? `
+                            <button class="admin-btn-action btn-copy" type="button" title="Ir a WhatsApp" onclick="window.open('${waLink.replace(/'/g, "\\'")}', '_blank', 'noopener,noreferrer');" aria-label="Ir a WhatsApp">
+                                <i class="fab fa-whatsapp"></i>
+                            </button>
+                        ` : ''}
                     </span>
                 </td>
             </tr>
@@ -2063,6 +2105,22 @@ function renderStoreCustomerOrdersTable() {
         });
     });
 
+    const invoiceButtons = tableBody.querySelectorAll('[data-invoice]');
+    invoiceButtons.forEach((button) => {
+        button.addEventListener('click', async () => {
+            try {
+                const payload = JSON.parse(button.dataset.invoice || '{}');
+                await createInvoiceFromCustomerOrder(payload);
+            } catch (_error) {
+                openGenericModal(
+                    'No se pudo facturar',
+                    '<p style="margin:0; color:#5c3d34;">No se pudo procesar la factura de este grupo.</p>',
+                    '<button class="btn btn-primary" type="button" onclick="closeGenericModal()">OK</button>'
+                );
+            }
+        });
+    });
+
     rowsPerPageSelect.value = String(storeCustomerOrdersState.rowsPerPage);
     paginationInfo.innerHTML = `Mostrando <strong>${totalRows === 0 ? 0 : startIndex + 1}</strong> - <strong>${Math.min(endIndex, totalRows)}</strong> de <strong>${totalRows}</strong>`;
     paginationContainer.style.display = totalRows <= 10 ? 'none' : '';
@@ -2071,6 +2129,98 @@ function renderStoreCustomerOrdersTable() {
         <span>Página <strong>${storeCustomerOrdersState.currentPage}</strong> de ${totalPages}</span>
         <button type="button" onclick="changeStoreCustomerOrdersPage(${storeCustomerOrdersState.currentPage + 1})" ${storeCustomerOrdersState.currentPage >= totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>
     `;
+}
+
+async function createInvoiceFromCustomerOrder(payload = {}) {
+    const session = getSession();
+    const items = Array.isArray(payload.items) ? payload.items : [];
+    const phone = String(payload.phone || '').trim();
+    const clientName = String(payload.client_name || '').trim() || 'Cliente sin nombre';
+    const clientId = payload.client_id ?? payload.clientId ?? null;
+
+    if (!session) {
+        alert('Debes iniciar sesión para facturar.');
+        return;
+    }
+
+    if (!items.length) {
+        openGenericModal(
+            'Sin items para facturar',
+            '<p style="margin:0; color:#5c3d34;">Este grupo no tiene productos para crear la factura.</p>',
+            '<button class="btn btn-primary" type="button" onclick="closeGenericModal()">OK</button>'
+        );
+        return;
+    }
+
+    try {
+        const results = [];
+        for (const item of items) {
+            const quantity = Number(item.quantity || 0);
+            const unitPrice = Number(item.unit_price || item.price || 0);
+            const productName = String(item.name || '').trim() || 'Producto sin nombre';
+            const imageUrl = String(item.image_url || item.image || '').trim();
+
+            if (!quantity || !unitPrice) continue;
+
+            const response = await fetch('/.netlify/functions/order-items', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-admin-token': session.token,
+                },
+                body: JSON.stringify({
+                    client_phone: phone,
+                    client_name: clientName,
+                    client_id: clientId,
+                    order_group_id: payload.order_group_id || payload.orderGroupId || null,
+                    product_name: productName,
+                    quantity,
+                    price: unitPrice,
+                    size: item.size || '',
+                    image_url: imageUrl,
+                })
+            });
+
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(data?.error || `No se pudo facturar ${productName}.`);
+            }
+            results.push(data);
+        }
+
+        if (!results.length) {
+            throw new Error('No hubo items válidos para facturar.');
+        }
+
+        const billedResponse = await fetch('/.netlify/functions/store-catalog-shared?action=mark-store-customer-billed', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-token': session.token,
+            },
+            body: JSON.stringify({
+                phone,
+                order_group_id: payload.order_group_id || payload.orderGroupId || null,
+                client_id: clientId || null,
+            })
+        });
+
+        if (!billedResponse.ok) {
+            console.warn('No se pudo marcar como facturado en store_orders.', await billedResponse.text().catch(() => ''));
+        }
+
+        openGenericModal(
+            'Factura creada',
+            `<p style="margin:0; color:#5c3d34;">Se generaron ${results.length} registros en order_items para ${clientName}.</p>`,
+            '<button class="btn btn-primary" type="button" onclick="closeGenericModal()">OK</button>'
+        );
+    } catch (error) {
+        openGenericModal(
+            'No se pudo facturar',
+            `<p style="margin:0; color:#5c3d34;">${String(error.message || 'Error inesperado.').replace(/</g, '&lt;')}</p>`,
+            '<button class="btn btn-primary" type="button" onclick="closeGenericModal()">OK</button>'
+        );
+    }
 }
 
 async function markStoreCustomerOrdersAsContacted(phoneValue, waLink, orderGroupId) {

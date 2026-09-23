@@ -655,7 +655,7 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
       const storeId = queryStringParameters.store_id || payload.store_id || payload.storeId;
       if (!storeId) return jsonResponse(400, { error: 'Falta store_id.' });
 
-      const orders = await supabaseRequest(`/rest/v1/store_orders?store_id=eq.${encodeURIComponent(storeId)}&select=id,client_id,client_phone,client_name,item_id,quantity,unit_price,created_at,contacted,order_group_id`);
+      const orders = await supabaseRequest(`/rest/v1/store_orders?store_id=eq.${encodeURIComponent(storeId)}&select=id,client_id,client_phone,client_name,item_id,quantity,unit_price,created_at,contacted,order_group_id,is_invoiced`);
       if (!Array.isArray(orders) || !orders.length) {
         return jsonResponse(200, { customers: [] });
       }
@@ -698,6 +698,7 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
             client_phone_last4: linkedClient ? (linkedClient.phone_last4 || String(linkedClient.phone || '').slice(-4)) : null,
             is_matched: Boolean(linkedClient),
             contacted: Boolean(order.contacted),
+            is_invoiced: Boolean(order.is_invoiced),
             items: [],
             total_quantity: 0,
           };
@@ -744,6 +745,7 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
             client_phone_last4: customer.client_phone_last4 || customer.phone_digits.slice(-4),
             is_matched: Boolean(customer.is_matched),
             contacted: Boolean(customer.contacted),
+            is_invoiced: Boolean(customer.is_invoiced),
             total_quantity: Number(customer.total_quantity || 0),
             items: customer.items.map((item) => ({
               item_id: item.item_id,
@@ -886,6 +888,51 @@ async function handleStoreRequest({ httpMethod, headers = {}, queryStringParamet
         });
       } catch (error) {
         return jsonResponse(500, { error: error.message || 'No se pudo vincular el cliente.' });
+      }
+    }
+
+    if (httpMethod === 'POST' && action === 'mark-store-customer-billed') {
+      if (!verifyToken(token)) return jsonResponse(401, { error: 'No autorizado.' });
+      const phone = String(payload.phone || '').trim();
+      const orderGroupId = payload.order_group_id || payload.orderGroupId || null;
+      const clientId = payload.client_id != null && payload.client_id !== '' ? Number(payload.client_id) : null;
+      if (!phone && !orderGroupId && !clientId) return jsonResponse(400, { error: 'Falta teléfono, group_id o client_id.' });
+
+      try {
+        const orders = await supabaseRequest('/rest/v1/store_orders?select=*');
+        const normalizedPhone = normalizePhoneDigits(phone);
+        const last4 = normalizedPhone ? normalizedPhone.slice(-4) : '';
+        const matches = (orders || []).filter((order) => {
+          const rowGroupId = String(order.order_group_id || '');
+          const rowPhone = normalizePhoneDigits(order.client_phone || '');
+
+          if (orderGroupId) {
+            return String(rowGroupId) === String(orderGroupId) || String(order.id) === String(orderGroupId);
+          }
+
+          if (normalizedPhone) {
+            return rowPhone === normalizedPhone;
+          }
+
+          if (clientId) {
+            return order.client_id != null && Number(order.client_id) === Number(clientId);
+          }
+
+          return false;
+        });
+
+        let updated = 0;
+        for (const order of matches) {
+          await supabaseRequest(`/rest/v1/store_orders?id=eq.${encodeURIComponent(order.id)}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ is_invoiced: true })
+          });
+          updated += 1;
+        }
+
+        return jsonResponse(200, { updated, phone, order_group_id: orderGroupId, client_id: clientId });
+      } catch (error) {
+        return jsonResponse(500, { error: error.message || 'No se pudo marcar como facturado.' });
       }
     }
 
