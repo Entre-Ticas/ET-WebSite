@@ -8,6 +8,19 @@ let storeOrdersAdminColumnFilters = {};
 let storeOrdersAdminRowsPerPage = 10;
 let storeOrdersAdminCurrentPage = 1;
 
+registerAdminRowsPerPageDropdown({
+    name: 'storeOrders',
+    dropdownId: 'storeOrdersRowsDropdown',
+    triggerId: 'storeOrdersRowsPerPageTrigger',
+    menuId: 'storeOrdersRowsPerPageMenu',
+    labelId: 'storeOrdersRowsPerPageSelectedLabel',
+    selectorId: 'storeOrdersRowsPerPageSelector',
+    toggleFnName: 'toggleStoreOrdersRowsPerPageDropdown',
+    selectFnName: 'selectStoreOrdersRowsPerPage',
+    getValue: () => storeOrdersAdminRowsPerPage,
+    onSelect: (value) => changeStoreOrdersRowsPerPage(value)
+});
+
 function formatStoreOrdersCurrency(value) {
     const numeric = Number(value || 0);
     return new Intl.NumberFormat('es-CR', {
@@ -196,11 +209,13 @@ function renderStoreOrdersAdminTable(orders) {
     const startIndex = storeOrdersAdminRowsPerPage === -1 ? 0 : (storeOrdersAdminCurrentPage - 1) * storeOrdersAdminRowsPerPage;
     const endIndex = storeOrdersAdminRowsPerPage === -1 ? totalRows : startIndex + storeOrdersAdminRowsPerPage;
     const pageOrders = filteredOrders.slice(startIndex, endIndex);
+    const shouldShowFooter = storeOrdersAdminRowsPerPage === -1 || totalRows > storeOrdersAdminRowsPerPage;
 
     noResults.style.display = 'none';
     table.style.display = '';
-    if (footer) footer.style.display = totalRows > 10 ? '' : 'none';
+    if (footer) footer.style.display = shouldShowFooter ? '' : 'none';
     if (rowsSelector) rowsSelector.value = String(storeOrdersAdminRowsPerPage);
+    syncAdminRowsPerPageDropdown('storeOrders');
     if (paginationInfo) {
         paginationInfo.innerHTML = `Mostrando <strong>${totalRows === 0 ? 0 : startIndex + 1}</strong> - <strong>${Math.min(endIndex, totalRows)}</strong> de <strong>${totalRows}</strong>`;
     }
@@ -254,27 +269,21 @@ function renderStoreOrdersAdminTable(orders) {
     }
 }
 
-toggleStoreOrdersRowsPerPageDropdown = function (event) {
-    const menu = document.getElementById('storeOrdersRowsPerPageMenu');
-    if (!menu) return;
-    event?.stopPropagation?.();
-    const isOpen = menu.classList.contains('open');
-    document.querySelectorAll('.order-rows-menu').forEach((el) => el.classList.remove('open'));
-    if (!isOpen) menu.classList.add('open');
-};
+function toggleStoreOrdersRowsPerPageDropdown(event) {
+    toggleAdminRowsPerPageDropdown('storeOrders', event);
+}
 
 function selectStoreOrdersRowsPerPage(value) {
-    changeStoreOrdersRowsPerPage(value);
-    const menu = document.getElementById('storeOrdersRowsPerPageMenu');
-    if (menu) menu.classList.remove('open');
+    selectAdminRowsPerPageDropdown('storeOrders', value);
 }
 
 function changeStoreOrdersRowsPerPage(value) {
     const parsed = Number(value);
     storeOrdersAdminRowsPerPage = Number.isFinite(parsed) ? parsed : 10;
     storeOrdersAdminCurrentPage = 1;
-    const label = document.getElementById('storeOrdersRowsPerPageSelectedLabel');
-    if (label) label.textContent = value === '-1' ? 'Todos' : String(value);
+    const rowsSelector = document.getElementById('storeOrdersRowsPerPageSelector');
+    if (rowsSelector) rowsSelector.value = String(storeOrdersAdminRowsPerPage);
+    syncAdminRowsPerPageDropdown('storeOrders');
     renderStoreOrdersAdminTable(storeOrdersAdminAll);
 }
 

@@ -1510,7 +1510,7 @@ let storeCustomerOrdersState = {
     },
     currentPage: 1,
     rowsPerPage: 10,
-    showOnlyUncontacted: true
+    showOnlyUncontacted: false
 };
 
 function isStoreCustomerUncontacted(customer) {
@@ -1795,7 +1795,7 @@ function getFilteredStoreCustomerOrders(customers) {
     const clientFilter = normalizeStoreCustomerOrdersSearch(storeCustomerOrdersState.filters.client);
     const itemsFilter = normalizeStoreCustomerOrdersSearch(storeCustomerOrdersState.filters.items);
     const totalFilter = normalizeStoreCustomerOrdersSearch(storeCustomerOrdersState.filters.total);
-    const onlyUncontacted = storeCustomerOrdersState.showOnlyUncontacted !== false;
+    const onlyUncontacted = storeCustomerOrdersState.showOnlyUncontacted === true;
 
     return customers.filter((customer) => {
         const phone = String(customer.phone || customer.phone_digits || 'Sin teléfono');
@@ -1859,11 +1859,11 @@ function renderStoreCustomerOrdersTable() {
             </div>
             <div class="admin-filter-chips">
                 <label class="admin-filter-option">
-                    <input type="radio" name="storeCustomerOrdersContactFilter" value="pending" ${storeCustomerOrdersState.showOnlyUncontacted !== false ? 'checked' : ''} onchange="setStoreCustomerOrdersContactFilter(true)" />
+                    <input type="radio" name="storeCustomerOrdersContactFilter" value="pending" ${storeCustomerOrdersState.showOnlyUncontacted === true ? 'checked' : ''} onchange="setStoreCustomerOrdersContactFilter(true)" />
                     <span>Solo sin contactar</span>
                 </label>
                 <label class="admin-filter-option">
-                    <input type="radio" name="storeCustomerOrdersContactFilter" value="all" ${storeCustomerOrdersState.showOnlyUncontacted === false ? 'checked' : ''} onchange="setStoreCustomerOrdersContactFilter(false)" />
+                    <input type="radio" name="storeCustomerOrdersContactFilter" value="all" ${storeCustomerOrdersState.showOnlyUncontacted !== true ? 'checked' : ''} onchange="setStoreCustomerOrdersContactFilter(false)" />
                     <span>Mostrar todos</span>
                 </label>
             </div>
@@ -2020,8 +2020,8 @@ function renderStoreCustomerOrdersTable() {
     if (totalInput) totalInput.value = storeCustomerOrdersState.filters.total || '';
     document.querySelectorAll('input[name="storeCustomerOrdersContactFilter"]').forEach((radio) => {
         radio.checked = radio.value === 'pending'
-            ? storeCustomerOrdersState.showOnlyUncontacted !== false
-            : storeCustomerOrdersState.showOnlyUncontacted === false;
+            ? storeCustomerOrdersState.showOnlyUncontacted === true
+            : storeCustomerOrdersState.showOnlyUncontacted !== true;
     });
 
     tableBody.innerHTML = paginatedCustomers.length ? paginatedCustomers.map((customer) => {
@@ -2123,7 +2123,7 @@ function renderStoreCustomerOrdersTable() {
 
     rowsPerPageSelect.value = String(storeCustomerOrdersState.rowsPerPage);
     paginationInfo.innerHTML = `Mostrando <strong>${totalRows === 0 ? 0 : startIndex + 1}</strong> - <strong>${Math.min(endIndex, totalRows)}</strong> de <strong>${totalRows}</strong>`;
-    paginationContainer.style.display = totalRows <= 10 ? 'none' : '';
+    paginationContainer.style.display = storeCustomerOrdersState.rowsPerPage === -1 || totalRows > storeCustomerOrdersState.rowsPerPage ? '' : 'none';
     paginationNav.innerHTML = `
         <button type="button" onclick="changeStoreCustomerOrdersPage(${storeCustomerOrdersState.currentPage - 1})" ${storeCustomerOrdersState.currentPage <= 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
         <span>Página <strong>${storeCustomerOrdersState.currentPage}</strong> de ${totalPages}</span>
@@ -2276,7 +2276,7 @@ function resetStoreCustomerOrdersFilters() {
     storeCustomerOrdersState.filters = { client: '', phone: '', items: '', total: '' };
     storeCustomerOrdersState.currentPage = 1;
     storeCustomerOrdersState.rowsPerPage = 10;
-    storeCustomerOrdersState.showOnlyUncontacted = true;
+    storeCustomerOrdersState.showOnlyUncontacted = false;
 
     const searchInput = document.getElementById('storeCustomerOrdersSearchInput');
     if (searchInput) searchInput.value = '';
@@ -2356,7 +2356,7 @@ async function viewStoreCustomerOrders(storeId) {
         filters: { client: '', phone: '', items: '', total: '' },
         currentPage: 1,
         rowsPerPage: 10,
-        showOnlyUncontacted: true
+        showOnlyUncontacted: false
     };
 
     gridView.style.display = 'none';

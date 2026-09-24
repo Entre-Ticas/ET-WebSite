@@ -316,7 +316,7 @@ function getScriptsForPage(page) {
         'admin/tracking': ['assets/js/admin-rows-dropdown.js', 'assets/js/tracking-admin.js'],
         'admin/catalog': ['assets/js/admin-rows-dropdown.js', 'assets/js/catalog-admin.js'],
         'admin/store': ['assets/js/store-admin.js'],
-        'admin/store-orders': ['assets/js/store-orders-admin.js'],
+        'admin/store-orders': ['assets/js/admin-rows-dropdown.js', 'assets/js/store-orders-admin.js'],
         'admin/order': ['assets/js/admin-rows-dropdown.js', 'assets/js/order_items-admin.js'],
         'admin/invoices': ['assets/js/admin-rows-dropdown.js', 'assets/js/invoices-admin.js'],
         'admin/payments': ['assets/js/admin-rows-dropdown.js', 'assets/js/payments-admin.js'],
